@@ -32,7 +32,7 @@ const mockUsers: User[] = [
   {
     id: 'a0000000-0000-0000-0000-000000000001',
     name: 'Cesar Administrador',
-    email: 'cesar.admin@fatec.sp.gov.br',
+    email: 'cesar.admin@aluno.cps.sp.gov.br',
     ra: '2840001',
     password_hash: DEFAULT_HASH,
     role: 'ADMIN',
@@ -45,7 +45,7 @@ const mockUsers: User[] = [
   {
     id: 'a0000000-0000-0000-0000-000000000002',
     name: 'Luis Desenvolvedor',
-    email: 'luis.dev@fatec.sp.gov.br',
+    email: 'luis.dev@aluno.cps.sp.gov.br',
     ra: '2840002',
     password_hash: DEFAULT_HASH,
     role: 'CA_MEMBRO',
@@ -58,7 +58,7 @@ const mockUsers: User[] = [
   {
     id: 'a0000000-0000-0000-0000-000000000003',
     name: 'Guilherme DevOps',
-    email: 'guilherme.devops@fatec.sp.gov.br',
+    email: 'guilherme.devops@aluno.cps.sp.gov.br',
     ra: '2840003',
     password_hash: DEFAULT_HASH,
     role: 'CA_MEMBRO',
@@ -71,7 +71,7 @@ const mockUsers: User[] = [
   {
     id: 'a0000000-0000-0000-0000-000000000004',
     name: 'Prof. Orlando',
-    email: 'orlando.docente@fatec.sp.gov.br',
+    email: 'orlando.docente@aluno.cps.sp.gov.br',
     ra: '2849999',
     password_hash: DEFAULT_HASH,
     role: 'PROFESSOR',

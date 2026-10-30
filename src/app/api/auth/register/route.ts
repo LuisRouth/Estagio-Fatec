@@ -11,12 +11,12 @@ import { validatePasswordStrength, sanitizeInput, SECURITY_HEADERS } from '@/lib
 import { ApiResponse, SafeUser } from '@/lib/types';
 
 const RegisterSchema = z.object({
-  name: z.string().min(3, 'O nome deve ter no mínimo 3 caracteres').max(150),
-  email: z.string().email('E-mail institucional inválido').max(180),
-  ra: z.string().min(5, 'O RA deve ter no mínimo 5 dígitos').max(20).optional(),
-  password: z.string().min(8, 'A senha deve ter no mínimo 8 caracteres'),
-  course: z.enum(['IA', 'ESG'], { errorMap: () => ({ message: 'Selecione o curso Inteligência Artificial (IA) ou Gestão ESG' }) }),
-  semester: z.number().int().min(1).max(6),
+  name: z.string().min(3).max(150),
+  email: z.string().email().max(180),
+  ra: z.string().min(5).max(20).optional(),
+  password: z.string().min(8),
+  course: z.enum(['IA', 'ESG']),
+  semester: z.number().int().min(1).max(4),
 });
 
 export async function POST(req: NextRequest) {

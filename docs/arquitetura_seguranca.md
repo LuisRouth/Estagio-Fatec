@@ -17,7 +17,7 @@
 * **Interoperabilidade:** Facilita a integração do frontend desenvolvido por Luis no mesmo repositório ou consumo via chamadas REST padrão.
 
 ### C. Banco de Dados: PostgreSQL
-* **Justificativa:** Banco de dados relacional líder de mercado, robusto e compatível com propriedades ACID (Atomicidade, Consistência, Isolamento, Durabilidade). Essencial para a integridade de transações financeiras e controle de estoque da cantina discente (*Honest Market*).
+* **Justificativa:** Banco de dados relacional líder de mercado, robusto e compatível com propriedades ACID (Atomicidade, Consistência, Isolamento, Durabilidade). Essencial para a integridade de transações financeiras e controle de estoque da cantina discente (autoatendimento discente).
 * **Extensões Utilizadas:** `pgcrypto` para geração nativa de UUIDv4.
 * **Modo Híbrido (Desenvolvimento Cooperativo):** Foi implementada uma camada de abstração em `src/lib/db.ts` que permite operar com PostgreSQL nativo ou em memória (*Mock Seed*) para que a equipe execute os testes localmente sem dependência de infraestrutura externa imediata.
 

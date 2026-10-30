@@ -20,7 +20,7 @@ O presente relatório documenta as atividades técnicas e acadêmicas desenvolvi
 
 | ID | Atividade Realizada | Horas | Evidência / Artefato Produzido |
 | :--- | :--- | :---: | :--- |
-| **ACT-01** | **Levantamento e Análise dos Requisitos de Dados:** Análise do formulário e dataset com 38 respostas discentes, identificando a necessidade de controle estrito da cantina (*Honest Market*), centralização de notas de aula e avisos institucionais. | **10h** | Seção de requisitos do projeto e matriz de entidades. |
+| **ACT-01** | **Levantamento e Análise dos Requisitos de Dados:** Análise do formulário e dataset com 38 respostas discentes, identificando a necessidade de controle estrito da cantina (autoatendimento discente), centralização de notas de aula e avisos institucionais. | **10h** | Seção de requisitos do projeto e matriz de entidades. |
 | **ACT-02** | **Modelagem Conceitual e Lógica do Banco de Dados (DER):** Criação do Diagrama Entidade-Relacionamento contemplando 8 tabelas centrais, chaves estrangeiras, restrições de integridade e índices para alto desempenho. | **16h** | [`database/der.md`](file:///c:/Users/fmsar/OneDrive/Documentos/GitHub/jogo_damas/Estagio-Fatec/database/der.md) e [`database/schema.sql`](file:///c:/Users/fmsar/OneDrive/Documentos/GitHub/jogo_damas/Estagio-Fatec/database/schema.sql). |
 | **ACT-03** | **Scripts DDL e Carga Inicial (Seed):** Elaboração do script SQL para PostgreSQL com triggers automáticos de timestamp, tipos enumerados (ENUMs) e dados iniciais realistas para os cursos de IA e ESG. | **12h** | [`database/schema.sql`](file:///c:/Users/fmsar/OneDrive/Documentos/GitHub/jogo_damas/Estagio-Fatec/database/schema.sql) e [`database/seed.sql`](file:///c:/Users/fmsar/OneDrive/Documentos/GitHub/jogo_damas/Estagio-Fatec/database/seed.sql). |
 | **ACT-04** | **Arquitetura de Segurança, Criptografia e RBAC:** Implementação do motor de autenticação utilizando hash Bcrypt (salt rounds 10), emissão de tokens JWT criptografados (`jose`), cookies seguros HttpOnly e middleware de proteção de rotas por papel (`ALUNO`, `CA_MEMBRO`, `PROFESSOR`, `ADMIN`). | **16h** | [`src/lib/auth.ts`](file:///c:/Users/fmsar/OneDrive/Documentos/GitHub/jogo_damas/Estagio-Fatec/src/lib/auth.ts), [`src/lib/security.ts`](file:///c:/Users/fmsar/OneDrive/Documentos/GitHub/jogo_damas/Estagio-Fatec/src/lib/security.ts) e [`src/middleware.ts`](file:///c:/Users/fmsar/OneDrive/Documentos/GitHub/jogo_damas/Estagio-Fatec/src/middleware.ts). |
@@ -41,11 +41,8 @@ O presente relatório documenta as atividades técnicas e acadêmicas desenvolvi
 ## 4. PRÓXIMOS PASSOS (SPRINT 2 — 03/11 A 09/11/2026)
 
 Na Sprint 2, o discente Cesar avançará com as seguintes tarefas:
-* Implementação dos endpoints do catálogo de produtos e baixa de estoque do *Honest Market*;
+* Implementação dos endpoints do catálogo de produtos e baixa de estoque do *Cantina Discente*;
 * Criação do serviço de geração de Pix dinâmico (Payload EMV padrão Banco Central);
 * APIs para upload e recuperação de materiais acadêmicos;
 * Integração com a validação OCR que será implementada pelo Guilherme.
 
----
-**Assinatura do Discente:** Cesar  
-**Visto do Orientador:** Prof. Orlando
