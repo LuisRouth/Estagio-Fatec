@@ -36,9 +36,16 @@ cp .env.example .env.local
 ```
 *Por padrão, o portal opera em modo híbrido (`USE_MOCK_DB=true`), permitindo testes imediatos de autenticação e dados sem necessidade de instalar um banco PostgreSQL local.*
 
-### 4. Executando os Testes do Backend (Sprint 1)
+### 4. Executando a Esteira de Testes (Backend, IA Gemini & QA - Sprint 1)
 ```bash
-node scripts/test_backend.js
+# Testes Unitários de Segurança e Autenticação (Cesar)
+npm run test:backend
+
+# Teste de Conectividade SDK Google Gemini & OCR Pix (Guilherme)
+npm run test:ai
+
+# Esteira Integrada de QA, DevOps e Auditoria (Guilherme)
+npm run test:qa
 ```
 
 ### 5. Iniciando o Servidor de Desenvolvimento
@@ -51,10 +58,13 @@ Acesse no navegador: `http://localhost:3000`
 
 ## 📚 Documentação do Projeto
 
-* [Plano Mestre de Projeto e Matriz de 200h](docs/relatorio_estagio_sprint1_cesar.md)
+* [Especificação de Requisitos (ERS) e Quadro Trello da Equipe](docs/especificacao_requisitos_trello.md)
+* [Guia DevOps: Hospedagem Vercel, Supabase e SDK Google Gemini](docs/devops_hospedagem_vercel_supabase.md)
 * [Diagrama Entidade-Relacionamento e Dicionário de Dados](database/der.md)
 * [Especificação de Arquitetura, Segurança e Hospedagem](docs/arquitetura_seguranca.md)
 * [Relatório Individual de Atividades - Cesar (Sprint 1)](docs/relatorio_estagio_sprint1_cesar.md)
+* [Relatório Individual de Atividades - Luis (Sprint 1)](docs/relatorio_estagio_sprint1_luis.md)
+* [Relatório Individual de Atividades - Guilherme (Sprint 1)](docs/relatorio_estagio_sprint1_guilherme.md)
 
 ---
 *Observação: Conforme diretrizes institucionais, todos os commits e sincronizações no GitHub são realizados manualmente pelos integrantes da equipe via GitHub Desktop.*
