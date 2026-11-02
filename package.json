@@ -9,7 +9,13 @@
     "start": "next start",
     "lint": "next lint",
     "db:migrate": "node scripts/migrate.js",
-    "db:seed": "node scripts/seed.js"
+    "db:seed": "node scripts/seed.js",
+    "test": "node scripts/test_qa_pipeline.js",
+    "test:backend": "node scripts/test_backend.js",
+    "test:ai": "node scripts/test_gemini.js",
+    "test:qa": "node scripts/test_qa_pipeline.js",
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
