@@ -136,3 +136,32 @@ export interface ApiResponse<T = unknown> {
   error?: string;
   errors?: Record<string, string[]>;
 }
+
+// ====================================================================
+// CONTRATOS DE INTELIGÊNCIA ARTIFICIAL (GOOGLE GEMINI SDK)
+// Responsável: Guilherme (IA, DevOps & QA)
+// ====================================================================
+
+export interface GeminiHealthStatus {
+  connected: boolean;
+  mode: 'LIVE_GEMINI_API' | 'HYBRID_MOCK_AI';
+  model: string;
+  apiKeyConfigured: boolean;
+  latencyMs: number;
+  sampleResponse: string;
+  timestamp: string;
+}
+
+export interface PixReceiptAnalysisResult {
+  isValidReceipt: boolean;
+  extractedAmount: number | null;
+  expectedAmount?: number;
+  amountMatches: boolean;
+  beneficiaryName: string | null;
+  pixEndToEndId: string | null;
+  transactionTimestamp: string | null;
+  confidenceScore: number; // 0.0 a 1.0
+  recommendedStatus: TransactionStatus;
+  reasoning: string;
+}
+
