@@ -1,0 +1,43 @@
+{
+  "name": "portal-fatec-rc",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Portal Integrado dos Estudantes da FATEC Rio Claro — Cursos de IA e Gestão ESG",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "node scripts/migrate.js",
+    "db:seed": "node scripts/seed.js",
+    "test": "node scripts/run_all_tests.js",
+    "test:backend": "node scripts/test_backend.js",
+    "test:gemini": "node scripts/test_gemini.js",
+    "test:unit": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "ci:verify": "node scripts/ci_pipeline_check.js"
+  },
+  "dependencies": {
+    "@google/genai": "^1.0.0",
+    "bcryptjs": "^3.0.2",
+    "jose": "^6.0.8",
+    "next": "^15.1.7",
+    "pg": "^8.13.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^22.13.4",
+    "@types/pg": "^8.11.11",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "dotenv": "^16.4.7",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
+}

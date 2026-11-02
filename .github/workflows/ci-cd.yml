@@ -1,0 +1,47 @@
+name: CI/CD — Portal Integrado FATEC Rio Claro (QA & DevOps)
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_ENV: test
+  USE_MOCK_DB: 'true'
+  JWT_SECRET: 'ci_cd_fatec_rio_claro_test_jwt_secret_key_2026_secure'
+  GEMINI_MODEL: 'gemini-2.5-flash'
+  GEMINI_FALLBACK_MOCK: 'true'
+
+jobs:
+  quality-assurance-and-tests:
+    name: 🧪 Esteira de QA (Segurança, IA Gemini & Testes Automatizados)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout do Repositório
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Configurar Node.js 24 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: 📦 Instalar Dependências
+        run: npm ci
+
+      - name: 🔍 Verificar Tipagem Estática (TypeScript Strict)
+        run: npm run typecheck
+
+      - name: 🔐 Executar Testes de Segurança e Autenticação Backend
+        run: npm run test:backend
+
+      - name: 🤖 Testar Conectividade e Motor OCR do SDK Google Gemini
+        run: npm run test:gemini
+
+      - name: 🧪 Executar Suíte Completa de Testes Unitários e Integração
+        run: npm test
+
+      - name: 🏗️ Validar Build de Produção para Hospedagem Vercel
+        run: npm run build
