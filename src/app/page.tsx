@@ -70,19 +70,9 @@ export default function HomePage() {
 
         {/* Hero Dinâmico com Carrossel Automático Sofisticado */}
         <section
+          className="hero-card"
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
-          style={{
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            borderRadius: '20px',
-            padding: '3rem 2.75rem',
-            border: '1px solid var(--border-light)',
-            boxShadow: 'var(--shadow-md)',
-            position: 'relative',
-            overflow: 'hidden',
-          }}
         >
           {/* Efeito Visual de Luz em Gradiente Mesh */}
           <div
@@ -98,19 +88,9 @@ export default function HomePage() {
             }}
           />
 
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: '2.5rem',
-              position: 'relative',
-              zIndex: 2,
-              flexWrap: 'wrap',
-            }}
-          >
-            {/* Lado Esquerdo: Textos, Cursos e Ações do Slide (Altura padronizada para eliminar saltos de layout) */}
-            <div style={{ flex: '1 1 520px', minWidth: '290px', minHeight: '380px' }}>
+          <div className="hero-content-row">
+            {/* Lado Esquerdo: Textos, Cursos e Ações do Slide */}
+            <div className="hero-text-col">
             <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
               <span className="badge badge-blue">
                 {heroSlides[currentSlide].badge}
@@ -124,31 +104,15 @@ export default function HomePage() {
             </div>
 
             <h1
-              className="animate-fade-in"
+              className="animate-fade-in hero-title"
               key={`title-${currentSlide}`}
-              style={{
-                fontSize: '2.3rem',
-                fontWeight: 800,
-                color: 'var(--text-main)',
-                letterSpacing: '-0.03em',
-                lineHeight: 1.25,
-                marginBottom: '1rem',
-                minHeight: '6.2rem',
-              }}
             >
               {heroSlides[currentSlide].title}
             </h1>
 
             <p
-              className="animate-fade-in"
+              className="animate-fade-in hero-desc"
               key={`desc-${currentSlide}`}
-              style={{
-                color: 'var(--text-sub)',
-                fontSize: '1.025rem',
-                lineHeight: 1.7,
-                marginBottom: '2rem',
-                minHeight: '4.8rem',
-              }}
             >
               {heroSlides[currentSlide].description}
             </p>
@@ -213,8 +177,8 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Lado Direito: Widget Ilustrativo Dinâmico (Livros, Xícara de Café, Explorador) */}
-          <div style={{ flex: '0 0 auto', display: 'flex', justifyContent: 'center' }}>
+          {/* Lado Direito: Widget Ilustrativo Dinâmico */}
+          <div className="hero-visual-col">
             <HeroVisualWidget currentSlide={currentSlide} selectedCourse={selectedCourse} />
           </div>
         </div>

@@ -27,7 +27,7 @@ export function getGeminiConfig() {
 }
 
 /**
- * Executa uma chamada ao modelo Google Gemini (via SDK @google/genai ou Endpoint REST v1beta)
+ * Executa uma chamada ao modelo Google Gemini (via Endpoint REST v1beta com fallback universal)
  */
 async function callGeminiGenerateContent(prompt: string, systemInstruction?: string): Promise<string> {
   const { apiKey, model } = getGeminiConfig();
@@ -35,25 +35,7 @@ async function callGeminiGenerateContent(prompt: string, systemInstruction?: str
     throw new Error('GEMINI_API_KEY não configurada no ambiente.');
   }
 
-  // Tentativa 1: SDK Oficial @google/genai (quando instalado no runtime Node)
-  try {
-    const genaiModule = await import('@google/genai').catch(() => null);
-    if (genaiModule && genaiModule.GoogleGenAI) {
-      const ai = new genaiModule.GoogleGenAI({ apiKey });
-      const response = await ai.models.generateContent({
-        model,
-        contents: prompt,
-        config: systemInstruction ? { systemInstruction } : undefined,
-      });
-      if (response && typeof response.text === 'string') {
-        return response.text;
-      }
-    }
-  } catch {
-    // Continua para chamada REST direta caso o ambiente Edge restrinja imports dinâmicos
-  }
-
-  // Tentativa 2: Chamada direta à API Google Gemini v1beta (Compatível com Edge Runtime / Vercel)
+  // Chamada REST direta à API Google Gemini v1beta (100% nativa, sem dependências externas adicionais, compatível com Edge Runtime e Vercel)
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
     model
   )}:generateContent?key=${encodeURIComponent(apiKey)}`;
@@ -167,7 +149,7 @@ export async function validatePixReceiptWithGemini(
   const brlMatch = cleanText.match(/R\$\s*(\d+[.,]\d{2})/i) || cleanText.match(/(\d+[.,]\d{2})/);
   const extractedAmount = brlMatch ? parseFloat(brlMatch[1].replace(',', '.')) : null;
   const e2eMatch = cleanText.match(/E\d{8}[A-Za-z0-9]{15,32}/);
-  const hasPixKeyword = /pix|comprovante|transfer[êe]ncia|pagamento/i.test(cleanText);
+  const hasPixKeyword = /pix|comprovante|transferência|transferencia|pagamento/i.test(cleanText);
 
   if (config.apiKey) {
     try {
@@ -250,7 +232,7 @@ export async function summarizeAcademicMaterial(
       : ['Gestão ESG', 'Sustentabilidade', 'Governança Corporativa'];
 
   return {
-    summary: `Resumo Assistido por IA (${course}): "${cleanTitle}" — ${cleanDesc.slice(0, 180)}`,
+    summary: `Resumo Assistido por IA (${course}): "${cleanTitle}" - ${cleanDesc.slice(0, 180)}`,
     tags: defaultTags,
     courseContext,
   };
