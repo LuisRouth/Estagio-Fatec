@@ -53,9 +53,22 @@ export interface CanteenProduct {
   updated_at: string;
 }
 
+export interface CanteenTransactionItem {
+  id: string;
+  transaction_id: string;
+  product_id: string;
+  product_name?: string;
+  quantity: number;
+  unit_price: number;
+  subtotal: number;
+  created_at: string;
+}
+
 export interface CanteenTransaction {
   id: string;
   user_id: string;
+  user_name?: string;
+  user_email?: string;
   total_amount: number;
   status: TransactionStatus;
   payment_method: 'PIX';
@@ -68,6 +81,7 @@ export interface CanteenTransaction {
   validated_at?: string | null;
   created_at: string;
   updated_at: string;
+  items?: CanteenTransactionItem[];
 }
 
 export interface Announcement {
@@ -93,6 +107,7 @@ export interface AcademicMaterial {
   course: CourseType;
   semester: number;
   author_id: string;
+  author_name?: string;
   material_type: MaterialType;
   file_url: string;
   github_url?: string | null;
@@ -121,6 +136,44 @@ export interface ApiResponse<T = unknown> {
   data?: T;
   error?: string;
   errors?: Record<string, string[]>;
+}
+
+// ====================================================================
+// TIPOS DO MÓDULO PIX DINÂMICO (PADRÃO BANCO CENTRAL DO BRASIL - EMV)
+// Responsável: Cesar (Backend, Banco de Dados & Segurança)
+// ====================================================================
+
+export interface PixPayloadParams {
+  pixKey?: string;
+  merchantName?: string;
+  merchantCity?: string;
+  amount: number;
+  txid?: string;
+  description?: string;
+}
+
+export interface PixPayloadResult {
+  payload: string;
+  txid: string;
+  amount: number;
+  pixKey: string;
+  merchantName: string;
+  merchantCity: string;
+  qrCodeUrl: string;
+}
+
+export interface PixValidationResult {
+  isValid: boolean;
+  error?: string;
+  payloadFormatIndicator?: string;
+  pixKey?: string;
+  merchantName?: string;
+  merchantCity?: string;
+  amount?: number;
+  txid?: string;
+  description?: string;
+  calculatedCrc?: string;
+  expectedCrc?: string;
 }
 
 // ====================================================================

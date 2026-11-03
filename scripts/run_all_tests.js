@@ -1,6 +1,6 @@
 // ====================================================================
 // ESTEIRA UNIFICADA DE TESTES AUTOMATIZADOS (QA PIPELINE RUNNER)
-// Responsável: Guilherme (DevOps, IA & QA)
+// Responsável: Guilherme (DevOps, IA & QA) e Cesar (Backend & BD)
 // Uso: npm test (ou node scripts/run_all_tests.js)
 // ====================================================================
 
@@ -11,7 +11,7 @@ const crypto = require('crypto');
 async function runFullQAPipeline() {
   console.log('===================================================================');
   console.log('🚀 ESTEIRA DE TESTES AUTOMATIZADOS (QA, DEVOPS, SEGURANÇA & IA)');
-  console.log('Projeto: Portal Integrado FATEC Rio Claro | Responsável: Guilherme');
+  console.log('Projeto: Portal Integrado FATEC Rio Claro | Sprints 1 & 2');
   console.log('===================================================================\n');
 
   let totalPassed = 0;
@@ -32,7 +32,7 @@ async function runFullQAPipeline() {
   // ------------------------------------------------------------------
   // SUÍTE 1: INFRAESTRUTURA DEVOPS (VERCEL, SUPABASE & CI/CD)
   // ------------------------------------------------------------------
-  console.log('📦 [SUÍTE 1/4] Validando Infraestrutura DevOps (Vercel, Supabase & CI/CD)...');
+  console.log('📦 [SUÍTE 1/5] Validando Infraestrutura DevOps (Vercel, Supabase & CI/CD)...');
   const envExamplePath = path.join(rootDir, '.env.example');
   const vercelJsonPath = path.join(rootDir, 'vercel.json');
   const ciWorkflowPath = path.join(rootDir, '.github', 'workflows', 'ci-cd.yml');
@@ -63,7 +63,7 @@ async function runFullQAPipeline() {
   // ------------------------------------------------------------------
   // SUÍTE 2: SEGURANÇA OWASP, AUTENTICAÇÃO & RATE LIMITING
   // ------------------------------------------------------------------
-  console.log('\n🔐 [SUÍTE 2/4] Testando Segurança OWASP, Validação de Senha e Sanitização...');
+  console.log('\n🔐 [SUÍTE 2/5] Testando Segurança OWASP, Validação de Senha e Sanitização...');
   function validatePassword(pw) {
     return (
       typeof pw === 'string' &&
@@ -81,7 +81,6 @@ async function runFullQAPipeline() {
   const sanitized = xssAttempt.trim().replace(/[<>]/g, '').slice(0, 1000);
   assert(!sanitized.includes('<script>'), 'Security', 'Sanitização neutraliza vetores XSS (<script>)');
 
-  // Teste de assinatura HMAC-SHA256 (equivalente ao núcleo criptográfico JWT HS256)
   const jwtHeader = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
   const jwtPayload = Buffer.from(
     JSON.stringify({ sub: 'a0000000-0000-0000-0000-000000000003', role: 'CA_MEMBRO', course: 'IA' })
@@ -96,7 +95,7 @@ async function runFullQAPipeline() {
   // ------------------------------------------------------------------
   // SUÍTE 3: INTELIGÊNCIA ARTIFICIAL (GOOGLE GEMINI SDK & OCR PIX)
   // ------------------------------------------------------------------
-  console.log('\n🤖 [SUÍTE 3/4] Testando Conectividade SDK Google Gemini e Motor OCR Pix...');
+  console.log('\n🤖 [SUÍTE 3/5] Testando Conectividade SDK Google Gemini e Motor OCR Pix...');
   const geminiLibPath = path.join(rootDir, 'src', 'lib', 'gemini.ts');
   const geminiRoutePath = path.join(rootDir, 'src', 'app', 'api', 'ai', 'status', 'route.ts');
   assert(fs.existsSync(geminiLibPath), 'Gemini-AI', 'Módulo src/lib/gemini.ts implementado');
@@ -124,9 +123,60 @@ async function runFullQAPipeline() {
   );
 
   // ------------------------------------------------------------------
-  // SUÍTE 4: ARQUITETURA FRONTEND, ROTAS E DOCUMENTAÇÃO DE REQUISITOS
+  // SUÍTE 4: MÓDULOS CENTRAIS DA SPRINT 2 (CESAR - CANTINA, PIX, EXTRATO & TCC)
   // ------------------------------------------------------------------
-  console.log('\n🧭 [SUÍTE 4/4] Verificando Rotas da Aplicação, Configs Vitest/Playwright e Documentação...');
+  console.log('\n💳 [SUÍTE 4/5] Validando Módulos Centrais Sprint 2 (Cesar: Pix Dinâmico, Catálogo, Checkout, Histórico & TCC)...');
+  
+  // 1. Pix EMV
+  function calculateCRC16(data) {
+    let crc = 0xffff;
+    for (let i = 0; i < data.length; i++) {
+      crc ^= data.charCodeAt(i) << 8;
+      for (let j = 0; j < 8; j++) {
+        if ((crc & 0x8000) !== 0) {
+          crc = ((crc << 1) ^ 0x1021) & 0xffff;
+        } else {
+          crc = (crc << 1) & 0xffff;
+        }
+      }
+    }
+    return crc.toString(16).toUpperCase().padStart(4, '0');
+  }
+  assert(calculateCRC16('123456789') === '29B1', 'Sprint2-Pix', 'Cálculo de CRC-16/CCITT-FALSE compatível com padrão BACEN');
+
+  const pixLib = path.join(rootDir, 'src', 'lib', 'pix.ts');
+  const pixGenerate = path.join(rootDir, 'src', 'app', 'api', 'pix', 'generate', 'route.ts');
+  const pixValidate = path.join(rootDir, 'src', 'app', 'api', 'pix', 'validate', 'route.ts');
+  assert(fs.existsSync(pixLib), 'Sprint2-Pix', 'Serviço de geração Pix EMV (src/lib/pix.ts) presente');
+  assert(fs.existsSync(pixGenerate), 'Sprint2-Pix', 'API de geração Pix dinâmica (/api/pix/generate) presente');
+  assert(fs.existsSync(pixValidate), 'Sprint2-Pix', 'API de validação Pix (/api/pix/validate) presente');
+
+  // 2. Catálogo & Estoque
+  const canteenProdRoute = path.join(rootDir, 'src', 'app', 'api', 'canteen', 'products', 'route.ts');
+  const canteenStockRoute = path.join(rootDir, 'src', 'app', 'api', 'canteen', 'products', '[id]', 'stock', 'route.ts');
+  assert(fs.existsSync(canteenProdRoute), 'Sprint2-Canteen', 'CRUD de catálogo (/api/canteen/products) presente');
+  assert(fs.existsSync(canteenStockRoute), 'Sprint2-Canteen', 'Controle de estoque (/api/canteen/products/[id]/stock) presente');
+
+  // 3. Checkout e Histórico / Extrato
+  const checkoutRoute = path.join(rootDir, 'src', 'app', 'api', 'canteen', 'checkout', 'route.ts');
+  const historyRoute = path.join(rootDir, 'src', 'app', 'api', 'canteen', 'history', 'route.ts');
+  const txRoute = path.join(rootDir, 'src', 'app', 'api', 'canteen', 'transactions', 'route.ts');
+  assert(fs.existsSync(checkoutRoute), 'Sprint2-Orders', 'Checkout com Pix EMV (/api/canteen/checkout) presente');
+  assert(fs.existsSync(historyRoute), 'Sprint2-Orders', 'Extrato de compras do aluno (/api/canteen/history) presente');
+  assert(fs.existsSync(txRoute), 'Sprint2-Orders', 'Histórico e auditoria de compras (/api/canteen/transactions) presente');
+
+  // 4. Repositório e TCC
+  const materialsRoute = path.join(rootDir, 'src', 'app', 'api', 'materials', 'route.ts');
+  const materialsUpload = path.join(rootDir, 'src', 'app', 'api', 'materials', 'upload', 'route.ts');
+  const announcementsRoute = path.join(rootDir, 'src', 'app', 'api', 'announcements', 'route.ts');
+  assert(fs.existsSync(materialsRoute), 'Sprint2-Materials', 'Repositório acadêmico e TCC (/api/materials) presente');
+  assert(fs.existsSync(materialsUpload), 'Sprint2-Materials', 'Endpoint de upload de materiais (/api/materials/upload) presente');
+  assert(fs.existsSync(announcementsRoute), 'Sprint2-Materials', 'Mural de comunicados (/api/announcements) presente');
+
+  // ------------------------------------------------------------------
+  // SUÍTE 5: ARQUITETURA FRONTEND, ROTAS E DOCUMENTAÇÃO DE REQUISITOS
+  // ------------------------------------------------------------------
+  console.log('\n🧭 [SUÍTE 5/5] Verificando Rotas da Aplicação, Configs Vitest/Playwright e Documentação...');
   const requiredRoutes = [
     'src/app/page.tsx',
     'src/app/login/page.tsx',
@@ -152,10 +202,10 @@ async function runFullQAPipeline() {
 
   assert(
     fs.existsSync(path.join(rootDir, 'tests', 'unit', 'security.test.ts')) &&
-      fs.existsSync(path.join(rootDir, 'tests', 'unit', 'gemini.test.ts')) &&
-      fs.existsSync(path.join(rootDir, 'tests', 'e2e', 'portal.spec.ts')),
+      fs.existsSync(path.join(rootDir, 'tests', 'unit', 'canteen_pix.test.ts')) &&
+      fs.existsSync(path.join(rootDir, 'tests', 'unit', 'materials.test.ts')),
     'QA-Suites',
-    'Suítes de testes unitários e End-to-End (E2E) estruturadas em /tests'
+    'Suítes de testes unitários da Sprint 2 estruturadas em /tests/unit'
   );
 
   console.log('\n===================================================================');

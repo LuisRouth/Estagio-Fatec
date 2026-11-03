@@ -27,7 +27,7 @@
 ```mermaid
 flowchart LR
     L1["📌 1. Diretrizes & Recursos"] --> L2["✅ 2. Sprint 1 — Concluído (27/10 a 02/11)"]
-    L2 --> L3["🚀 3. Sprint 2 — Em Execução (03/11 a 09/11)"]
+    L2 --> L3["🚀 3. Sprint 2 — Entregas Cesar Concluídas (03/11 a 09/11)"]
     L3 --> L4["🔬 4. Em Homologação / QA"]
     L4 --> L5["🎯 5. Sprint 3 — Backlog Futuro (10/11 a 16/11)"]
 ```
@@ -40,66 +40,61 @@ flowchart LR
 * **Card #00 — Visão do Produto & Pesquisa com 38 Alunos (IA + ESG)**
   * **Membros:** `@cesar`, `@luis`, `@guilherme`
   * **Descrição:** Centralizar resultados do formulário discente (38 respostas), unindo as turmas de IA (Matutino) e Gestão ESG (Noturno).
-  * **Anexos Vinculados:** [`docs/especificacao_requisitos.md`](file:///c:/Users/guilh/Documents/GitHub/Estagio-Fatec/docs/especificacao_requisitos.md), [`database/der.md`](file:///c:/Users/guilh/Documents/GitHub/Estagio-Fatec/database/der.md), [`docs/arquitetura_seguranca.md`](file:///c:/Users/guilh/Documents/GitHub/Estagio-Fatec/docs/arquitetura_seguranca.md) e [`docs/devops_vercel_supabase.md`](file:///c:/Users/guilh/Documents/GitHub/Estagio-Fatec/docs/devops_vercel_supabase.md).
+  * **Anexos Vinculados:** [`docs/especificacao_requisitos.md`](file:///c:/Users/fmsar/OneDrive/Documentos/GitHub/jogo_damas/Estagio-Fatec/docs/especificacao_requisitos.md), [`database/der.md`](file:///c:/Users/fmsar/OneDrive/Documentos/GitHub/jogo_damas/Estagio-Fatec/database/der.md), [`docs/arquitetura_seguranca.md`](file:///c:/Users/fmsar/OneDrive/Documentos/GitHub/jogo_damas/Estagio-Fatec/docs/arquitetura_seguranca.md) e [`docs/devops_vercel_supabase.md`](file:///c:/Users/fmsar/OneDrive/Documentos/GitHub/jogo_damas/Estagio-Fatec/docs/devops_vercel_supabase.md).
 
 ---
 
 ### ✅ COLUNA 2: SPRINT 1 — CONCLUÍDO (27/10 A 02/11/2026 — 66H POR INTEGRANTE)
 
 #### 🔹 Entregas de DevOps, IA & QA — **Guilherme (66h)**
-* **Card #G1 — Configurar Ambiente de Hospedagem e Variáveis na Vercel e Supabase** `[DEVOPS & CLOUD]` `(16h)`
-  * **Responsável:** `@guilherme` | **Status:** ✅ Concluído
-  * **Checklist:**
-    - [x] Mapear e padronizar variáveis de ambiente em [`.env.example`](file:///c:/Users/guilh/Documents/GitHub/Estagio-Fatec/.env.example) (`DATABASE_URL`, `DIRECT_URL`, chaves Supabase, `JWT_SECRET` e `GEMINI_API_KEY`).
-    - [x] Configurar [`vercel.json`](file:///c:/Users/guilh/Documents/GitHub/Estagio-Fatec/vercel.json) na região `gru1` (São Paulo) com headers OWASP e timeouts para Serverless Functions.
-    - [x] Estruturar pipeline CI/CD no GitHub Actions ([`.github/workflows/ci-cd.yml`](file:///c:/Users/guilh/Documents/GitHub/Estagio-Fatec/.github/workflows/ci-cd.yml)).
-    - [x] Documentar guia de deploy e Connection Pooling (Supavisor) em [`docs/devops_vercel_supabase.md`](file:///c:/Users/guilh/Documents/GitHub/Estagio-Fatec/docs/devops_vercel_supabase.md).
-
-* **Card #G2 — Configurar Chaves de API e Testar Conectividade com o SDK do Google Gemini** `[IA & GEMINI SDK]` `(18h)`
-  * **Responsável:** `@guilherme` | **Status:** ✅ Concluído
-  * **Checklist:**
-    - [x] Implementar serviço [`src/lib/gemini.ts`](file:///c:/Users/guilh/Documents/GitHub/Estagio-Fatec/src/lib/gemini.ts) integrado ao SDK `@google/genai` (`gemini-2.5-flash`) com fallback resiliente para QA.
-    - [x] Criar função de validação OCR de comprovantes Pix (`validatePixReceiptWithGemini`) extraindo valor monetário e ID End-to-End.
-    - [x] Construir endpoint de diagnóstico `GET/POST /api/ai/status` ([`src/app/api/ai/status/route.ts`](file:///c:/Users/guilh/Documents/GitHub/Estagio-Fatec/src/app/api/ai/status/route.ts)).
-    - [x] Criar e validar script CLI [`scripts/test_gemini.js`](file:///c:/Users/guilh/Documents/GitHub/Estagio-Fatec/scripts/test_gemini.js) (`npm run test:gemini`).
-
-* **Card #G3 — Definir a Esteira de Testes Automatizados (Vitest / Playwright)** `[QA & REQUISITOS]` `(16h)`
-  * **Responsável:** `@guilherme` | **Status:** ✅ Concluído
-  * **Checklist:**
-    - [x] Configurar **Vitest** ([`vitest.config.ts`](file:///c:/Users/guilh/Documents/GitHub/Estagio-Fatec/vitest.config.ts)) para testes unitários e de integração.
-    - [x] Configurar **Playwright** ([`playwright.config.ts`](file:///c:/Users/guilh/Documents/GitHub/Estagio-Fatec/playwright.config.ts)) para testes E2E Desktop e Mobile PWA.
-    - [x] Implementar suítes em `tests/unit/` (`security.test.ts`, `gemini.test.ts`, `db_rbac.test.ts`) e `tests/e2e/portal.spec.ts`.
-    - [x] Criar orquestrador unificado [`scripts/run_all_tests.js`](file:///c:/Users/guilh/Documents/GitHub/Estagio-Fatec/scripts/run_all_tests.js) (`npm test` com 100% de aprovação).
-
-* **Card #G4 — Elaborar Documento de Especificação de Requisitos e Quadro Trello da Equipe** `[QA & REQUISITOS]` `(16h)`
-  * **Responsável:** `@guilherme` | **Status:** ✅ Concluído
-  * **Checklist:**
-    - [x] Redigir Especificação de Requisitos (ERS / IEEE 830) em [`docs/especificacao_requisitos.md`](file:///c:/Users/guilh/Documents/GitHub/Estagio-Fatec/docs/especificacao_requisitos.md) (RF-01 a RF-18, RNF-01 a RNF-12 e Matriz de Rastreabilidade).
-    - [x] Estruturar Quadro Trello oficial da equipe em [`docs/quadro_trello_equipe.md`](file:///c:/Users/guilh/Documents/GitHub/Estagio-Fatec/docs/quadro_trello_equipe.md).
-    - [x] Consolidar Relatório Individual da Sprint 1 em [`docs/relatorio_estagio_sprint1_guilherme.md`](file:///c:/Users/guilh/Documents/GitHub/Estagio-Fatec/docs/relatorio_estagio_sprint1_guilherme.md).
-
----
+* **Card #G1 — Configurar Ambiente de Hospedagem e Variáveis na Vercel e Supabase** `[DEVOPS & CLOUD]` `(16h)` — ✅ Concluído
+* **Card #G2 — Configurar Chaves de API e Testar Conectividade com o SDK do Google Gemini** `[IA & GEMINI SDK]` `(18h)` — ✅ Concluído
+* **Card #G3 — Definir a Esteira de Testes Automatizados (Vitest / Playwright)** `[QA & REQUISITOS]` `(16h)` — ✅ Concluído
+* **Card #G4 — Elaborar Documento de Especificação de Requisitos e Quadro Trello da Equipe** `[QA & REQUISITOS]` `(16h)` — ✅ Concluído
 
 #### 🔹 Entregas de Backend, Banco de Dados & Segurança — **Cesar (66h)**
 * **Card #C1 — Modelagem Relacional (DER) e DDL PostgreSQL (8 Tabelas)** `[BACKEND & DB]` `(28h)` — ✅ Concluído (`database/der.md`, `database/schema.sql`, `database/seed.sql`)
 * **Card #C2 — Motor de Autenticação Bcrypt, JWT (`jose`) e RBAC Middleware** `[SEGURANÇA OWASP]` `(24h)` — ✅ Concluído (`src/lib/auth.ts`, `src/lib/security.ts`, `src/middleware.ts`)
 * **Card #C3 — Endpoints REST de Autenticação, Health Check e Testes de Segurança** `[BACKEND & DB]` `(14h)` — ✅ Concluído (`src/app/api/auth/*`, `src/app/api/health/route.ts`, `scripts/test_backend.js`)
 
----
-
 #### 🔹 Entregas de Frontend, UI/UX, Acessibilidade & PWA — **Luis (66h)**
-* **Card #L1 — Pesquisa de UX, Identidade Visual FATEC/CPS e Mascote Galo Widget** `[FRONTEND & UI/UX]` `(22h)` — ✅ Concluído (`src/components/brand/*`, `public/brand/*`)
-* **Card #L2 — Design System Simbiótico (IA/ESG), Fundo Toroidal Canvas e Zero CLS** `[FRONTEND & UI/UX]` `(20h)` — ✅ Concluído (`src/app/globals.css`, `src/components/layout/EcoTechBackground.tsx`, `src/app/page.tsx`)
-* **Card #L3 — Layout Multiplataforma PWA, Login, Cadastro e Rotas Acadêmicas** `[FRONTEND & UI/UX]` `(24h)` — ✅ Concluído (`src/components/layout/AppLayout.tsx`, `src/app/login/page.tsx`, `src/app/cadastro/page.tsx`, `public/manifest.json`)
+* **Card #L1 — Pesquisa de UX, Identidade Visual FATEC/CPS e Mascote Galo Widget** `[FRONTEND & UI/UX]` `(22h)` — ✅ Concluído
+* **Card #L2 — Design System Simbiótico (IA/ESG), Fundo Toroidal Canvas e Zero CLS** `[FRONTEND & UI/UX]` `(20h)` — ✅ Concluído
+* **Card #L3 — Layout Multiplataforma PWA, Login, Cadastro e Rotas Acadêmicas** `[FRONTEND & UI/UX]` `(24h)` — ✅ Concluído
 
 ---
 
-### 🚀 COLUNA 3: SPRINT 2 — EM PLANEJAMENTO / EXECUÇÃO (03/11 A 09/11/2026 — 67H POR INTEGRANTE)
+### 🚀 COLUNA 3: SPRINT 2 — EM EXECUÇÃO / HOMOLOGAÇÃO (03/11 A 09/11/2026 — 67H POR INTEGRANTE)
 
+#### 🔹 Entregas de Backend, Banco de Dados & Segurança — **Cesar (67h / Total: 133h)**
+* **Card #S2-C1 — Endpoints CRUD do Catálogo da Cantina e Controle de Estoque** `[BACKEND & DB]` `(20h)` — ✅ Concluído
+  - [x] Endpoint `GET /api/canteen/products`: listagem com filtros por categoria e busca textual.
+  - [x] Endpoint `POST /api/canteen/products`: cadastro restrito a membros do CA e Administradores (`CA_MEMBRO`/`ADMIN`).
+  - [x] Endpoint `GET/PUT/DELETE /api/canteen/products/[id]`: consulta, atualização cadastral e exclusão lógica/física.
+  - [x] Endpoint `PATCH /api/canteen/products/[id]/stock`: ajuste e reposição de estoque com verificação de não-negatividade e alertas de estoque mínimo (`min_stock_alert`).
+
+* **Card #S2-C2 — Motor de Pix Dinâmico EMV Padrão Banco Central e Checkout da Cantina** `[BACKEND & SEGURANÇA]` `(20h)` — ✅ Concluído
+  - [x] Serviço `src/lib/pix.ts`: codificação TLV (Tags 00 a 63), cálculo do checksum CRC-16/CCITT-FALSE (polinômio 0x1021, init 0xFFFF) e geração de `txid` único.
+  - [x] Validador `validatePixPayload` com decodificação e auditoria reversa de integridade.
+  - [x] Endpoint `POST /api/canteen/checkout`: criação do pedido, cálculo monetário exato, geração do payload Pix Copia-e-Cola e baixa de estoque atômica (ACID).
+  - [x] Endpoints utilitários `POST /api/pix/generate` e `POST /api/pix/validate`.
+
+* **Card #S2-C3 — API de Histórico e Extrato de Compras do Aluno** `[BACKEND & DB]` `(14h)` — ✅ Concluído
+  - [x] Endpoint `GET /api/canteen/history`: extrato financeiro pessoal consolidado com total gasto, status e itens de cada compra.
+  - [x] Endpoint `GET /api/canteen/transactions`: listagem auditada de pedidos para o discente e visão gerencial para o Centro Acadêmico.
+  - [x] Endpoint `GET/PATCH /api/canteen/transactions/[id]`: consulta detalhada e atualização de status.
+  - [x] Endpoint `POST /api/canteen/transactions/[id]/proof`: anexo de comprovante Pix para análise discente e OCR Gemini.
+
+* **Card #S2-C4 — Repositório Acadêmico e Vitrine de TCCs** `[BACKEND & DB]` `(13h)` — ✅ Concluído
+  - [x] Endpoint `GET /api/materials`: busca e filtragem por curso (`IA`/`ESG`), semestre (1º ao 6º), tipo (`SLIDE`, `APOSTILA`, `CODIGO`, `TCC`, `DATASET`) e busca textual.
+  - [x] Endpoint `POST /api/materials`: publicação de material ou projeto de TCC com categorização automática e normalização de tags.
+  - [x] Endpoint `POST /api/materials/upload`: upload seguro com restrição de extensões (`.pdf`, `.ipynb`, `.zip`, etc.) e sanitização anti-path-traversal.
+  - [x] Endpoint `POST /api/materials/[id]/download`: download contabilizado com atualização incremental atômica.
+  - [x] Endpoint `GET/POST /api/announcements`: mural oficial de avisos segmentado por curso e prioridade.
+
+#### 🔹 Entregas em Andamento dos Colegas (Sprint 2):
 * **Card #S2-G1 (Guilherme — IA & QA):** Upload Multimodal de Imagem de Comprovante Pix (Base64/Storage Supabase) para o OCR do Google Gemini e Painel de Auditoria do CA.
 * **Card #S2-G2 (Guilherme — QA):** Testes Automatizados de Carga e E2E do Fluxo Completo de Compra na Cantina Discente.
-* **Card #S2-C1 (Cesar — Backend):** Endpoints REST de Catálogo da Cantina (`/api/canteen/products`), Checkout Pix EMV (`/api/canteen/checkout`) e Baixa Automática de Estoque.
-* **Card #S2-C2 (Cesar — Backend):** Endpoints REST de Repositório Acadêmico (`/api/materials`) e Mural de Avisos (`/api/announcements`).
 * **Card #S2-L1 (Luis — Frontend):** Integração Dinâmica da Tela da Cantina (`/cantina`) com Carrinho Interativo, QR Code Pix em Tempo Real e Upload de Comprovante.
 * **Card #S2-L2 (Luis — Frontend):** Filtros Dinâmicos no Repositório Acadêmico (`/repositorio`) por Semestre (1º ao 4º) e Curso (`IA` / `ESG`).
 
