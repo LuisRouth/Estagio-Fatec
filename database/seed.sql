@@ -7,11 +7,11 @@
 
 -- 1. Inserção de Usuários de Exemplo
 INSERT INTO users (id, name, email, ra, password_hash, role, course, semester) VALUES
-('a0000000-0000-0000-0000-000000000001', 'Cesar Administrador', 'cesar.admin@fatec.sp.gov.br', '2840001', '$2a$10$wT8K5qD1nK9oH8y0y2bDqO4h2aM4u3q1w0o3t2z1e9m8a7p6s5d4e', 'ADMIN', 'IA', 4),
-('a0000000-0000-0000-0000-000000000002', 'Luis Desenvolvedor', 'luis.dev@fatec.sp.gov.br', '2840002', '$2a$10$wT8K5qD1nK9oH8y0y2bDqO4h2aM4u3q1w0o3t2z1e9m8a7p6s5d4e', 'CA_MEMBRO', 'IA', 4),
-('a0000000-0000-0000-0000-000000000003', 'Guilherme DevOps', 'guilherme.devops@fatec.sp.gov.br', '2840003', '$2a$10$wT8K5qD1nK9oH8y0y2bDqO4h2aM4u3q1w0o3t2z1e9m8a7p6s5d4e', 'CA_MEMBRO', 'IA', 4),
-('a0000000-0000-0000-0000-000000000004', 'Prof. Orlando', 'orlando.docente@fatec.sp.gov.br', '2849999', '$2a$10$wT8K5qD1nK9oH8y0y2bDqO4h2aM4u3q1w0o3t2z1e9m8a7p6s5d4e', 'PROFESSOR', 'IA', 4),
-('a0000000-0000-0000-0000-000000000005', 'Mariana ESG Silva', 'mariana.esg@fatec.sp.gov.br', '2841005', '$2a$10$wT8K5qD1nK9oH8y0y2bDqO4h2aM4u3q1w0o3t2z1e9m8a7p6s5d4e', 'ALUNO', 'ESG', 2)
+('a0000000-0000-0000-0000-000000000001', 'Cesar Bovo', 'cesar.admin@aluno.cps.sp.gov.br', '2840001', '$2a$10$wT8K5qD1nK9oH8y0y2bDqO4h2aM4u3q1w0o3t2z1e9m8a7p6s5d4e', 'ADMIN', 'IA', 4),
+('a0000000-0000-0000-0000-000000000002', 'Luis Otavio', 'luis.dev@aluno.cps.sp.gov.br', '2840002', '$2a$10$wT8K5qD1nK9oH8y0y2bDqO4h2aM4u3q1w0o3t2z1e9m8a7p6s5d4e', 'ADMIN', 'IA', 4),
+('a0000000-0000-0000-0000-000000000003', 'Guilherme Romanzotti', 'guilherme.devops@aluno.cps.sp.gov.br', '2840003', '$2a$10$wT8K5qD1nK9oH8y0y2bDqO4h2aM4u3q1w0o3t2z1e9m8a7p6s5d4e', 'ADMIN', 'IA', 4),
+('a0000000-0000-0000-0000-000000000004', 'Prof. Orlando', 'orlando.docente@aluno.cps.sp.gov.br', '2849999', '$2a$10$wT8K5qD1nK9oH8y0y2bDqO4h2aM4u3q1w0o3t2z1e9m8a7p6s5d4e', 'PROFESSOR', 'IA', 4),
+('a0000000-0000-0000-0000-000000000005', 'Mariana ESG Silva', 'mariana.esg@aluno.cps.sp.gov.br', '2841005', '$2a$10$wT8K5qD1nK9oH8y0y2bDqO4h2aM4u3q1w0o3t2z1e9m8a7p6s5d4e', 'ALUNO', 'ESG', 2)
 ON CONFLICT (email) DO NOTHING;
 
 -- 2. Inserção de Produtos da Cantina Discente (Honest Market)

@@ -37,6 +37,11 @@
   padding: 0;
 }
 
+img {
+  max-width: 100%;
+  height: auto;
+}
+
 /* Fundo Suave Integrado: Tecnologia (IA) & Sustentabilidade (ESG) */
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -361,6 +366,7 @@ a.btn-secondary:hover:not(:disabled) {
   min-height: calc(100vh - 70px);
   position: relative;
   background: transparent;
+  padding-top: var(--header-height);
 }
 
 /* Desktop (>= 1024px) */
@@ -399,6 +405,37 @@ a.btn-secondary:hover:not(:disabled) {
     min-height: calc(100vh - 70px) !important;
     background: transparent !important;
   }
+}
+
+/* Animação Mecânica Rítmica de Engrenagens Interconectadas (3 Engrenagens) */
+@keyframes gearSpinCW {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes gearSpinCCW {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(-360deg); }
+}
+
+.gear-spin-cw {
+  animation: gearSpinCW 3s steps(12, end) infinite;
+  transform-origin: center center;
+}
+
+.gear-spin-ccw {
+  animation: gearSpinCCW 2.4s steps(12, end) infinite;
+  transform-origin: center center;
+}
+
+.gear-spin-cw-fast {
+  animation: gearSpinCW 1.8s steps(12, end) infinite;
+  transform-origin: center center;
+}
+
+.gear-spin-rhythm {
+  animation: gearSpinCW 3s steps(12, end) infinite;
+  transform-origin: center center;
 }
 
 /* Mobile e Tablet (< 1024px) */
@@ -441,4 +478,292 @@ a.btn-secondary:hover:not(:disabled) {
     min-height: calc(100vh - 70px) !important;
     background: transparent !important;
   }
+}
+
+
+/* Prevenção de overflow horizontal */
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* ====================================================================
+   MODO ALTO CONTRASTE NOTURNO / CINZA ESCURO (INCLUSIVO & e-MAG)
+   Paleta Harmonizada de 2 Tons:
+   1. Tom Escuro Base dos Cards: #151e2e
+   2. Tom Secundário ("Mais Cinzinha"): #243044
+   ==================================================================== */
+.dark-high-contrast {
+  --bg-primary: #0b1120 !important;
+  --bg-card: #151e2e !important;
+  --bg-muted: #243044 !important;
+  --text-main: #f8fafc !important;
+  --text-muted: #94a3b8 !important;
+  --text-sub: #cbd5e1 !important;
+  --border-light: #2b3a4f !important;
+  background-color: #0b1120 !important;
+  color: #f8fafc !important;
+}
+
+html.dark-high-contrast,
+body.dark-high-contrast {
+  background-color: #0b1120 !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast header {
+  background-color: #0b1120 !important;
+  border-bottom: 1px solid #2b3a4f !important;
+}
+
+.dark-high-contrast .layout-sidebar {
+  background-color: #0b1120 !important;
+  border-right: 1px solid #2b3a4f !important;
+}
+
+.dark-high-contrast footer {
+  background-color: #0b1120 !important;
+  border-top: 1px solid #2b3a4f !important;
+}
+
+/* Todos os Cards Principais (Mural, Repositório, Hero, etc.) */
+.dark-high-contrast .hero-card,
+.dark-high-contrast .card-interactive,
+.dark-high-contrast div[style*="background-color: #ffffff"],
+.dark-high-contrast div[style*="background-color: rgb(255, 255, 255)"],
+.dark-high-contrast div[style*="backgroundColor: '#ffffff'"],
+.dark-high-contrast section[style*="background-color: #ffffff"],
+.dark-high-contrast section[style*="background-color: rgb(255, 255, 255)"],
+.dark-high-contrast form > div[style*="background-color: #ffffff"] {
+  background-color: #151e2e !important;
+  border: 1px solid #2b3a4f !important;
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.4) !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .hero-card .hero-text-col,
+.dark-high-contrast .hero-card h1,
+.dark-high-contrast .hero-card p {
+  color: #f8fafc !important;
+}
+
+/* Sub-containers e caixas secundárias (O Tom "Mais Cinzinha": #243044) */
+.dark-high-contrast div[style*="background-color: var(--bg-primary)"],
+.dark-high-contrast div[style*="background-color: var(--bg-muted)"],
+.dark-high-contrast div[style*="backgroundColor: 'var(--bg-primary)'"],
+.dark-high-contrast div[style*="backgroundColor: 'var(--bg-muted)'"],
+.dark-high-contrast div[style*="border: 1px dashed"],
+.dark-high-contrast div[style*="border: 1px dashed var(--border-light)"] {
+  background-color: #243044 !important;
+  border-color: #3b4a63 !important;
+  color: #e2e8f0 !important;
+}
+
+/* Títulos, Labels e Parágrafos */
+.dark-high-contrast h1,
+.dark-high-contrast h2,
+.dark-high-contrast h3,
+.dark-high-contrast h4,
+.dark-high-contrast strong,
+.dark-high-contrast label,
+.dark-high-contrast .label {
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast p {
+  color: #cbd5e1 !important;
+}
+
+/* Botões com fundo branco ou cinza claro (Corrigido para o tom mais cinzinha #243044) */
+.dark-high-contrast button[style*="background-color: #ffffff"],
+.dark-high-contrast button[style*="background-color: rgb(255, 255, 255)"],
+.dark-high-contrast button[style*="backgroundColor: '#ffffff'"],
+.dark-high-contrast .btn-secondary {
+  background-color: #243044 !important;
+  border-color: #3b4a63 !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast button[style*="background-color: #ffffff"]:hover,
+.dark-high-contrast .btn-secondary:hover {
+  background-color: #2d3d56 !important;
+  border-color: #0284c7 !important;
+}
+
+/* Botões de Ação Primária */
+.dark-high-contrast .btn-primary {
+  background-color: #0284c7 !important;
+  color: #ffffff !important;
+  border-color: #0284c7 !important;
+}
+
+/* Inputs e Selects */
+.dark-high-contrast input,
+.dark-high-contrast select,
+.dark-high-contrast textarea {
+  background-color: #101726 !important;
+  color: #f8fafc !important;
+  border-color: #2b3a4f !important;
+}
+
+.dark-high-contrast select option {
+  background-color: #101726 !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast input[disabled],
+.dark-high-contrast input[readonly] {
+  background-color: #182232 !important;
+  color: #94a3b8 !important;
+}
+
+.dark-high-contrast input::placeholder {
+  color: #64748b !important;
+}
+
+/* Caixa Azul de Aviso Discente ("Por que o semestre pode ser alterado aqui?") */
+.dark-high-contrast div[style*="background-color: var(--accent-blue-light)"] {
+  background-color: #16263d !important;
+  border: 1px solid rgba(2, 132, 199, 0.4) !important;
+  color: #7dd3fc !important;
+}
+
+.dark-high-contrast div[style*="background-color: var(--accent-blue-light)"] strong {
+  color: #bae6fd !important;
+}
+
+/* Badges e Tags */
+.dark-high-contrast .badge-blue {
+  background-color: rgba(2, 132, 199, 0.25) !important;
+  color: #38bdf8 !important;
+  border-color: rgba(56, 189, 248, 0.4) !important;
+}
+
+.dark-high-contrast .badge-emerald {
+  background-color: rgba(5, 150, 105, 0.25) !important;
+  color: #34d399 !important;
+  border-color: rgba(52, 211, 153, 0.4) !important;
+}
+
+.dark-high-contrast .hamburger-btn,
+.dark-high-contrast .mobile-close-btn {
+  color: #f8fafc !important;
+  border-color: #2b3a4f !important;
+}
+
+
+/* Logo FATEC Transparente (Alternância Clara / Escura) */
+.logo-fatec-light {
+  display: block;
+}
+.logo-fatec-dark {
+  display: none !important;
+}
+
+.dark-high-contrast .logo-fatec-light {
+  display: none !important;
+}
+.dark-high-contrast .logo-fatec-dark {
+  display: block !important;
+}
+.dark-high-contrast .logo-fatec-divider {
+  background-color: #475569 !important;
+}
+
+/* Galo Mascote no Tema Escuro (Fundo sem quadrado branco) */
+.dark-high-contrast .galo-square-btn {
+  background-color: #151e2e !important;
+  border-color: #2b3a4f !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* ==================================================================== */
+/* TELAS DE AUTENTICAÇÃO: LOGIN, CADASTRO E VERIFICAÇÃO DE E-MAIL       */
+/* ==================================================================== */
+.auth-page-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1.5rem;
+  position: relative;
+  background-color: #f8fafc;
+  transition: background-color 0.2s ease;
+}
+
+.dark-high-contrast .auth-page-container {
+  background-color: #0b1120 !important;
+}
+
+.auth-card {
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-lg);
+  color: var(--text-main);
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.dark-high-contrast .auth-card {
+  background-color: rgba(21, 30, 46, 0.96) !important;
+  border-color: #2b3a4f !important;
+  box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.6) !important;
+  color: #f8fafc !important;
+}
+
+.auth-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-sub);
+  text-decoration: none;
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  background-color: rgba(241, 245, 249, 0.8);
+  border: 1px solid var(--border-light);
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.auth-back-btn:hover {
+  background-color: rgba(226, 232, 240, 0.9);
+  color: var(--text-main);
+}
+
+.dark-high-contrast .auth-back-btn {
+  background-color: #243044 !important;
+  border-color: #3b4a63 !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .auth-back-btn:hover {
+  background-color: #2d3d56 !important;
+  border-color: #0284c7 !important;
+}
+
+.dark-high-contrast .auth-card a {
+  color: #38bdf8 !important;
+}
+
+.dark-high-contrast .auth-card a:hover {
+  color: #7dd3fc !important;
+}
+
+/* ==================================================================== */
+/* VISIBILIDADE DO CURSOR DE DIGITAÇÃO (CARET) E CAMPOS                 */
+/* ==================================================================== */
+input, select, textarea, .form-input, .form-select {
+  caret-color: #0284c7;
+}
+
+.dark-high-contrast input,
+.dark-high-contrast select,
+.dark-high-contrast textarea,
+.dark-high-contrast .form-input,
+.dark-high-contrast .form-select {
+  caret-color: #38bdf8 !important;
 }

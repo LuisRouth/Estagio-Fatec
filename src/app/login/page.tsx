@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { LogoFatec } from '@/components/brand/LogoFatec';
 import { EcoTechBackground } from '@/components/layout/EcoTechBackground';
+import { CampusDoorTransition } from '@/components/auth/CampusDoorTransition';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,18 +13,18 @@ export default function LoginPage() {
   const [senha, setSenha] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
+  const [isEntering, setIsEntering] = useState(false);
+  const [fieldError, setFieldError] = useState('');
 
-  const isEmailValid = email.toLowerCase().endsWith('@aluno.cps.sp.gov.br');
+  const cleanEmail = email.toLowerCase().trim();
+  const isEmailValid = cleanEmail.endsWith('@aluno.cps.sp.gov.br') || cleanEmail.endsWith('@fatec.sp.gov.br');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg('');
-    setSuccessMsg('');
+    setFieldError('');
 
     if (!isEmailValid) {
-      setErrorMsg('Utilize seu e-mail institucional oficial (@aluno.cps.sp.gov.br).');
+      setFieldError('E-mail institucional inválido');
       return;
     }
 
@@ -33,53 +34,37 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim().toLowerCase(), password: senha }),
+        body: JSON.stringify({ email: cleanEmail, password: senha }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || data.message || 'Falha na autenticação. Verifique seu e-mail e senha.');
+        throw new Error(data.error || data.message || 'Credenciais de acesso incorretas');
       }
 
-      setSuccessMsg('Login realizado com sucesso. Redirecionando...');
+      // Ativa a animação rápida do personagem entrando na porta no botão
+      setIsEntering(true);
       setTimeout(() => {
-        router.push('/');
-        router.refresh();
-      }, 1000);
+        window.location.href = '/';
+      }, 700);
     } catch (err: any) {
-      setErrorMsg(err.message || 'Erro inesperado ao conectar com o servidor.');
-    } finally {
+      setFieldError('E-mail ou senha incorretos');
       setLoading(false);
     }
   };
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '2.5rem 1.5rem',
-        position: 'relative',
-        backgroundColor: '#f8fafc',
-      }}
-    >
+    <div className="auth-page-container">
       {/* Fundo de Rede Neuronal e Ecológica */}
       <EcoTechBackground />
 
       <div
-        className="animate-fade-in"
+        className="animate-fade-in auth-card"
         style={{
           width: '100%',
           maxWidth: '440px',
-          backgroundColor: 'rgba(255, 255, 255, 0.94)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
           borderRadius: '20px',
-          boxShadow: 'var(--shadow-lg)',
-          border: '1px solid var(--border-light)',
           padding: '2.5rem 2.25rem',
           position: 'relative',
           zIndex: 10,
@@ -87,23 +72,7 @@ export default function LoginPage() {
       >
         {/* Botão Voltar para a Página Inicial sem fazer login */}
         <div style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Link
-            href="/"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              fontSize: '0.8125rem',
-              fontWeight: 600,
-              color: 'var(--text-sub)',
-              textDecoration: 'none',
-              padding: '0.35rem 0.75rem',
-              borderRadius: '8px',
-              backgroundColor: 'rgba(241, 245, 249, 0.8)',
-              border: '1px solid var(--border-light)',
-              transition: 'all 0.15s ease',
-            }}
-          >
+          <Link href="/" className="auth-back-btn">
             ← Voltar ao Início
           </Link>
           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>FATEC Rio Claro</span>
@@ -122,52 +91,22 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {errorMsg && (
-          <div
-            style={{
-              padding: '0.75rem 1rem',
-              backgroundColor: 'var(--accent-rose-light)',
-              color: 'var(--accent-rose)',
-              borderRadius: '9px',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              marginBottom: '1.25rem',
-              border: '1px solid rgba(225, 29, 72, 0.2)',
-            }}
-          >
-            {errorMsg}
-          </div>
-        )}
-
-        {successMsg && (
-          <div
-            style={{
-              padding: '0.75rem 1rem',
-              backgroundColor: 'var(--accent-emerald-light)',
-              color: 'var(--accent-emerald)',
-              borderRadius: '9px',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              marginBottom: '1.25rem',
-              border: '1px solid rgba(5, 150, 105, 0.2)',
-            }}
-          >
-            {successMsg}
-          </div>
-        )}
-
         <form onSubmit={handleSubmit}>
           {/* Campo E-mail Institucional */}
-          <div className="form-group">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: '20px' }}>
               <label className="form-label" htmlFor="email">
                 E-mail Institucional
               </label>
-              {isEmailValid && (
+              {fieldError ? (
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-rose)' }}>
+                  ⚠ {fieldError}
+                </span>
+              ) : isEmailValid ? (
                 <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-emerald)' }}>
                   ✓ E-mail oficial verificado
                 </span>
-              )}
+              ) : null}
             </div>
             <input
               id="email"
@@ -175,10 +114,13 @@ export default function LoginPage() {
               className="form-input"
               placeholder="ex: seu.nome@aluno.cps.sp.gov.br"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (fieldError) setFieldError('');
+              }}
               style={{
-                borderColor: isEmailValid ? 'var(--accent-emerald)' : undefined,
-                boxShadow: isEmailValid ? '0 0 0 3px rgba(5, 150, 105, 0.12)' : undefined,
+                borderColor: fieldError ? 'var(--accent-rose)' : isEmailValid ? 'var(--accent-emerald)' : undefined,
+                boxShadow: fieldError ? '0 0 0 3px rgba(225, 29, 72, 0.12)' : isEmailValid ? '0 0 0 3px rgba(5, 150, 105, 0.12)' : undefined,
               }}
               required
               autoFocus
@@ -186,8 +128,8 @@ export default function LoginPage() {
           </div>
 
           {/* Campo Senha */}
-          <div className="form-group">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: '20px' }}>
               <label className="form-label" htmlFor="senha">
                 Senha de Acesso
               </label>
@@ -205,8 +147,14 @@ export default function LoginPage() {
                 className="form-input"
                 placeholder="Sua senha segura"
                 value={senha}
-                onChange={(e) => setSenha(e.target.value)}
-                style={{ paddingRight: '4.5rem' }}
+                onChange={(e) => {
+                  setSenha(e.target.value);
+                  if (fieldError) setFieldError('');
+                }}
+                style={{
+                  paddingRight: '4.5rem',
+                  borderColor: fieldError ? 'var(--accent-rose)' : undefined,
+                }}
                 required
               />
               <button
@@ -234,10 +182,27 @@ export default function LoginPage() {
           <button
             type="submit"
             className="btn btn-primary"
-            disabled={loading}
-            style={{ width: '100%', marginTop: '0.75rem', padding: '0.75rem', fontSize: '0.95rem' }}
+            disabled={loading || isEntering}
+            style={{
+              width: '100%',
+              marginTop: '0.75rem',
+              padding: '0.75rem',
+              fontSize: '0.95rem',
+              minHeight: '48px',
+              position: 'relative',
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
           >
-            {loading ? 'Validando acesso...' : 'Acessar Portal'}
+            {isEntering ? (
+              <CampusDoorTransition active={true} />
+            ) : loading ? (
+              'Validando acesso...'
+            ) : (
+              'Acessar Portal'
+            )}
           </button>
         </form>
 

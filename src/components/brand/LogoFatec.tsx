@@ -21,15 +21,27 @@ export const LogoFatec: React.FC<LogoFatecProps> = ({
       }}
       className={className}
     >
-      {/* Logomarca Oficial FATEC */}
+      {/* Logomarca Oficial FATEC - Versão Clara (para fundo claro) */}
       <img
-        src="/brand/logo-fatec.png"
+        src="/brand/logo-fatec-clean.png"
         alt="Logotipo Oficial FATEC - Faculdade de Tecnologia"
+        className="logo-fatec-light"
         style={{
           height: `${height}px`,
           width: 'auto',
           objectFit: 'contain',
-          display: 'block',
+        }}
+      />
+
+      {/* Logomarca Oficial FATEC - Versão Branca Transparente (para fundo escuro / alto contraste) */}
+      <img
+        src="/brand/logo-fatec-white.png"
+        alt="Logotipo Oficial FATEC - Faculdade de Tecnologia"
+        className="logo-fatec-dark"
+        style={{
+          height: `${height}px`,
+          width: 'auto',
+          objectFit: 'contain',
         }}
       />
 
@@ -37,6 +49,7 @@ export const LogoFatec: React.FC<LogoFatecProps> = ({
       {showSubtitle && (
         <>
           <div
+            className="logo-fatec-divider"
             style={{
               height: `${Math.round(height * 0.8)}px`,
               width: '1.5px',

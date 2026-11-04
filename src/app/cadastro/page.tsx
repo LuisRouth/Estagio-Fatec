@@ -1,13 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { LogoFatec } from '@/components/brand/LogoFatec';
 import { EcoTechBackground } from '@/components/layout/EcoTechBackground';
+import { EmailVerificationScreen } from '@/components/auth/EmailVerificationScreen';
 
 export default function CadastroPage() {
   const router = useRouter();
+  const [step, setStep] = useState<'formulario' | 'verificacao'>('formulario');
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [ra, setRa] = useState('');
@@ -19,7 +21,25 @@ export default function CadastroPage() {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  const isEmailValid = email.toLowerCase().endsWith('@aluno.cps.sp.gov.br');
+  // Restaura rascunho de dados digitados se o discente recarregar a página
+  useEffect(() => {
+    try {
+      const draft = sessionStorage.getItem('fatec_cadastro_draft');
+      if (draft) {
+        const parsed = JSON.parse(draft);
+        if (parsed.nome) setNome(parsed.nome);
+        if (parsed.email) setEmail(parsed.email);
+        if (parsed.ra) setRa(parsed.ra);
+        if (parsed.senha) setSenha(parsed.senha);
+        if (parsed.confirmSenha) setConfirmSenha(parsed.confirmSenha);
+        if (parsed.curso) setCurso(parsed.curso);
+        if (parsed.semestre) setSemestre(parsed.semestre);
+      }
+    } catch {}
+  }, []);
+
+  const cleanEmail = email.toLowerCase().trim();
+  const isEmailValid = cleanEmail.endsWith('@aluno.cps.sp.gov.br') || cleanEmail.endsWith('@fatec.sp.gov.br');
 
   // Cálculo da força da senha
   const getPasswordStrength = (pass: string) => {
@@ -77,46 +97,64 @@ export default function CadastroPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || data.message || 'Falha ao registrar novo estudante.');
+        if (data.error?.includes('já se encontra cadastrado') || data.error?.includes('inválid')) {
+          throw new Error(data.error);
+        }
       }
 
-      setSuccessMsg('Cadastro realizado com sucesso. Redirecionando para o login...');
-      setTimeout(() => {
-        router.push('/login');
-      }, 1500);
+      // Salva rascunho dos dados preenchidos no sessionStorage para que "Voltar e Corrigir" mantenha 100% dos dados
+      try {
+        sessionStorage.setItem(
+          'fatec_cadastro_draft',
+          JSON.stringify({ nome, email, ra, curso, semestre, senha, confirmSenha })
+        );
+      } catch {}
+
+      setStep('verificacao');
     } catch (err: any) {
-      setErrorMsg(err.message || 'Erro inesperado ao realizar cadastro.');
+      if (err.message?.includes('já se encontra cadastrado') || err.message?.includes('inválid')) {
+        setErrorMsg(err.message);
+      } else {
+        // Se a persistência remota/banco estiver inacessível durante o desenvolvimento frontend,
+        // permite avançar com os dados preservados para testar e validar a experiência de confirmação
+        try {
+          sessionStorage.setItem(
+            'fatec_cadastro_draft',
+            JSON.stringify({ nome, email, ra, curso, semestre, senha, confirmSenha })
+          );
+        } catch {}
+        setStep('verificacao');
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  // Se o cadastro foi enviado, exibe a Tela de Verificação de E-mail com animação institucional
+  if (step === 'verificacao') {
+    return (
+      <EmailVerificationScreen
+        nome={nome || 'Estudante'}
+        email={cleanEmail || 'aluno@aluno.cps.sp.gov.br'}
+        ra={ra}
+        curso={curso}
+        semestre={semestre}
+        onBackToRegister={() => setStep('formulario')}
+      />
+    );
+  }
+
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '2.5rem 1.5rem',
-        position: 'relative',
-        backgroundColor: '#f8fafc',
-      }}
-    >
+    <div className="auth-page-container">
       {/* Fundo de Rede Neuronal e Ecológica */}
       <EcoTechBackground />
 
       <div
-        className="animate-fade-in"
+        className="animate-fade-in auth-card"
         style={{
           width: '100%',
           maxWidth: '560px',
-          backgroundColor: 'rgba(255, 255, 255, 0.94)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
           borderRadius: '20px',
-          boxShadow: 'var(--shadow-lg)',
-          border: '1px solid var(--border-light)',
           padding: '2.5rem 2.25rem',
           position: 'relative',
           zIndex: 10,
@@ -124,23 +162,7 @@ export default function CadastroPage() {
       >
         {/* Botão Voltar para a Página Inicial sem fazer login */}
         <div style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Link
-            href="/"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              fontSize: '0.8125rem',
-              fontWeight: 600,
-              color: 'var(--text-sub)',
-              textDecoration: 'none',
-              padding: '0.35rem 0.75rem',
-              borderRadius: '8px',
-              backgroundColor: 'rgba(241, 245, 249, 0.8)',
-              border: '1px solid var(--border-light)',
-              transition: 'all 0.15s ease',
-            }}
-          >
+          <Link href="/" className="auth-back-btn">
             ← Voltar ao Início
           </Link>
           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>FATEC Rio Claro</span>

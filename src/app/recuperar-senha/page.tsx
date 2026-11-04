@@ -28,24 +28,13 @@ export default function RecuperarSenhaPage() {
   };
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '2rem 1.5rem',
-        backgroundColor: 'var(--bg-primary)',
-      }}
-    >
+    <div className="auth-page-container">
       <div
+        className="auth-card"
         style={{
           width: '100%',
           maxWidth: '460px',
-          backgroundColor: '#ffffff',
           borderRadius: '20px',
-          boxShadow: 'var(--shadow-lg)',
-          border: '1px solid var(--border-light)',
           padding: '2.75rem 2.25rem',
         }}
       >

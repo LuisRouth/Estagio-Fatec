@@ -45,7 +45,7 @@ export const GaloWidget: React.FC = () => {
           width: 44px;
           height: 44px;
           border-radius: 12px;
-          background-color: #ffffff;
+          background-color: var(--bg-card, #ffffff);
           border: 1px solid var(--border-light);
           box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
           display: flex;
@@ -166,11 +166,16 @@ export const GaloWidget: React.FC = () => {
         <img
           src="/brand/mascote-galo.png"
           alt="FATEC Rio Claro"
+          width="32"
+          height="32"
           style={{
-            width: '100%',
-            height: '100%',
+            width: '32px',
+            height: '32px',
+            maxWidth: '32px',
+            maxHeight: '32px',
             objectFit: 'contain',
             pointerEvents: 'none',
+            display: 'block',
           }}
         />
       </button>
