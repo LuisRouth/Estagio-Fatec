@@ -767,3 +767,223 @@ input, select, textarea, .form-input, .form-select {
 .dark-high-contrast .form-select {
   caret-color: #38bdf8 !important;
 }
+
+/* ==================================================================== */
+/* ANIMAÇÕES INTERATIVAS TEMÁTICAS DOS CARDS DA CANTINA DISCENTE        */
+/* ==================================================================== */
+
+/* Container base do card com overflow escondido para confinar a animação */
+.canteen-card-interactive {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+  z-index: 1;
+}
+
+.canteen-card-interactive:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px -8px rgba(15, 23, 42, 0.12), 0 4px 8px -4px rgba(15, 23, 42, 0.06);
+}
+
+/* Camada de fundo animada */
+.canteen-card-bg-effect {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.canteen-card-interactive:hover .canteen-card-bg-effect {
+  opacity: 1;
+}
+
+/* Conteúdo do card sobreposto à animação */
+.canteen-card-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+}
+
+/* -------------------------------------------------------------------- */
+/* 1. BEBIDA: Refrigerante / Líquido subindo com ondas e bolhas         */
+/* -------------------------------------------------------------------- */
+.canteen-card-interactive.cat-bebida:hover {
+  border-color: #0284c7;
+}
+
+.canteen-liquid-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 0%;
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.35) 0%, rgba(2, 132, 199, 0.22) 100%);
+  transition: height 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+  overflow: hidden;
+}
+
+.canteen-card-interactive.cat-bebida:hover .canteen-liquid-fill {
+  height: 100%;
+}
+
+/* Ondinha no topo do líquido */
+.canteen-liquid-wave {
+  position: absolute;
+  top: -12px;
+  left: -50%;
+  width: 200%;
+  height: 24px;
+  background: radial-gradient(ellipse at center, rgba(186, 230, 253, 0.8) 0%, transparent 70%);
+  border-radius: 40%;
+  animation: waveFlow 2s linear infinite;
+}
+
+@keyframes waveFlow {
+  0% { transform: translateX(0) rotate(0deg); }
+  50% { transform: translateX(-25%) rotate(180deg); }
+  100% { transform: translateX(-50%) rotate(360deg); }
+}
+
+/* Bolhas subindo */
+.canteen-bubble {
+  position: absolute;
+  bottom: -10px;
+  background: rgba(255, 255, 255, 0.75);
+  border-radius: 50%;
+  animation: bubbleRise 2s infinite ease-in;
+}
+
+.canteen-bubble:nth-child(1) { left: 15%; width: 8px; height: 8px; animation-duration: 1.6s; animation-delay: 0.1s; }
+.canteen-bubble:nth-child(2) { left: 35%; width: 12px; height: 12px; animation-duration: 2.2s; animation-delay: 0.3s; }
+.canteen-bubble:nth-child(3) { left: 55%; width: 7px; height: 7px; animation-duration: 1.8s; animation-delay: 0.6s; }
+.canteen-bubble:nth-child(4) { left: 75%; width: 10px; height: 10px; animation-duration: 2s; animation-delay: 0.2s; }
+.canteen-bubble:nth-child(5) { left: 88%; width: 6px; height: 6px; animation-duration: 1.5s; animation-delay: 0.5s; }
+
+@keyframes bubbleRise {
+  0% { transform: translateY(0) scale(0.8); opacity: 0; }
+  20% { opacity: 0.9; }
+  80% { opacity: 0.8; }
+  100% { transform: translateY(-280px) scale(1.2); opacity: 0; }
+}
+
+/* -------------------------------------------------------------------- */
+/* 2. DOCE: Doces, confeitos e bombons caindo e preenchendo             */
+/* -------------------------------------------------------------------- */
+.canteen-card-interactive.cat-doce:hover {
+  border-color: #f43f5e;
+}
+
+.canteen-candy-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 0%;
+  background: linear-gradient(180deg, rgba(253, 164, 175, 0.3) 0%, rgba(244, 63, 94, 0.18) 100%);
+  transition: height 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.canteen-card-interactive.cat-doce:hover .canteen-candy-fill {
+  height: 100%;
+}
+
+.canteen-falling-candy {
+  position: absolute;
+  top: -30px;
+  font-size: 1.15rem;
+  animation: candyFall 2s infinite ease-in;
+  user-select: none;
+}
+
+.canteen-falling-candy:nth-child(1) { left: 12%; animation-duration: 1.7s; animation-delay: 0.1s; }
+.canteen-falling-candy:nth-child(2) { left: 32%; animation-duration: 2.1s; animation-delay: 0.4s; }
+.canteen-falling-candy:nth-child(3) { left: 52%; animation-duration: 1.9s; animation-delay: 0.2s; }
+.canteen-falling-candy:nth-child(4) { left: 72%; animation-duration: 2.3s; animation-delay: 0.5s; }
+.canteen-falling-candy:nth-child(5) { left: 88%; animation-duration: 1.8s; animation-delay: 0.3s; }
+
+@keyframes candyFall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+  15% { opacity: 0.85; }
+  85% { opacity: 0.85; }
+  100% { transform: translateY(320px) rotate(360deg); opacity: 0; }
+}
+
+/* -------------------------------------------------------------------- */
+/* 3. CONGELADO: Cristalização gélida, névoa e flocos de neve           */
+/* -------------------------------------------------------------------- */
+.canteen-card-interactive.cat-congelado:hover {
+  border-color: #06b6d4;
+}
+
+.canteen-frost-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(165, 243, 252, 0.38) 0%, rgba(6, 182, 212, 0.22) 100%);
+  backdrop-filter: blur(1.5px);
+  border: 2px solid rgba(165, 243, 252, 0.7);
+  box-shadow: inset 0 0 25px rgba(6, 182, 212, 0.35);
+  animation: frostPulse 3s ease-in-out infinite alternate;
+}
+
+@keyframes frostPulse {
+  0% { box-shadow: inset 0 0 15px rgba(6, 182, 212, 0.25); }
+  100% { box-shadow: inset 0 0 35px rgba(165, 243, 252, 0.65); }
+}
+
+.canteen-snowflake {
+  position: absolute;
+  top: -20px;
+  color: #0891b2;
+  font-size: 1.25rem;
+  animation: snowDrift 2.5s infinite linear;
+  user-select: none;
+}
+
+.canteen-snowflake:nth-child(1) { left: 15%; animation-duration: 2.2s; animation-delay: 0.2s; }
+.canteen-snowflake:nth-child(2) { left: 38%; animation-duration: 2.7s; animation-delay: 0.5s; }
+.canteen-snowflake:nth-child(3) { left: 62%; animation-duration: 2.3s; animation-delay: 0.1s; }
+.canteen-snowflake:nth-child(4) { left: 82%; animation-duration: 2.9s; animation-delay: 0.4s; }
+
+@keyframes snowDrift {
+  0% { transform: translateY(0) rotate(0deg) scale(0.8); opacity: 0; }
+  20% { opacity: 0.9; }
+  80% { opacity: 0.9; }
+  100% { transform: translateY(300px) rotate(180deg) scale(1.1); opacity: 0; }
+}
+
+/* -------------------------------------------------------------------- */
+/* 4. SALGADO: Efeito Estalo Quentinho / Crocância (Crispy Waves & Gergelim/Tempero) */
+/* -------------------------------------------------------------------- */
+.canteen-card-interactive.cat-salgado:hover {
+  border-color: #f59e0b;
+}
+
+.canteen-crispy-fill {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(254, 243, 199, 0.45) 0%, rgba(245, 158, 11, 0.18) 100%);
+}
+
+.canteen-spice-flake {
+  position: absolute;
+  font-size: 0.85rem;
+  user-select: none;
+  animation: spicePop 1.6s infinite ease-out;
+}
+
+.canteen-spice-flake:nth-child(1) { left: 20%; top: 40%; animation-delay: 0.1s; }
+.canteen-spice-flake:nth-child(2) { left: 45%; top: 60%; animation-delay: 0.4s; }
+.canteen-spice-flake:nth-child(3) { left: 70%; top: 35%; animation-delay: 0.2s; }
+.canteen-spice-flake:nth-child(4) { left: 30%; top: 75%; animation-delay: 0.5s; }
+.canteen-spice-flake:nth-child(5) { left: 80%; top: 65%; animation-delay: 0.3s; }
+
+@keyframes spicePop {
+  0% { transform: scale(0.4) rotate(0deg); opacity: 0; }
+  40% { transform: scale(1.2) rotate(45deg); opacity: 0.9; }
+  100% { transform: scale(1) translateY(-25px) rotate(90deg); opacity: 0; }
+}

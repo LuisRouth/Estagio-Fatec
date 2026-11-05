@@ -10,9 +10,9 @@ import { UserRole } from '@/lib/types';
 
 // Mapa de rotas protegidas por papel mínimo requerido
 const PROTECTED_ROUTES: { prefix: string; allowedRoles: UserRole[] }[] = [
-  { prefix: '/api/admin', allowedRoles: ['ADMIN'] },
-  { prefix: '/api/ca', allowedRoles: ['CA_MEMBRO', 'ADMIN'] },
-  { prefix: '/api/professor', allowedRoles: ['PROFESSOR', 'ADMIN'] },
+  { prefix: '/api/admin/', allowedRoles: ['ADMIN'] },
+  { prefix: '/api/ca/', allowedRoles: ['CA_MEMBRO', 'ADMIN'] },
+  { prefix: '/api/professor/', allowedRoles: ['PROFESSOR', 'ADMIN'] },
 ];
 
 export async function middleware(req: NextRequest) {

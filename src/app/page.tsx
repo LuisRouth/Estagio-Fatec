@@ -10,6 +10,18 @@ export default function HomePage() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [slideTimerKey, setSlideTimerKey] = useState(0);
+  const [canteenProducts, setCanteenProducts] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch('/api/canteen/products')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success && Array.isArray(d.data)) {
+          setCanteenProducts(d.data.slice(0, 4));
+        }
+      })
+      .catch((err) => console.error('Erro ao carregar cantina na home:', err));
+  }, []);
 
   // Slides dinâmicos do Hero com auto-slide
   const heroSlides = [
@@ -332,29 +344,100 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <div
-            style={{
-              padding: '3.5rem 1.5rem',
-              backgroundColor: 'var(--bg-muted)',
-              borderRadius: '12px',
-              border: '1px dashed var(--border-light)',
-              textAlign: 'center',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.75rem',
-            }}
-          >
-            <div style={{ maxWidth: '480px' }}>
-              <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '1.05rem' }}>
-                Catálogo em sincronização pela comissão discente
+          {canteenProducts.length === 0 ? (
+            <div
+              style={{
+                padding: '3.5rem 1.5rem',
+                backgroundColor: 'var(--bg-muted)',
+                borderRadius: '12px',
+                border: '1px dashed var(--border-light)',
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.75rem',
+              }}
+            >
+              <div style={{ maxWidth: '480px' }}>
+                <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '1.05rem' }}>
+                  Carregando catálogo da cantina...
+                </div>
               </div>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.35rem', lineHeight: 1.55 }}>
-                Os itens disponíveis, valores e a chave Pix estão sendo cadastrados pela comissão. Consulte os preços afixados no expositor físico durante o intervalo.
-              </p>
             </div>
-          </div>
+          ) : (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+                gap: '1.25rem',
+              }}
+            >
+              {canteenProducts.map((p) => (
+                <div
+                  key={p.id}
+                  style={{
+                    backgroundColor: '#ffffff',
+                    borderRadius: '12px',
+                    border: '1px solid var(--border-light)',
+                    padding: '1.25rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    boxShadow: 'var(--shadow-sm)',
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <span className="badge badge-blue" style={{ fontSize: '0.7rem' }}>
+                        {p.category}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: '0.7rem',
+                          fontWeight: 700,
+                          color: p.current_stock > 5 ? 'var(--accent-emerald)' : 'var(--color-danger, #ef4444)',
+                        }}
+                      >
+                        {p.current_stock} em estoque
+                      </span>
+                    </div>
+                    <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-main)', marginBottom: '0.35rem' }}>
+                      {p.name}
+                    </div>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-sub)', lineHeight: 1.4 }}>
+                      {p.description || 'Disponível na cantina discente'}
+                    </p>
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: '1.25rem',
+                      paddingTop: '0.85rem',
+                      borderTop: '1px solid var(--border-light)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <div>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Preço unitário</span>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent-primary)' }}>
+                        R$ {Number(p.price).toFixed(2).replace('.', ',')}
+                      </div>
+                    </div>
+                    <Link
+                      href="/cantina"
+                      className="btn btn-primary"
+                      style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem' }}
+                    >
+                      Comprar
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* 3. REPOSITÓRIO ACADÊMICO — SEÇÃO EM ESTADO VAZIO */}
