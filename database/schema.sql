@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255) NOT NULL,
     role user_role NOT NULL DEFAULT 'ALUNO',
     course course_type NOT NULL,
-    semester INTEGER NOT NULL CHECK (semester BETWEEN 1 AND 6),
+    semester INTEGER NOT NULL CHECK (semester BETWEEN 1 AND 4),
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -146,7 +146,7 @@ CREATE TABLE IF NOT EXISTS academic_materials (
     description TEXT,
     subject VARCHAR(120) NOT NULL,
     course course_type NOT NULL,
-    semester INTEGER NOT NULL CHECK (semester BETWEEN 1 AND 6),
+    semester INTEGER NOT NULL CHECK (semester BETWEEN 1 AND 4),
     author_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
     material_type VARCHAR(50) NOT NULL DEFAULT 'SLIDE', -- 'SLIDE', 'APOSTILA', 'CODIGO', 'TCC', 'DATASET'
     file_url TEXT NOT NULL,

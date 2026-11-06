@@ -420,9 +420,7 @@ export default function ConfiguracoesPage() {
                     <option value={1} style={{ backgroundColor: isDark ? '#101726' : '#ffffff', color: isDark ? '#f8fafc' : 'var(--text-main)' }}>1º Semestre (Ingressante)</option>
                     <option value={2} style={{ backgroundColor: isDark ? '#101726' : '#ffffff', color: isDark ? '#f8fafc' : 'var(--text-main)' }}>2º Semestre</option>
                     <option value={3} style={{ backgroundColor: isDark ? '#101726' : '#ffffff', color: isDark ? '#f8fafc' : 'var(--text-main)' }}>3º Semestre</option>
-                    <option value={4} style={{ backgroundColor: isDark ? '#101726' : '#ffffff', color: isDark ? '#f8fafc' : 'var(--text-main)' }}>4º Semestre</option>
-                    <option value={5} style={{ backgroundColor: isDark ? '#101726' : '#ffffff', color: isDark ? '#f8fafc' : 'var(--text-main)' }}>5º Semestre</option>
-                    <option value={6} style={{ backgroundColor: isDark ? '#101726' : '#ffffff', color: isDark ? '#f8fafc' : 'var(--text-main)' }}>6º Semestre (Concluinte)</option>
+                    <option value={4} style={{ backgroundColor: isDark ? '#101726' : '#ffffff', color: isDark ? '#f8fafc' : 'var(--text-main)' }}>4º Semestre (Concluinte)</option>
                   </select>
                 </div>
               </div>

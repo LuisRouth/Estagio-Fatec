@@ -3,6 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import AppLayout from '@/components/layout/AppLayout';
+import { Announcement, CourseType } from '@/lib/types';
+import AnnouncementCard from '@/components/announcements/AnnouncementCard';
+import AnnouncementDetailModal from '@/components/announcements/AnnouncementDetailModal';
+import AnnouncementFormModal from '@/components/announcements/AnnouncementFormModal';
+import ToastNotification from '@/components/ui/ToastNotification';
 import { HeroVisualWidget } from '@/components/home/HeroVisualWidget';
 
 export default function HomePage() {
@@ -10,18 +15,45 @@ export default function HomePage() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [slideTimerKey, setSlideTimerKey] = useState(0);
-  const [canteenProducts, setCanteenProducts] = useState<any[]>([]);
+  // Comunicados Oficiais no Mural da Home
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [announcementsLoading, setAnnouncementsLoading] = useState(true);
+  const [homeCourseFilter, setHomeCourseFilter] = useState<CourseType | 'TODOS'>('TODOS');
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [toast, setToast] = useState<{ message: string | null; type: 'success' | 'error' | 'info' }>({ message: null, type: 'success' });
+
+  // Carregar usuário logado e comunicados oficiais
+  const fetchHomeAnnouncements = async () => {
+    setAnnouncementsLoading(true);
+    try {
+      const res = await fetch('/api/announcements');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.data)) {
+          setAnnouncements(data.data);
+        }
+      }
+    } catch (e) {
+      console.error('Erro ao buscar avisos na home:', e);
+    } finally {
+      setAnnouncementsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    fetch('/api/canteen/products')
+    fetchHomeAnnouncements();
+    fetch('/api/auth/me')
       .then((r) => r.json())
       .then((d) => {
-        if (d.success && Array.isArray(d.data)) {
-          setCanteenProducts(d.data.slice(0, 4));
-        }
+        if (d.success && d.data) setCurrentUser(d.data);
       })
-      .catch((err) => console.error('Erro ao carregar cantina na home:', err));
+      .catch(() => {});
   }, []);
+
+  const canManage = currentUser?.role === 'ADMIN' || currentUser?.role === 'CA_MEMBRO' || currentUser?.role === 'PROFESSOR';
 
   // Slides dinâmicos do Hero com auto-slide
   const heroSlides = [
@@ -275,51 +307,200 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* 1. MURAL DE AVISOS — ACIMA & EM ESTADO VAZIO */}
+        {/* 1. MURAL DE AVISOS E COMUNICADOS OFICIAIS — CONECTIVIDADE TOTAL COM O INÍCIO */}
         <section
           className="card-interactive"
           style={{
             padding: '2.25rem',
+            borderRadius: '20px',
+            backgroundColor: '#ffffff',
+            border: '1px solid var(--border-light)',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+          {/* Cabeçalho da Seção */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
-              <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                <span className="badge badge-blue">Mural Oficial</span>
+                <span className="badge badge-emerald">Tempo Real</span>
+              </div>
+              <h2 style={{ fontSize: '1.45rem', fontWeight: 900, color: 'var(--text-main)', letterSpacing: '-0.02em', margin: 0 }}>
                 Mural de Avisos e Comunicados Oficiais
               </h2>
-              <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                Informativos da Coordenação, Secretaria Acadêmica e Centro Acadêmico (CA)
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                Avisos prioritários, eventos acadêmicos, prazos e comunicados da Coordenação de IA, Gestão ESG e CA.
               </p>
             </div>
 
-            <Link href="/avisos" className="btn btn-primary" style={{ fontSize: '0.85rem', padding: '0.55rem 1.15rem' }}>
-              Abrir Mural de Avisos
-            </Link>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              {canManage && (
+                <button
+                  onClick={() => setIsFormOpen(true)}
+                  className="btn btn-outline"
+                  style={{ fontSize: '0.825rem', fontWeight: 700 }}
+                >
+                  + Publicar Comunicado
+                </button>
+              )}
+
+              <Link href="/avisos" className="btn btn-primary" style={{ fontSize: '0.85rem', padding: '0.55rem 1.15rem' }}>
+                Abrir Mural Completo ({announcements.length}) ➔
+              </Link>
+            </div>
           </div>
 
-          <div
-            style={{
-              padding: '3.5rem 1.5rem',
-              backgroundColor: 'var(--bg-muted)',
-              borderRadius: '12px',
-              border: '1px dashed var(--border-light)',
-              textAlign: 'center',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.75rem',
-            }}
-          >
-            <div style={{ maxWidth: '480px' }}>
-              <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '1.05rem' }}>
-                Nenhum comunicado urgente registrado no momento
+          {/* Filtro Rápido de Cursos na Home */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+              Filtrar no início:
+            </span>
+            {[
+              { id: 'TODOS', label: '🌐 Todos os Cursos' },
+              { id: 'IA', label: '🤖 Inteligência Artificial' },
+              { id: 'ESG', label: '🌱 Gestão ESG' },
+            ].map((c) => (
+              <button
+                key={c.id}
+                onClick={() => setHomeCourseFilter(c.id as any)}
+                style={{
+                  padding: '0.35rem 0.85rem',
+                  borderRadius: '20px',
+                  border: homeCourseFilter === c.id ? '2px solid var(--accent-primary, #0284c7)' : '1px solid var(--border-light)',
+                  backgroundColor: homeCourseFilter === c.id ? 'rgba(2, 132, 199, 0.1)' : 'transparent',
+                  color: homeCourseFilter === c.id ? 'var(--accent-primary, #0284c7)' : 'var(--text-sub)',
+                  fontWeight: homeCourseFilter === c.id ? 800 : 500,
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Cards Padronizados de Comunicados na Home */}
+          {announcementsLoading ? (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                gap: '1.5rem',
+              }}
+            >
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="card-interactive"
+                  style={{
+                    height: '420px',
+                    borderRadius: '16px',
+                    padding: '1.25rem',
+                    border: '1px solid var(--border-light)',
+                    background: '#ffffff',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <div>
+                    <div className="skeleton-shimmer" style={{ width: '100%', height: '160px', borderRadius: '10px', marginBottom: '1rem' }} />
+                    <div className="skeleton-shimmer" style={{ width: '80px', height: '20px', borderRadius: '6px', marginBottom: '0.6rem' }} />
+                    <div className="skeleton-shimmer" style={{ width: '90%', height: '20px', borderRadius: '6px', marginBottom: '0.5rem' }} />
+                    <div className="skeleton-shimmer" style={{ width: '65%', height: '16px', borderRadius: '6px', marginBottom: '0.75rem' }} />
+                    <div className="skeleton-shimmer" style={{ width: '95%', height: '14px', borderRadius: '4px' }} />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.75rem', borderTop: '1px solid var(--border-light)' }}>
+                    <div className="skeleton-shimmer" style={{ width: '80px', height: '16px' }} />
+                    <div className="skeleton-shimmer" style={{ width: '60px', height: '16px' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : announcements.length === 0 ? (
+            <div
+              style={{
+                padding: '3.5rem 1.5rem',
+                backgroundColor: 'var(--bg-muted, #f8fafc)',
+                borderRadius: '14px',
+                border: '1px dashed var(--border-light)',
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.75rem',
+              }}
+            >
+              <div style={{ fontSize: '2.5rem' }}>📢</div>
+              <div style={{ maxWidth: '480px' }}>
+                <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '1.05rem' }}>
+                  Nenhum comunicado registrado no momento
+                </div>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.35rem', lineHeight: 1.55 }}>
+                  Novos avisos da coordenação de Inteligência Artificial e Gestão ESG serão publicados aqui em tempo real.
+                </p>
               </div>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.35rem', lineHeight: 1.55 }}>
-                Novos avisos da coordenação de Inteligência Artificial e Gestão ESG, datas de avaliações e eventos acadêmicos serão publicados aqui em tempo real.
-              </p>
             </div>
-          </div>
+          ) : (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                gap: '1.5rem',
+              }}
+            >
+              {announcements
+                .filter((a) => {
+                  if (homeCourseFilter === 'TODOS') return true;
+                  return !a.target_course || a.target_course === homeCourseFilter;
+                })
+                .slice(0, 3)
+                .map((ann) => (
+                  <AnnouncementCard
+                    key={ann.id}
+                    announcement={ann}
+                    onOpenDetail={(a) => {
+                      setSelectedAnnouncement(a);
+                      setIsDetailOpen(true);
+                    }}
+                    canManage={false}
+                  />
+                ))}
+            </div>
+          )}
+
+          {/* Modal de Detalhes em Tela Cheia (Disponível direto da Home) */}
+          <AnnouncementDetailModal
+            announcement={selectedAnnouncement}
+            isOpen={isDetailOpen}
+            onClose={() => setIsDetailOpen(false)}
+          />
+
+          {/* Modal de Formulário direto da Home (Se for ADM ou CA) */}
+          {canManage && (
+            <AnnouncementFormModal
+              isOpen={isFormOpen}
+              onClose={() => setIsFormOpen(false)}
+              onSave={async (formData) => {
+                const res = await fetch('/api/announcements', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(formData),
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Erro ao publicar comunicado.');
+                setToast({ message: 'Comunicado publicado com sucesso no início e no mural!', type: 'success' });
+                await fetchHomeAnnouncements();
+              }}
+            />
+          )}
+
+          <ToastNotification
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast({ message: null, type: 'success' })}
+          />
         </section>
 
         {/* 3. REPOSITÓRIO ACADÊMICO — SEÇÃO EM ESTADO VAZIO */}

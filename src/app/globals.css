@@ -1266,3 +1266,26 @@ input, select, textarea, .form-input, .form-select {
   background-size: 200% 100%;
   animation: skeletonWave 1.4s infinite linear;
 }
+
+/* ==================================================================== */
+/* MURAL DE AVISOS E ANÚNCIOS OFICIAIS FATEC                            */
+/* ==================================================================== */
+.announcement-card-standardized:hover .announcement-card-img {
+  transform: scale(1.05);
+}
+
+.high-contrast .announcement-card-standardized {
+  background: #000000 !important;
+  border: 2px solid #ffffff !important;
+  color: #ffffff !important;
+}
+
+.high-contrast .announcement-card-standardized h3,
+.high-contrast .announcement-card-standardized p,
+.high-contrast .announcement-card-standardized span {
+  color: #ffffff !important;
+}
+
+.high-contrast .announcement-card-standardized:hover {
+  border-color: #ffff00 !important;
+}

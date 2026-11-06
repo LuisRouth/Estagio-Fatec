@@ -18,7 +18,7 @@ const materialSchema = z.object({
   course: z.enum(['IA', 'ESG'] as const, {
     errorMap: () => ({ message: 'Curso inválido. Escolha IA ou ESG.' }),
   }),
-  semester: z.number().int().min(1).max(6, 'Semestre deve ser entre 1 e 6'),
+  semester: z.number().int().min(1).max(4, 'Semestre deve ser entre 1 e 4'),
   material_type: z.enum(['SLIDE', 'APOSTILA', 'CODIGO', 'TCC', 'DATASET'] as const, {
     errorMap: () => ({ message: 'Tipo inválido. Opções: SLIDE, APOSTILA, CODIGO, TCC, DATASET.' }),
   }),

@@ -1,0 +1,19 @@
+[
+  {
+    "id": "c0000000-0000-0000-0000-000000000001",
+    "title": "Portal Integrado FATEC Rio Claro: Mural Oficial no Ar!",
+    "content": "Sejam bem-vindos ao novo Portal Integrado dos Cursos de Inteligência Artificial e Gestão ESG da FATEC Rio Claro! Por aqui você confere comunicados oficiais, eventos do campus, novidades didáticas e cardápio da cantina em tempo real.",
+    "priority": "ALTA",
+    "author_id": "a0000000-0000-0000-0000-000000000007",
+    "author_name": "Luis Otavio",
+    "author_role": "Desenvolvimento & Administração",
+    "target_course": null,
+    "target_semester": null,
+    "image_url": "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?q=80&w=800&auto=format&fit=crop",
+    "link_url": "https://fatecrioclaro.cps.sp.gov.br",
+    "link_label": "Acessar Portal Institucional",
+    "is_pinned": true,
+    "created_at": "2026-11-06T20:57:34.242Z",
+    "updated_at": "2026-11-06T20:57:34.242Z"
+  }
+]

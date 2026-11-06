@@ -14,7 +14,7 @@ const updateSchema = z.object({
   title: z.string().min(3).max(200).optional(),
   description: z.string().max(1000).optional().nullable(),
   subject: z.string().min(2).max(120).optional(),
-  semester: z.number().int().min(1).max(6).optional(),
+  semester: z.number().int().min(1).max(4).optional(),
   github_url: z.string().url().or(z.string().startsWith('https://github.com')).optional().nullable(),
   tags: z.string().max(255).optional().nullable(),
   is_approved: z.boolean().optional(),

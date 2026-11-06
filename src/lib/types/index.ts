@@ -91,8 +91,12 @@ export interface Announcement {
   priority: AnnouncementPriority;
   author_id: string;
   author_name?: string;
-  target_course?: CourseType | null;
-  target_semester?: number | null;
+  author_role?: string | null;
+  target_course?: CourseType | null; // null = Todos os cursos
+  target_semester?: number | null; // null = Todos os semestres (1, 2, 3, 4)
+  image_url?: string | null;
+  link_url?: string | null;
+  link_label?: string | null;
   is_pinned: boolean;
   expires_at?: string | null;
   created_at: string;

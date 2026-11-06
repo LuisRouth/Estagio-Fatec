@@ -16,7 +16,11 @@ const announcementSchema = z.object({
   content: z.string().min(5, 'O conteúdo do aviso deve ser detalhado'),
   priority: z.enum(['BAIXA', 'MEDIA', 'ALTA', 'URGENTE'] as const),
   target_course: z.enum(['IA', 'ESG'] as const).optional().nullable(),
-  target_semester: z.number().int().min(1).max(6).optional().nullable(),
+  target_semester: z.number().int().min(1).max(4).optional().nullable(),
+  image_url: z.string().optional().nullable(),
+  link_url: z.string().optional().nullable(),
+  link_label: z.string().optional().nullable(),
+  author_role: z.string().optional().nullable(),
   is_pinned: z.boolean().default(false),
   expires_at: z.string().datetime().optional().nullable(),
 });
@@ -28,13 +32,16 @@ const announcementSchema = z.object({
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const course = searchParams.get('course') as CourseType | null;
+    const courseParam = searchParams.get('course');
+    const course = (courseParam && courseParam !== 'TODOS' ? courseParam : undefined) as CourseType | undefined;
     const semesterStr = searchParams.get('semester');
-    const semester = semesterStr ? parseInt(semesterStr, 10) : undefined;
+    const semester = semesterStr && semesterStr !== '0' ? parseInt(semesterStr, 10) : undefined;
+    const search = searchParams.get('search') ? sanitizeInput(searchParams.get('search')!) : undefined;
 
     const announcements = await db.announcements.listActive({
-      course: course || undefined,
+      course,
       semester,
+      search,
     });
 
     return NextResponse.json(
@@ -84,8 +91,12 @@ export async function POST(req: NextRequest) {
       priority: parsed.data.priority,
       author_id: session.sub,
       author_name: session.name,
+      author_role: parsed.data.author_role || (session.role === 'ADMIN' ? 'Administração FATEC' : session.role === 'CA_MEMBRO' ? 'Centro Acadêmico (CA)' : 'Corpo Docente FATEC'),
       target_course: parsed.data.target_course || null,
       target_semester: parsed.data.target_semester || null,
+      image_url: parsed.data.image_url ? sanitizeInput(parsed.data.image_url) : null,
+      link_url: parsed.data.link_url ? sanitizeInput(parsed.data.link_url) : null,
+      link_label: parsed.data.link_label ? sanitizeInput(parsed.data.link_label) : null,
       is_pinned: parsed.data.is_pinned,
       expires_at: parsed.data.expires_at || null,
     });
@@ -98,6 +109,7 @@ export async function POST(req: NextRequest) {
       entity_id: announcement.id,
       ip_address: ip,
       user_agent: req.headers.get('user-agent'),
+      payload: { title: announcement.title, target_course: announcement.target_course, target_semester: announcement.target_semester },
     });
 
     return NextResponse.json(
@@ -116,4 +128,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

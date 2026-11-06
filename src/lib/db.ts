@@ -780,37 +780,56 @@ const mockMaterials: AcademicMaterial[] = [
   },
 ];
 
-const mockAnnouncements: Announcement[] = [
+const ANNOUNCEMENTS_STORAGE_FILE = path.join(process.cwd(), 'data', 'announcements.json');
+
+function saveMockAnnouncementsToDisk() {
+  try {
+    const dir = path.dirname(ANNOUNCEMENTS_STORAGE_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(ANNOUNCEMENTS_STORAGE_FILE, JSON.stringify(mockAnnouncements, null, 2), 'utf8');
+  } catch (err) {
+    console.error('Falha ao persistir data/announcements.json:', err);
+  }
+}
+
+function loadMockAnnouncementsFromDisk(initial: Announcement[]): Announcement[] {
+  try {
+    if (fs.existsSync(ANNOUNCEMENTS_STORAGE_FILE)) {
+      const data = fs.readFileSync(ANNOUNCEMENTS_STORAGE_FILE, 'utf8');
+      const parsed = JSON.parse(data);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (err) {
+    console.error('Falha ao carregar data/announcements.json:', err);
+  }
+  return initial;
+}
+
+let mockAnnouncements: Announcement[] = loadMockAnnouncementsFromDisk([
   {
     id: 'c0000000-0000-0000-0000-000000000001',
-    title: 'Portal Integrado FATEC Rio Claro no ar!',
-    content: 'Acesse o catálogo da cantina, consulte materiais e registre seus comprovantes de forma digital.',
+    title: 'Portal Integrado FATEC Rio Claro: Mural Oficial no Ar!',
+    content: 'Sejam bem-vindos ao novo Portal Integrado dos Cursos de Inteligência Artificial e Gestão ESG da FATEC Rio Claro! Por aqui você confere comunicados oficiais, eventos do campus, novidades didáticas e cardápio da cantina em tempo real.',
     priority: 'ALTA',
-    author_id: 'a0000000-0000-0000-0000-000000000001',
-    author_name: 'Cesar Bovo',
+    author_id: 'a0000000-0000-0000-0000-000000000007',
+    author_name: 'Luis Otavio',
+    author_role: 'Desenvolvimento & Administração',
+    target_course: null, // Todos os cursos
+    target_semester: null, // Todos os semestres
+    image_url: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?q=80&w=800&auto=format&fit=crop',
+    link_url: 'https://fatecrioclaro.cps.sp.gov.br',
+    link_label: 'Acessar Portal Institucional',
     is_pinned: true,
-    created_at: new Date('2026-10-27T10:00:00Z').toISOString(),
-    updated_at: new Date('2026-10-27T10:00:00Z').toISOString(),
+    created_at: new Date('2026-11-06T10:00:00Z').toISOString(),
+    updated_at: new Date('2026-11-06T10:00:00Z').toISOString(),
   },
-  {
-    id: 'c0000000-0000-0000-0000-000000000002',
-    title: 'Entrega do Projeto de Estágio - Prof. Orlando',
-    content: 'Atenção alunos do 4º semestre: a entrega da documentação e testes finais será no dia 16/11/2026 impreterivelmente.',
-    priority: 'URGENTE',
-    author_id: 'a0000000-0000-0000-0000-000000000004',
-    author_name: 'Prof. Orlando',
-    target_course: 'IA',
-    is_pinned: true,
-    created_at: new Date('2026-10-28T10:00:00Z').toISOString(),
-    updated_at: new Date('2026-10-28T10:00:00Z').toISOString(),
-  },
-];
+]);
 
 const mockAuditLogs: AuditLog[] = [];
-
-// ====================================================================
-// FUNÇÕES DE ACESSO A DADOS (INTERFACE UNIFICADA)
-// ====================================================================
 
 export const db = {
   isMockMode: () => isMock,
@@ -1703,39 +1722,70 @@ export const db = {
   // 5. AVISOS INSTITUCIONAIS (CARD #S2-C2)
   // ------------------------------------------------------------------
   announcements: {
-    listActive: async (filters?: { course?: CourseType; semester?: number }): Promise<Announcement[]> => {
+    listActive: async (filters?: { course?: CourseType | string; semester?: number; search?: string }): Promise<Announcement[]> => {
       if (isMock || !pool) {
         let items = [...mockAnnouncements];
-        if (filters?.course) {
+        if (filters?.course && filters.course !== 'TODOS') {
           items = items.filter((a) => !a.target_course || a.target_course === filters.course);
         }
-        if (filters?.semester) {
+        if (filters?.semester && filters.semester > 0) {
           items = items.filter((a) => !a.target_semester || a.target_semester === filters.semester);
         }
-        return items.sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0));
+        if (filters?.search) {
+          const s = filters.search.toLowerCase().trim();
+          items = items.filter((a) => a.title.toLowerCase().includes(s) || a.content.toLowerCase().includes(s));
+        }
+        return items.sort((a, b) => {
+          if (b.is_pinned !== a.is_pinned) return b.is_pinned ? 1 : -1;
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
       }
 
       let query = `
         SELECT a.*, u.name as author_name
         FROM announcements a
-        JOIN users u ON u.id = a.author_id
+        LEFT JOIN users u ON u.id = a.author_id
         WHERE 1=1
       `;
       const params: any[] = [];
       let pIdx = 1;
 
-      if (filters?.course) {
+      if (filters?.course && filters.course !== 'TODOS') {
         query += ` AND (a.target_course IS NULL OR a.target_course = $${pIdx++})`;
         params.push(filters.course);
       }
-      if (filters?.semester) {
+      if (filters?.semester && filters.semester > 0) {
         query += ` AND (a.target_semester IS NULL OR a.target_semester = $${pIdx++})`;
         params.push(filters.semester);
       }
-      query += ` ORDER BY a.is_pinned DESC, a.created_at DESC LIMIT 20`;
+      if (filters?.search) {
+        query += ` AND (a.title ILIKE $${pIdx} OR a.content ILIKE $${pIdx})`;
+        params.push(`%${filters.search}%`);
+        pIdx++;
+      }
+      query += ` ORDER BY a.is_pinned DESC, a.created_at DESC LIMIT 50`;
 
       const res = await pool.query(query, params);
       return res.rows;
+    },
+
+    listAll: async (): Promise<Announcement[]> => {
+      if (isMock || !pool) {
+        return [...mockAnnouncements].sort((a, b) => {
+          if (b.is_pinned !== a.is_pinned) return b.is_pinned ? 1 : -1;
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
+      }
+      const res = await pool.query('SELECT a.*, u.name as author_name FROM announcements a LEFT JOIN users u ON u.id = a.author_id ORDER BY a.is_pinned DESC, a.created_at DESC');
+      return res.rows;
+    },
+
+    findById: async (id: string): Promise<Announcement | null> => {
+      if (isMock || !pool) {
+        return mockAnnouncements.find((a) => a.id === id) || null;
+      }
+      const res = await pool.query('SELECT a.*, u.name as author_name FROM announcements a LEFT JOIN users u ON u.id = a.author_id WHERE a.id = $1 LIMIT 1', [id]);
+      return res.rows[0] || null;
     },
 
     create: async (data: Omit<Announcement, 'id' | 'created_at' | 'updated_at'>): Promise<Announcement> => {
@@ -1745,22 +1795,58 @@ export const db = {
       const newAnn: Announcement = {
         ...data,
         id,
-        author_name: author?.name || 'Comissão FATEC',
+        author_name: data.author_name || author?.name || 'Comissão FATEC',
+        author_role: data.author_role || (author?.role === 'ADMIN' ? 'Administração' : author?.role === 'CA_MEMBRO' ? 'Centro Acadêmico' : 'Docente FATEC'),
         created_at: now,
         updated_at: now,
       };
 
       if (isMock || !pool) {
         mockAnnouncements.unshift(newAnn);
+        saveMockAnnouncementsToDisk();
         return newAnn;
       }
 
       const res = await pool.query(
-        `INSERT INTO announcements (id, title, content, priority, author_id, target_course, target_semester, is_pinned, expires_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-        [id, data.title, data.content, data.priority, data.author_id, data.target_course || null, data.target_semester || null, data.is_pinned || false, data.expires_at || null]
+        `INSERT INTO announcements (id, title, content, priority, author_id, target_course, target_semester, image_url, link_url, link_label, is_pinned, expires_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+        [id, data.title, data.content, data.priority, data.author_id, data.target_course || null, data.target_semester || null, data.image_url || null, data.link_url || null, data.link_label || null, data.is_pinned || false, data.expires_at || null]
       );
       return res.rows[0];
+    },
+
+    update: async (id: string, data: Partial<Announcement>): Promise<Announcement | null> => {
+      const now = new Date().toISOString();
+
+      if (isMock || !pool) {
+        const idx = mockAnnouncements.findIndex((a) => a.id === id);
+        if (idx === -1) return null;
+        const current = mockAnnouncements[idx];
+        const updated: Announcement = {
+          ...current,
+          ...data,
+          updated_at: now,
+        };
+        mockAnnouncements[idx] = updated;
+        saveMockAnnouncementsToDisk();
+        return updated;
+      }
+
+      const fields: string[] = [];
+      const values: any[] = [];
+      let pIdx = 1;
+
+      Object.entries(data).forEach(([key, val]) => {
+        if (key !== 'id' && key !== 'created_at') {
+          fields.push(`${key} = $${pIdx++}`);
+          values.push(val);
+        }
+      });
+      fields.push('updated_at = CURRENT_TIMESTAMP');
+      values.push(id);
+
+      const res = await pool.query(`UPDATE announcements SET ${fields.join(', ')} WHERE id = $${pIdx} RETURNING *`, values);
+      return res.rows[0] || null;
     },
 
     delete: async (id: string): Promise<boolean> => {
@@ -1768,6 +1854,7 @@ export const db = {
         const idx = mockAnnouncements.findIndex((a) => a.id === id);
         if (idx === -1) return false;
         mockAnnouncements.splice(idx, 1);
+        saveMockAnnouncementsToDisk();
         return true;
       }
       const res = await pool.query('DELETE FROM announcements WHERE id = $1', [id]);
