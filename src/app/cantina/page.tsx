@@ -269,6 +269,45 @@ export default function CantinaPage() {
   };
 
   // Concluir compra quando o aluno já realizou o Pix no aplicativo do banco
+  
+  // Simular confirmação de pagamento para testes do histórico/extrato
+  const handleSimulateTestPayment = async () => {
+    if (!checkoutData?.orderId) return;
+    setIsProcessingCheckout(true);
+    try {
+      const res = await fetch(`/api/canteen/transactions/${checkoutData.orderId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'PAGO',
+          notes: 'Pagamento confirmado via simulador de testes local FATEC',
+          pix_end_to_end_id: 'E2ETEST' + Date.now(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Falha ao confirmar pagamento teste.');
+      }
+
+      setCart([]);
+      try {
+        localStorage.removeItem('fatec_canteen_cart');
+      } catch {}
+
+      setIsCheckoutModalOpen(false);
+      setCheckoutData(null);
+      setProofSubmitted(false);
+      setProofText('');
+      showToast('✓ Pagamento de teste aprovado! O pedido foi registrado no seu Histórico.', 'success');
+      fetchProducts();
+    } catch (err: any) {
+      showToast(err.message || 'Erro ao simular pagamento.', 'error');
+    } finally {
+      setIsProcessingCheckout(false);
+    }
+  };
+
   const handleFinishPurchase = () => {
     setCart([]);
     try {
@@ -906,22 +945,26 @@ export default function CantinaPage() {
                 transition: 'all 0.2s ease',
               }}
             >
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="9" cy="21" r="1"/>
+                    <circle cx="20" cy="21" r="1"/>
+                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                  </svg>
+                </div>
                 <span
                   style={{
-                    position: 'absolute',
-                    top: '-6px',
-                    right: '-8px',
                     backgroundColor: '#ef4444',
                     color: '#ffffff',
                     fontSize: '0.72rem',
                     fontWeight: 800,
-                    borderRadius: '10px',
-                    padding: '0.1rem 0.35rem',
-                    minWidth: '18px',
+                    borderRadius: '12px',
+                    padding: '0.12rem 0.45rem',
+                    minWidth: '20px',
                     textAlign: 'center',
-                    border: '2px solid #ffffff',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
+                    lineHeight: 1.2,
                   }}
                 >
                   {totalCartCount}
@@ -945,6 +988,7 @@ export default function CantinaPage() {
         {/* Modal de Carrinho Lateral (Drawer Responsivo) */}
         {isCartOpen && (
           <div
+            onClick={() => setIsCartOpen(false)}
             style={{
               position: 'fixed',
               inset: 0,
@@ -956,6 +1000,7 @@ export default function CantinaPage() {
           >
             <div
               className="canteen-cart-drawer"
+              onClick={(e) => e.stopPropagation()}
               style={{
                 width: '100%',
                 maxWidth: '420px',
@@ -1072,11 +1117,30 @@ export default function CantinaPage() {
                             +
                           </button>
                           <button
+                            type="button"
                             onClick={() => removeFromCart(item.product.id)}
-                            style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.85rem', cursor: 'pointer', marginLeft: '0.25rem', fontWeight: 700 }}
-                            title="Remover do pedido"
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: '#ef4444',
+                              cursor: 'pointer',
+                              marginLeft: '0.35rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              padding: '0.25rem',
+                              borderRadius: '4px',
+                              opacity: 0.85,
+                              transition: 'opacity 0.2s',
+                            }}
+                            title="Remover produto do carrinho"
                           >
-                            ✕
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              <line x1="10" y1="11" x2="10" y2="17" />
+                              <line x1="14" y1="11" x2="14" y2="17" />
+                            </svg>
                           </button>
                         </div>
                       </div>
@@ -1111,6 +1175,7 @@ export default function CantinaPage() {
         {/* Modal de Checkout Express (QR Code Pix Dinâmico) */}
         {isCheckoutModalOpen && (
           <div
+            onClick={handleCloseCheckoutWithoutFinishing}
             style={{
               position: 'fixed',
               inset: 0,
@@ -1125,6 +1190,7 @@ export default function CantinaPage() {
           >
             <div
               className="canteen-checkout-modal"
+              onClick={(e) => e.stopPropagation()}
               style={{
                 width: '100%',
                 maxWidth: '520px',
@@ -1223,6 +1289,35 @@ export default function CantinaPage() {
                         {copiedKey ? '✓ Copiado!' : 'Copiar Chave'}
                       </button>
                     </div>
+                  </div>
+
+                  
+                  {/* Botão de Teste Direto para Homologação do Histórico */}
+                  <div style={{ marginBottom: '1.25rem', padding: '0.85rem', backgroundColor: 'rgba(2, 132, 199, 0.08)', borderRadius: '12px', border: '1px dashed var(--accent-blue)', textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-sub)', fontWeight: 600, marginBottom: '0.5rem' }}>
+                      Ambiente de Testes / Validação do Extrato:
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSimulateTestPayment}
+                      disabled={isProcessingCheckout}
+                      className="btn btn-primary"
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem 1rem',
+                        fontSize: '0.85rem',
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.4rem',
+                      }}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                      </svg>
+                      {isProcessingCheckout ? 'Processando teste...' : 'Simular Pagamento Pix (Teste do Histórico)'}
+                    </button>
                   </div>
 
                   {/* Ações de Retorno ou Conclusão Rápida */}

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Announcement,
   AnnouncementBannerType,
@@ -34,8 +35,24 @@ export default function AnnouncementDetailModal({
   canManage = false,
 }: AnnouncementDetailModalProps) {
   const [imgError, setImgError] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  if (!isOpen || !announcement) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Bloqueia o scroll da página enquanto o modal estiver aberto
+  useEffect(() => {
+    if (isOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen]);
+
+  if (!isOpen || !announcement || !mounted) return null;
 
   const isUrgent = announcement.priority === 'URGENTE';
   const isHigh = announcement.priority === 'ALTA';
@@ -70,7 +87,8 @@ export default function AnnouncementDetailModal({
 
   const allAttachments = announcement.attachments || [];
 
-  return (
+  return createPortal(
+
     <div
       style={{
         position: 'fixed',
@@ -83,6 +101,7 @@ export default function AnnouncementDetailModal({
         justifyContent: 'center',
         padding: '1rem',
         animation: 'fadeIn 0.2s ease-out',
+        overscrollBehavior: 'contain',
       }}
       onClick={onClose}
     >
@@ -246,7 +265,7 @@ export default function AnnouncementDetailModal({
         </div>
 
         {/* Conteúdo com rolagem */}
-        <div style={{ overflowY: 'auto', padding: '1.75rem 2rem', flex: 1 }}>
+        <div style={{ overflowY: 'auto', padding: '1.75rem 2rem', flex: 1, overscrollBehavior: 'contain' }}>
           {/* Metadados: Curso, Semestre e Data */}
           <div
             style={{
@@ -564,5 +583,7 @@ export default function AnnouncementDetailModal({
         </div>
       </div>
     </div>
+  ,
+    document.body
   );
 }

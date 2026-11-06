@@ -1,3 +1,12 @@
+html {
+  scrollbar-gutter: stable;
+  overflow-y: scroll;
+}
+
+body {
+  overflow-x: hidden;
+}
+
 :root {
   /* Paleta Oficial e Limpa - FATEC Rio Claro / CPS */
   --bg-primary: #f1f5f9;
@@ -1574,4 +1583,114 @@ textarea,
 
 .dark-high-contrast .announcement-card-footer .announcement-card-read-more {
   color: #38bdf8 !important;
+}
+
+
+/* ==================================================================== */
+/* HISTÓRICO DE COMPRAS DA CANTINA - TEMA CLARO E ALTO CONTRASTE        */
+/* ==================================================================== */
+.canteen-statement-header {
+  background-color: #ffffff;
+  border: 1px solid var(--border-light);
+  color: var(--text-main);
+}
+
+.canteen-statement-metric-card {
+  background-color: #ffffff;
+  border: 1px solid var(--border-light);
+  color: var(--text-main);
+  box-shadow: var(--shadow-sm);
+}
+
+.canteen-statement-main-card {
+  background-color: #ffffff;
+  border: 1px solid var(--border-light);
+  color: var(--text-main);
+  box-shadow: var(--shadow-sm);
+}
+
+.canteen-statement-tx-row {
+  background-color: var(--bg-muted, #f8fafc);
+  border: 1px solid var(--border-light, #e2e8f0);
+}
+
+.canteen-statement-item-chip {
+  background-color: #ffffff;
+  border: 1px solid var(--border-light);
+  color: var(--text-main);
+}
+
+/* Modo Alto Contraste do Histórico */
+.dark-high-contrast .canteen-statement-header {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .canteen-statement-header h1 {
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .canteen-statement-header p {
+  color: #cbd5e1 !important;
+}
+
+.dark-high-contrast .canteen-statement-metric-card {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .canteen-statement-metric-card span {
+  color: #cbd5e1 !important;
+}
+
+.dark-high-contrast .canteen-statement-main-card {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .canteen-statement-main-card h2,
+.dark-high-contrast .canteen-statement-main-card h3 {
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .canteen-statement-tx-row {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .canteen-statement-tx-row span,
+.dark-high-contrast .canteen-statement-tx-row div {
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .canteen-statement-tx-date {
+  color: #94a3b8 !important;
+}
+
+.dark-high-contrast .canteen-statement-item-chip {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .canteen-cart-drawer {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border-left: 1px solid #334155 !important;
+}
+
+.dark-high-contrast .canteen-cart-item-row {
+  background-color: #1e293b !important;
+  border: 1px solid #334155 !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .canteen-checkout-modal {
+  background-color: #0f172a !important;
+  border: 1px solid #334155 !important;
+  color: #f8fafc !important;
 }

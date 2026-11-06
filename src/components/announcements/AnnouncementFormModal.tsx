@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Announcement,
   AnnouncementPriority,
@@ -145,7 +146,24 @@ export default function AnnouncementFormModal({
     setError('');
   }, [editingAnnouncement, isOpen]);
 
-  if (!isOpen) return null;
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Bloqueia scroll do fundo
+  useEffect(() => {
+    if (isOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen]);
+
+  if (!isOpen || !mounted) return null;
 
   // Gerenciadores de Links Dinâmicos
   const handleAddLink = () => {
@@ -316,8 +334,10 @@ export default function AnnouncementFormModal({
   const activeGradient =
     BANNER_PRESETS.find((p) => p.id === bannerType)?.gradient || BANNER_PRESETS[0].gradient;
 
-  return (
+  return createPortal(
+
     <div
+      onClick={onClose}
       style={{
         position: 'fixed',
         inset: 0,
@@ -329,10 +349,12 @@ export default function AnnouncementFormModal({
         justifyContent: 'center',
         padding: '1rem',
         animation: 'fadeIn 0.2s ease-out',
+        overscrollBehavior: 'contain',
       }}
     >
       <div
         className="announcement-modal-card card"
+        onClick={(e) => e.stopPropagation()}
         style={{
           width: '100%',
           maxWidth: '780px',
@@ -385,7 +407,7 @@ export default function AnnouncementFormModal({
         </div>
 
         {/* Formulário com Scroll Suave */}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflowY: 'auto' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflowY: 'auto', overscrollBehavior: 'contain' }}>
           <div style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             {error && (
               <div
@@ -1085,5 +1107,7 @@ export default function AnnouncementFormModal({
         </form>
       </div>
     </div>
+  ,
+    document.body
   );
 }

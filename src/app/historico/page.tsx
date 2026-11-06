@@ -85,9 +85,7 @@ export default function HistoricoPage() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
         
         {/* Cabeçalho do Painel */}
-        <div
-          style={{
-            backgroundColor: 'rgba(255, 255, 255, 0.92)',
+        <div className="canteen-statement-header" style={{
             backdropFilter: 'blur(16px)',
             borderRadius: '20px',
             padding: '2.25rem 2rem',
@@ -114,8 +112,9 @@ export default function HistoricoPage() {
             </p>
           </div>
 
-          <Link href="/cantina" className="btn btn-primary" style={{ padding: '0.8rem 1.4rem' }}>
-            🥪 Comprar na Cantina
+          <Link href="/cantina" className="btn btn-primary" style={{ padding: '0.75rem 1.35rem', display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+            Comprar na Cantina
           </Link>
         </div>
 
@@ -147,7 +146,7 @@ export default function HistoricoPage() {
         {/* Métricas e Resumo Financeiro Pessoal */}
         {summary && !errorMsg && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
-            <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '1.5rem', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
+            <div className="canteen-statement-metric-card" style={{ borderRadius: '16px', padding: '1.5rem' }}>
               <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>Total Consumido</span>
               <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--accent-blue)', marginTop: '0.35rem' }}>
                 R$ {summary.totalSpent.toFixed(2).replace('.', ',')}
@@ -155,7 +154,7 @@ export default function HistoricoPage() {
               <span style={{ fontSize: '0.75rem', color: 'var(--accent-emerald)', fontWeight: 600 }}>Extrato consolidado</span>
             </div>
 
-            <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '1.5rem', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
+            <div className="canteen-statement-metric-card" style={{ borderRadius: '16px', padding: '1.5rem' }}>
               <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>Compras Confirmadas</span>
               <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--accent-emerald)', marginTop: '0.35rem' }}>
                 {summary.confirmedCount}
@@ -163,7 +162,7 @@ export default function HistoricoPage() {
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Pagamentos via Pix conferidos</span>
             </div>
 
-            <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '1.5rem', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
+            <div className="canteen-statement-metric-card" style={{ borderRadius: '16px', padding: '1.5rem' }}>
               <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>Pendentes de Confirmação</span>
               <div style={{ fontSize: '1.85rem', fontWeight: 800, color: summary.pendingCount > 0 ? 'var(--accent-amber)' : 'var(--text-muted)', marginTop: '0.35rem' }}>
                 {summary.pendingCount}
@@ -171,7 +170,7 @@ export default function HistoricoPage() {
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Aguardando validação CA</span>
             </div>
 
-            <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '1.5rem', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
+            <div className="canteen-statement-metric-card" style={{ borderRadius: '16px', padding: '1.5rem' }}>
               <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>Total de Pedidos</span>
               <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '0.35rem' }}>
                 {summary.totalOrders}
@@ -183,15 +182,7 @@ export default function HistoricoPage() {
 
         {/* Tabela e Lista de Transações */}
         {!errorMsg && (
-          <div
-            style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '16px',
-              padding: '1.75rem',
-              border: '1px solid var(--border-light)',
-              boxShadow: 'var(--shadow-sm)',
-            }}
-          >
+          <div className="canteen-statement-main-card" style={{ borderRadius: '16px', padding: '1.75rem', minHeight: '340px' }}>
             {/* Filtros de Status */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
               <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)' }}>
@@ -229,13 +220,24 @@ export default function HistoricoPage() {
             </div>
 
             {loading ? (
-              <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--text-muted)' }}>
-                <div style={{ fontSize: '2rem', marginBottom: '0.5rem', animation: 'spin 1s infinite linear' }}>⏳</div>
-                Carregando extrato pessoal...
+              <div style={{ textAlign: 'center', padding: '5rem 0', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="2.5" strokeLinecap="round" style={{ animation: 'spin 1s linear infinite', marginBottom: '0.85rem' }}>
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                </svg>
+                <div style={{ fontSize: '0.95rem', fontWeight: 600 }}>Carregando extrato pessoal...</div>
+                <div style={{ fontSize: '0.8rem', opacity: 0.8, marginTop: '0.2rem' }}>Sincronizando compras e comprovantes Pix</div>
               </div>
             ) : transactions.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '4rem 2rem', color: 'var(--text-muted)' }}>
-                <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>🧾</div>
+                <div style={{ display: 'inline-flex', justifyContent: 'center', marginBottom: '0.75rem', color: 'var(--text-muted)' }}>
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                    <polyline points="10 9 9 9 8 9"/>
+                  </svg>
+                </div>
                 <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-main)' }}>
                   Nenhuma transação encontrada
                 </h3>
@@ -250,11 +252,7 @@ export default function HistoricoPage() {
                   const dateStr = new Date(tx.created_at).toLocaleString('pt-BR');
 
                   return (
-                    <div
-                      key={tx.id}
-                      style={{
-                        padding: '1.25rem',
-                        backgroundColor: 'var(--bg-muted)',
+                    <div key={tx.id} className="canteen-statement-tx-row" style={{ padding: '1.25rem',
                         borderRadius: '12px',
                         border: '1px solid var(--border-light)',
                         display: 'flex',
@@ -270,8 +268,7 @@ export default function HistoricoPage() {
                               Pedido #{tx.txid || tx.id.slice(0, 8)}
                             </span>
                             <span
-                              className="badge"
-                              style={{ backgroundColor: statusBadge.bg, color: statusBadge.color }}
+                              className="badge" style={{ backgroundColor: statusBadge.bg, color: statusBadge.color, fontWeight: 700 }}
                             >
                               {statusBadge.label}
                             </span>
@@ -293,11 +290,7 @@ export default function HistoricoPage() {
                       {tx.items && tx.items.length > 0 && (
                         <div style={{ borderTop: '1px dashed var(--border-light)', paddingTop: '0.65rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                           {tx.items.map((it) => (
-                            <span
-                              key={it.id}
-                              style={{
-                                fontSize: '0.8rem',
-                                backgroundColor: '#ffffff',
+                            <span key={it.id} className="canteen-statement-item-chip" style={{ fontSize: '0.8rem',
                                 border: '1px solid var(--border-light)',
                                 padding: '3px 8px',
                                 borderRadius: '6px',

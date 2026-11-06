@@ -1354,10 +1354,11 @@ export const db = {
         const createdItems: CanteenTransactionItem[] = [];
 
         for (const item of items) {
+          const subtotal = Number((item.quantity * item.unitPrice).toFixed(2));
           const itemRes = await client.query(
-            `INSERT INTO canteen_transaction_items (transaction_id, product_id, quantity, unit_price)
-             VALUES ($1, $2, $3, $4) RETURNING *`,
-            [txId, item.productId, item.quantity, item.unitPrice]
+            `INSERT INTO canteen_transaction_items (transaction_id, product_id, quantity, unit_price, subtotal)
+             VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+            [txId, item.productId, item.quantity, item.unitPrice, subtotal]
           );
           createdItems.push(itemRes.rows[0]);
         }
