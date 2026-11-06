@@ -11,15 +11,31 @@ import { getCurrentSession } from '@/lib/auth';
 import { SECURITY_HEADERS, sanitizeInput } from '@/lib/security';
 import { CourseType } from '@/lib/types';
 
+const linkSchema = z.object({
+  id: z.string(),
+  label: z.string().min(1, 'Rótulo obrigatório').max(100),
+  url: z.string().url('URL inválida').or(z.string().min(1)),
+});
+
+const attachmentSchema = z.object({
+  id: z.string(),
+  title: z.string().min(1, 'Título obrigatório').max(150),
+  url: z.string().min(1, 'URL ou caminho obrigatório'),
+  type: z.enum(['IMAGEM', 'DOCUMENTO']).default('DOCUMENTO'),
+});
+
 const announcementSchema = z.object({
   title: z.string().min(4, 'O título deve ter no mínimo 4 caracteres').max(200),
   content: z.string().min(5, 'O conteúdo do aviso deve ser detalhado'),
   priority: z.enum(['BAIXA', 'MEDIA', 'ALTA', 'URGENTE'] as const),
   target_course: z.enum(['IA', 'ESG'] as const).optional().nullable(),
   target_semester: z.number().int().min(1).max(4).optional().nullable(),
+  banner_type: z.enum(['PADRAO_AZUL', 'PADRAO_VERDE', 'PADRAO_ROXO', 'PADRAO_AMBAR', 'PADRAO_GRAFITE', 'CUSTOM'] as const).optional().nullable(),
   image_url: z.string().optional().nullable(),
   link_url: z.string().optional().nullable(),
   link_label: z.string().optional().nullable(),
+  links: z.array(linkSchema).optional().nullable(),
+  attachments: z.array(attachmentSchema).optional().nullable(),
   author_role: z.string().optional().nullable(),
   is_pinned: z.boolean().default(false),
   expires_at: z.string().datetime().optional().nullable(),
@@ -94,9 +110,12 @@ export async function POST(req: NextRequest) {
       author_role: parsed.data.author_role || (session.role === 'ADMIN' ? 'Administração FATEC' : session.role === 'CA_MEMBRO' ? 'Centro Acadêmico (CA)' : 'Corpo Docente FATEC'),
       target_course: parsed.data.target_course || null,
       target_semester: parsed.data.target_semester || null,
+      banner_type: parsed.data.banner_type || 'PADRAO_AZUL',
       image_url: parsed.data.image_url ? sanitizeInput(parsed.data.image_url) : null,
       link_url: parsed.data.link_url ? sanitizeInput(parsed.data.link_url) : null,
       link_label: parsed.data.link_label ? sanitizeInput(parsed.data.link_label) : null,
+      links: parsed.data.links || [],
+      attachments: parsed.data.attachments || [],
       is_pinned: parsed.data.is_pinned,
       expires_at: parsed.data.expires_at || null,
     });

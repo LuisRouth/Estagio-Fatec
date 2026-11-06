@@ -344,7 +344,7 @@ export default function HomePage() {
               )}
 
               <Link href="/avisos" className="btn btn-primary" style={{ fontSize: '0.85rem', padding: '0.55rem 1.15rem' }}>
-                Abrir Mural Completo ({announcements.length}) ➔
+                Abrir Mural Completo ({announcements.length}) →
               </Link>
             </div>
           </div>
@@ -355,24 +355,14 @@ export default function HomePage() {
               Filtrar no início:
             </span>
             {[
-              { id: 'TODOS', label: '🌐 Todos os Cursos' },
-              { id: 'IA', label: '🤖 Inteligência Artificial' },
-              { id: 'ESG', label: '🌱 Gestão ESG' },
+              { id: 'TODOS', label: 'Todos os Cursos' },
+              { id: 'IA', label: 'Inteligência Artificial' },
+              { id: 'ESG', label: 'Gestão ESG' },
             ].map((c) => (
               <button
                 key={c.id}
                 onClick={() => setHomeCourseFilter(c.id as any)}
-                style={{
-                  padding: '0.35rem 0.85rem',
-                  borderRadius: '20px',
-                  border: homeCourseFilter === c.id ? '2px solid var(--accent-primary, #0284c7)' : '1px solid var(--border-light)',
-                  backgroundColor: homeCourseFilter === c.id ? 'rgba(2, 132, 199, 0.1)' : 'transparent',
-                  color: homeCourseFilter === c.id ? 'var(--accent-primary, #0284c7)' : 'var(--text-sub)',
-                  fontWeight: homeCourseFilter === c.id ? 800 : 500,
-                  fontSize: '0.8rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
+                className={`announcement-filter-btn ${homeCourseFilter === c.id ? 'active' : ''}`}
               >
                 {c.label}
               </button>
@@ -432,7 +422,7 @@ export default function HomePage() {
                 gap: '0.75rem',
               }}
             >
-              <div style={{ fontSize: '2.5rem' }}>📢</div>
+              <div style={{ display: "inline-flex", justifyContent: "center", marginBottom: "0.5rem", color: "var(--text-muted)" }}><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg></div>
               <div style={{ maxWidth: '480px' }}>
                 <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '1.05rem' }}>
                   Nenhum comunicado registrado no momento

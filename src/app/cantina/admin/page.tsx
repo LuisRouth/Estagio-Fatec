@@ -196,16 +196,44 @@ export default function CantinaAdminPage() {
     });
   };
 
-  // Seleciona arquivo local para upload
-  const handleSelectFileToUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Seleciona arquivo local e realiza upload imediato
+  const handleSelectFileToUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setSelectedUploadFile(file);
-    if (!uploadCustomName) {
+    setIsUploadingImage(true);
+    setFormError('');
+
+    try {
       const baseSuggest = formName
         ? formName.toLowerCase().trim().replace(/\s+/g, '_')
         : file.name.substring(0, file.name.lastIndexOf('.')).toLowerCase().replace(/\s+/g, '_');
       setUploadCustomName(baseSuggest);
+
+      const formData = new FormData();
+      formData.append('file', file);
+      if (baseSuggest) {
+        formData.append('customName', baseSuggest);
+      }
+
+      const res = await fetch('/api/canteen/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success && data.url) {
+        setFormImageUrl(data.url);
+        setImageLoadError(false);
+        showToast('Foto carregada e vinculada com sucesso!');
+        await loadGallery();
+      } else {
+        showToast(data.error || 'Falha ao processar foto.');
+      }
+    } catch {
+      showToast('Erro ao enviar foto para o servidor.');
+    } finally {
+      setIsUploadingImage(false);
     }
   };
 
@@ -962,9 +990,9 @@ export default function CantinaAdminPage() {
                     >
                       <option value="SALGADO">Salgados & Snacks</option>
                       <option value="BEBIDA">Bebidas Geladas</option>
-                      <option value="DOCE">Doces & Biscoitos</option>
-                      <option value="CONGELADO">Congelados / Micro-ondas</option>
-                      <option value="OUTRO">Outros</option>
+                      <option value="DOCE">Doces & Sobremesas</option>
+                      <option value="CONGELADO">Congelados (Micro-ondas)</option>
+                      
                     </select>
                   </div>
 
@@ -1029,7 +1057,7 @@ export default function CantinaAdminPage() {
                           cursor: 'pointer',
                         }}
                       >
-                        🖼️ Galeria
+                        Galeria FATEC
                       </button>
                       <button
                         type="button"
@@ -1045,7 +1073,7 @@ export default function CantinaAdminPage() {
                           cursor: 'pointer',
                         }}
                       >
-                        📁 Enviar Foto
+                        Carregar Foto (PC)
                       </button>
                       <button
                         type="button"
@@ -1061,7 +1089,7 @@ export default function CantinaAdminPage() {
                           cursor: 'pointer',
                         }}
                       >
-                        🌐 Link Web
+                        Link Externo (Web)
                       </button>
                     </div>
                   </div>
@@ -1174,7 +1202,7 @@ export default function CantinaAdminPage() {
                                 textDecoration: 'underline',
                               }}
                             >
-                              🗑️ Excluir da Galeria
+                              Excluir da Galeria
                             </button>
                           )}
                         </div>
@@ -1209,7 +1237,7 @@ export default function CantinaAdminPage() {
                           }}
                           title="Atualizar galeria do servidor"
                         >
-                          {isLoadingGallery ? '⏳' : '🔄'}
+                          {isLoadingGallery ? '...' : 'Atualizar'}
                         </button>
                       </div>
 
@@ -1400,7 +1428,12 @@ export default function CantinaAdminPage() {
                           placeholder="Cole o link direto da imagem (https://...)"
                           value={webUrlInput}
                           onChange={(e) => {
-                            setWebUrlInput(e.target.value);
+                            const val = e.target.value;
+                            setWebUrlInput(val);
+                            if (val.trim()) {
+                              setFormImageUrl(val.trim());
+                              setImageLoadError(false);
+                            }
                             if (!webCustomName) {
                               setWebCustomName(formName.toLowerCase().replace(/\s+/g, '_') || 'foto_web');
                             }

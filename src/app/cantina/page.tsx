@@ -142,11 +142,11 @@ export default function CantinaPage() {
 
   // Filtros de Categoria
   const categories = [
-    { id: 'TODOS', label: 'Todos os Itens', icon: '🧺' },
-    { id: 'SALGADO', label: 'Salgados & Snacks', icon: '🥐' },
-    { id: 'BEBIDA', label: 'Bebidas Geladas', icon: '🥤' },
-    { id: 'DOCE', label: 'Doces & Sobremesas', icon: '🍫' },
-    { id: 'CONGELADO', label: 'Congelados (Micro-ondas)', icon: '❄️' },
+    { id: 'TODOS', label: 'Todos os Itens' },
+    { id: 'SALGADO', label: 'Salgados & Snacks' },
+    { id: 'BEBIDA', label: 'Bebidas Geladas' },
+    { id: 'DOCE', label: 'Doces & Sobremesas' },
+    { id: 'CONGELADO', label: 'Congelados (Micro-ondas)' },
   ];
 
   const filteredProducts = products.filter((p) => {
@@ -455,15 +455,7 @@ export default function CantinaPage() {
   };
 
     // Ícones ilustrativos nativos para fallback de imagem dos produtos
-  const getProductFallbackEmoji = (cat: string) => {
-    switch (cat) {
-      case 'BEBIDA': return '🥤';
-      case 'SALGADO': return '🥐';
-      case 'CONGELADO': return '🥟';
-      case 'DOCE': return '🍫';
-      default: return '🥪';
-    }
-  };
+  const getProductFallbackEmoji = (cat: string) => '';
 
   return (
     <AppLayout activePath="/cantina">
@@ -519,7 +511,7 @@ export default function CantinaPage() {
                 }}
                 title="Acessar painel do Centro Acadêmico e Secretaria para reposição, novos itens e preços"
               >
-                <span>⚙️</span>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                 <span>Gerenciar Estoque (CA / Secretaria)</span>
               </Link>
             )}
@@ -530,7 +522,7 @@ export default function CantinaPage() {
               className="btn btn-primary"
               style={{ padding: '0.8rem 1.4rem', fontSize: '0.95rem', position: 'relative' }}
             >
-              <span>🛒 Meu Pedido</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>Meu Pedido</span>
               {totalCartCount > 0 && (
                 <span
                   style={{
@@ -564,10 +556,11 @@ export default function CantinaPage() {
                   <button
                     key={cat.id}
                     onClick={() => setSelectedCategory(cat.id)}
+                    className={`canteen-category-btn ${isSelected ? 'active' : ''}`}
                     style={{
                       border: isSelected ? '1px solid var(--accent-blue)' : '1px solid var(--border-light)',
-                      backgroundColor: isSelected ? 'var(--accent-blue-light)' : '#ffffff',
-                      color: isSelected ? 'var(--accent-blue-hover)' : 'var(--text-main)',
+                      backgroundColor: isSelected ? 'var(--accent-blue)' : 'transparent',
+                      color: isSelected ? '#ffffff' : 'var(--text-main)',
                       fontWeight: isSelected ? 700 : 500,
                       padding: '0.6rem 1.15rem',
                       borderRadius: '12px',
@@ -580,7 +573,6 @@ export default function CantinaPage() {
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    <span>{cat.icon}</span>
                     <span>{cat.label}</span>
                   </button>
                 );
@@ -591,7 +583,7 @@ export default function CantinaPage() {
             <div style={{ minWidth: '260px', flex: '1 1 260px', maxWidth: '380px' }}>
               <input
                 type="text"
-                placeholder="🔍 Buscar salgado, refrigerante, doce..."
+                placeholder="Buscar salgado, refrigerante, doce..."
                 className="form-input"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -716,7 +708,7 @@ export default function CantinaPage() {
               border: '1px dashed var(--border-light)',
             }}
           >
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
+            <div style={{ display: "inline-flex", justifyContent: "center", marginBottom: "1rem", color: "var(--text-muted)" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
             <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-main)' }}>
               Nenhum item encontrado nesta categoria
             </h3>
@@ -915,7 +907,7 @@ export default function CantinaPage() {
               }}
             >
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                <span style={{ fontSize: '1.3rem' }}>🛒</span>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
                 <span
                   style={{
                     position: 'absolute',
@@ -1021,7 +1013,7 @@ export default function CantinaPage() {
                         }}
                         title="Esvaziar todos os itens do carrinho"
                       >
-                        🗑️ Limpar
+                        Limpar
                       </button>
                     )}
                     <button
@@ -1037,7 +1029,7 @@ export default function CantinaPage() {
 
                 {cart.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--text-muted)' }}>
-                    <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🛒</div>
+                    <div style={{ display: "inline-flex", justifyContent: "center", marginBottom: "0.75rem", color: "var(--text-muted)" }}><svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div>
                     Seu carrinho está vazio.<br />Adicione itens do expositor para pagar via Pix.
                   </div>
                 ) : (
@@ -1081,10 +1073,10 @@ export default function CantinaPage() {
                           </button>
                           <button
                             onClick={() => removeFromCart(item.product.id)}
-                            style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '1rem', cursor: 'pointer', marginLeft: '0.25rem' }}
+                            style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.85rem', cursor: 'pointer', marginLeft: '0.25rem', fontWeight: 700 }}
                             title="Remover do pedido"
                           >
-                            🗑️
+                            ✕
                           </button>
                         </div>
                       </div>
@@ -1155,7 +1147,7 @@ export default function CantinaPage() {
 
               {checkoutError ? (
                 <div style={{ textAlign: 'center', padding: '2rem 0' }}>
-                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</div>
+                  <div style={{ display: "inline-flex", justifyContent: "center", marginBottom: "1rem", color: "var(--accent-rose)" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
                   <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>
                     Atenção no Checkout
                   </h3>

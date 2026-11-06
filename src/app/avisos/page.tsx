@@ -246,14 +246,14 @@ export default function AvisosPage() {
                 Curso:
               </span>
               {[
-                { id: 'TODOS', label: '🌐 Todos os Cursos' },
-                { id: 'IA', label: '🤖 Inteligência Artificial' },
-                { id: 'ESG', label: '🌱 Gestão ESG' },
+                { id: 'TODOS', label: 'Todos os Cursos' },
+                { id: 'IA', label: 'Inteligência Artificial' },
+                { id: 'ESG', label: 'Gestão ESG' },
               ].map((c) => (
                 <button
                   key={c.id}
                   onClick={() => setSelectedCourse(c.id as any)}
-                  className={`btn ${selectedCourse === c.id ? 'btn-primary' : 'btn-outline'}`}
+                  className={`announcement-filter-btn ${selectedCourse === c.id ? 'active' : ''}`}
                   style={{
                     fontSize: '0.825rem',
                     padding: '0.4rem 0.85rem',
@@ -294,17 +294,7 @@ export default function AvisosPage() {
               <button
                 key={s.val}
                 onClick={() => setSelectedSemester(s.val)}
-                style={{
-                  padding: '0.3rem 0.75rem',
-                  borderRadius: '16px',
-                  border: selectedSemester === s.val ? '2px solid var(--accent-primary, #0284c7)' : '1px solid var(--border-light)',
-                  backgroundColor: selectedSemester === s.val ? 'rgba(2, 132, 199, 0.1)' : 'transparent',
-                  color: selectedSemester === s.val ? 'var(--accent-primary, #0284c7)' : 'var(--text-sub)',
-                  fontWeight: selectedSemester === s.val ? 800 : 500,
-                  fontSize: '0.8rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
+                className={`announcement-filter-btn ${selectedSemester === s.val ? 'active' : ''}`}
               >
                 {s.label}
               </button>
@@ -372,7 +362,12 @@ export default function AvisosPage() {
               gap: '1rem',
             }}
           >
-            <div style={{ fontSize: '3rem' }}>📢</div>
+            <div style={{ width: '48px', height: '48px', margin: '0 auto', borderRadius: '50%', backgroundColor: 'rgba(2, 132, 199, 0.1)', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                </svg>
+              </div>
             <div style={{ maxWidth: '480px' }}>
               <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
                 Nenhum comunicado encontrado para este filtro

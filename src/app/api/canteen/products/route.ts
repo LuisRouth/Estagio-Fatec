@@ -20,7 +20,7 @@ const productSchema = z.object({
   price: z.number().positive('O preço deve ser maior que zero'),
   current_stock: z.number().int().min(0, 'O estoque não pode ser negativo'),
   min_stock_alert: z.number().int().min(0).default(5),
-  image_url: z.string().url().or(z.string().startsWith('/')).optional().nullable(),
+  image_url: z.string().optional().nullable(),
   barcode: z.string().max(50).optional().nullable(),
   is_available: z.boolean().default(true),
 });
@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
       price: Number(parsed.data.price.toFixed(2)),
       current_stock: parsed.data.current_stock,
       min_stock_alert: parsed.data.min_stock_alert,
-      image_url: parsed.data.image_url || null,
+      image_url: parsed.data.image_url && parsed.data.image_url.trim() ? sanitizeInput(parsed.data.image_url.trim()) : null,
       barcode: parsed.data.barcode || null,
       is_available: parsed.data.is_available,
     });

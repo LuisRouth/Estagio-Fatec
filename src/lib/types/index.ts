@@ -87,6 +87,27 @@ export interface CanteenTransaction {
   items?: CanteenTransactionItem[];
 }
 
+export type AnnouncementBannerType =
+  | 'PADRAO_AZUL'
+  | 'PADRAO_VERDE'
+  | 'PADRAO_ROXO'
+  | 'PADRAO_AMBAR'
+  | 'PADRAO_GRAFITE'
+  | 'CUSTOM';
+
+export interface AnnouncementLink {
+  id: string;
+  label: string;
+  url: string;
+}
+
+export interface AnnouncementAttachment {
+  id: string;
+  title: string;
+  url: string;
+  type?: 'IMAGEM' | 'DOCUMENTO';
+}
+
 export interface Announcement {
   id: string;
   title: string;
@@ -97,9 +118,12 @@ export interface Announcement {
   author_role?: string | null;
   target_course?: CourseType | null; // null = Todos os cursos
   target_semester?: number | null; // null = Todos os semestres (1, 2, 3, 4)
+  banner_type?: AnnouncementBannerType | null;
   image_url?: string | null;
   link_url?: string | null;
   link_label?: string | null;
+  links?: AnnouncementLink[];
+  attachments?: AnnouncementAttachment[];
   is_pinned: boolean;
   expires_at?: string | null;
   created_at: string;

@@ -1892,7 +1892,11 @@ export const db = {
       query += ` ORDER BY a.is_pinned DESC, a.created_at DESC LIMIT 50`;
 
       const res = await pool.query(query, params);
-      return res.rows;
+      return res.rows.map((r: any) => ({
+        ...r,
+        links: typeof r.links === 'string' ? JSON.parse(r.links) : (r.links || []),
+        attachments: typeof r.attachments === 'string' ? JSON.parse(r.attachments) : (r.attachments || []),
+      }));
     },
 
     listAll: async (): Promise<Announcement[]> => {
@@ -1903,7 +1907,11 @@ export const db = {
         });
       }
       const res = await pool.query('SELECT a.*, u.name as author_name FROM announcements a LEFT JOIN users u ON u.id = a.author_id ORDER BY a.is_pinned DESC, a.created_at DESC');
-      return res.rows;
+      return res.rows.map((r: any) => ({
+        ...r,
+        links: typeof r.links === 'string' ? JSON.parse(r.links) : (r.links || []),
+        attachments: typeof r.attachments === 'string' ? JSON.parse(r.attachments) : (r.attachments || []),
+      }));
     },
 
     findById: async (id: string): Promise<Announcement | null> => {
@@ -1911,7 +1919,13 @@ export const db = {
         return mockAnnouncements.find((a) => a.id === id) || null;
       }
       const res = await pool.query('SELECT a.*, u.name as author_name FROM announcements a LEFT JOIN users u ON u.id = a.author_id WHERE a.id = $1 LIMIT 1', [id]);
-      return res.rows[0] || null;
+      if (!res.rows[0]) return null;
+      const r = res.rows[0];
+      return {
+        ...r,
+        links: typeof r.links === 'string' ? JSON.parse(r.links) : (r.links || []),
+        attachments: typeof r.attachments === 'string' ? JSON.parse(r.attachments) : (r.attachments || []),
+      };
     },
 
     create: async (data: Omit<Announcement, 'id' | 'created_at' | 'updated_at'>): Promise<Announcement> => {
@@ -1921,6 +1935,9 @@ export const db = {
       const newAnn: Announcement = {
         ...data,
         id,
+        banner_type: data.banner_type || (data.image_url ? 'CUSTOM' : 'PADRAO_AZUL'),
+        links: data.links || (data.link_url ? [{ id: 'link-1', label: data.link_label || 'Acessar Link', url: data.link_url }] : []),
+        attachments: data.attachments || [],
         author_name: data.author_name || author?.name || 'Comissão FATEC',
         author_role: data.author_role || (author?.role === 'ADMIN' ? 'Administração' : author?.role === 'CA_MEMBRO' ? 'Centro Acadêmico' : 'Docente FATEC'),
         created_at: now,
@@ -1934,11 +1951,34 @@ export const db = {
       }
 
       const res = await pool.query(
-        `INSERT INTO announcements (id, title, content, priority, author_id, target_course, target_semester, image_url, link_url, link_label, is_pinned, expires_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
-        [id, data.title, data.content, data.priority, data.author_id, data.target_course || null, data.target_semester || null, data.image_url || null, data.link_url || null, data.link_label || null, data.is_pinned || false, data.expires_at || null]
+        `INSERT INTO announcements (
+          id, title, content, priority, author_id, target_course, target_semester,
+          image_url, link_url, link_label, banner_type, links, attachments, is_pinned, expires_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING *`,
+        [
+          id,
+          data.title,
+          data.content,
+          data.priority,
+          data.author_id,
+          data.target_course || null,
+          data.target_semester || null,
+          data.image_url || null,
+          data.link_url || null,
+          data.link_label || null,
+          newAnn.banner_type,
+          JSON.stringify(newAnn.links || []),
+          JSON.stringify(newAnn.attachments || []),
+          data.is_pinned || false,
+          data.expires_at || null,
+        ]
       );
-      return res.rows[0];
+      const r = res.rows[0];
+      return {
+        ...r,
+        links: typeof r.links === 'string' ? JSON.parse(r.links) : (r.links || []),
+        attachments: typeof r.attachments === 'string' ? JSON.parse(r.attachments) : (r.attachments || []),
+      };
     },
 
     update: async (id: string, data: Partial<Announcement>): Promise<Announcement | null> => {
@@ -1965,14 +2005,24 @@ export const db = {
       Object.entries(data).forEach(([key, val]) => {
         if (key !== 'id' && key !== 'created_at') {
           fields.push(`${key} = $${pIdx++}`);
-          values.push(val);
+          if (key === 'links' || key === 'attachments') {
+            values.push(JSON.stringify(val || []));
+          } else {
+            values.push(val);
+          }
         }
       });
       fields.push('updated_at = CURRENT_TIMESTAMP');
       values.push(id);
 
       const res = await pool.query(`UPDATE announcements SET ${fields.join(', ')} WHERE id = $${pIdx} RETURNING *`, values);
-      return res.rows[0] || null;
+      if (!res.rows[0]) return null;
+      const r = res.rows[0];
+      return {
+        ...r,
+        links: typeof r.links === 'string' ? JSON.parse(r.links) : (r.links || []),
+        attachments: typeof r.attachments === 'string' ? JSON.parse(r.attachments) : (r.attachments || []),
+      };
     },
 
     delete: async (id: string): Promise<boolean> => {

@@ -17,7 +17,7 @@ const updateProductSchema = z.object({
   price: z.number().positive().optional(),
   current_stock: z.number().int().min(0).optional(),
   min_stock_alert: z.number().int().min(0).optional(),
-  image_url: z.string().url().or(z.string().startsWith('/')).optional().nullable(),
+  image_url: z.string().optional().nullable(),
   barcode: z.string().max(50).optional().nullable(),
   is_available: z.boolean().optional(),
 });
@@ -83,6 +83,9 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     if (payloadToUpdate.name) payloadToUpdate.name = sanitizeInput(payloadToUpdate.name);
     if (payloadToUpdate.description) payloadToUpdate.description = sanitizeInput(payloadToUpdate.description);
     if (payloadToUpdate.price !== undefined) payloadToUpdate.price = Number(payloadToUpdate.price.toFixed(2));
+    if (payloadToUpdate.image_url !== undefined) {
+      payloadToUpdate.image_url = payloadToUpdate.image_url && payloadToUpdate.image_url.trim() ? sanitizeInput(payloadToUpdate.image_url.trim()) : null;
+    }
 
     const updated = await db.products.update(id, payloadToUpdate);
 

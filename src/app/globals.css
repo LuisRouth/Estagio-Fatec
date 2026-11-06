@@ -1289,3 +1289,289 @@ input, select, textarea, .form-input, .form-select {
 .high-contrast .announcement-card-standardized:hover {
   border-color: #ffff00 !important;
 }
+
+
+/* ==================================================================== */
+/* MURAL DE AVISOS & CANTINA - REFINAMENTO DE ALTO CONTRASTE E BOTOES  */
+/* ==================================================================== */
+
+.announcement-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 1rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border-light);
+  background-color: #ffffff;
+  color: var(--text-main);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+
+.announcement-filter-btn:hover {
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+  transform: translateY(-1px);
+}
+
+.announcement-filter-btn.active {
+  background-color: var(--accent-blue);
+  border-color: var(--accent-blue);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+}
+
+.dark-high-contrast .announcement-filter-btn {
+  background-color: #1e293b !important;
+  border: 1px solid #334155 !important;
+  color: #cbd5e1 !important;
+}
+
+.dark-high-contrast .announcement-filter-btn:hover {
+  border-color: #38bdf8 !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .announcement-filter-btn.active {
+  background-color: #0284c7 !important;
+  border: 1px solid #38bdf8 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.45) !important;
+}
+
+/* Modais de Avisos (Criacao, Edicao e Detalhes) - Modo Padrao / Claro */
+.announcement-modal-card {
+  background-color: #ffffff !important;
+  border: 1px solid var(--border-light, #e2e8f0) !important;
+  color: var(--text-main, #0f172a) !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}
+
+.announcement-modal-header {
+  background-color: #ffffff !important;
+  border-bottom: 1px solid var(--border-light, #e2e8f0) !important;
+  color: var(--text-main, #0f172a) !important;
+}
+
+.announcement-modal-footer {
+  background-color: #f8fafc !important;
+  border-top: 1px solid var(--border-light, #e2e8f0) !important;
+  color: var(--text-main, #0f172a) !important;
+}
+
+.announcement-form-section {
+  background-color: #f8fafc !important;
+  border: 1px solid var(--border-light, #e2e8f0) !important;
+  color: var(--text-main, #0f172a) !important;
+}
+
+.announcement-form-row {
+  background-color: #ffffff !important;
+  border: 1px solid var(--border-light, #e2e8f0) !important;
+  color: var(--text-main, #0f172a) !important;
+}
+
+.announcement-detail-author-box {
+  background-color: #f8fafc !important;
+  border: 1px solid var(--border-light, #e2e8f0) !important;
+  color: var(--text-main, #0f172a) !important;
+}
+
+.announcement-detail-section {
+  background-color: #f8fafc !important;
+  border: 1px solid var(--border-light, #e2e8f0) !important;
+  color: var(--text-main, #0f172a) !important;
+}
+
+.announcement-detail-card {
+  background-color: #ffffff !important;
+  border: 1px solid var(--border-light, #e2e8f0) !important;
+  color: var(--text-main, #0f172a) !important;
+}
+
+.announcement-detail-card:hover {
+  border-color: #0284c7 !important;
+}
+
+.announcement-form-btn-toggle {
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #475569 !important;
+}
+
+.announcement-form-btn-toggle.active {
+  background-color: #0284c7 !important;
+  border-color: #0284c7 !important;
+  color: #ffffff !important;
+}
+
+.announcement-banner-choice-card {
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #475569 !important;
+}
+
+/* Modais de Avisos (Criacao, Edicao e Detalhes) - Alto Contraste */
+.dark-high-contrast .announcement-modal-card {
+  background-color: #0f172a !important;
+  border: 1px solid #334155 !important;
+  color: #f8fafc !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7) !important;
+}
+
+.dark-high-contrast .announcement-modal-header {
+  background-color: #1e293b !important;
+  border-bottom: 1px solid #334155 !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .announcement-modal-footer {
+  background-color: #1e293b !important;
+  border-top: 1px solid #334155 !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .announcement-form-section {
+  background-color: #1e293b !important;
+  border: 1px solid #334155 !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .announcement-form-row {
+  background-color: #0f172a !important;
+  border: 1px solid #334155 !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .announcement-detail-author-box {
+  background-color: #1e293b !important;
+  border: 1px solid #334155 !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .announcement-detail-section {
+  background-color: #1e293b !important;
+  border: 1px solid #334155 !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .announcement-detail-card {
+  background-color: #0f172a !important;
+  border: 1px solid #334155 !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .announcement-detail-card:hover {
+  border-color: #38bdf8 !important;
+}
+
+.dark-high-contrast .announcement-form-btn-toggle {
+  background-color: #0f172a !important;
+  border: 1px solid #334155 !important;
+  color: #cbd5e1 !important;
+}
+
+.dark-high-contrast .announcement-form-btn-toggle.active {
+  background-color: #0284c7 !important;
+  border-color: #38bdf8 !important;
+  color: #ffffff !important;
+}
+
+.dark-high-contrast .announcement-banner-choice-card {
+  background-color: #0f172a !important;
+  border: 1px solid #334155 !important;
+  color: #cbd5e1 !important;
+}
+
+.dark-high-contrast .announcement-banner-choice-card.selected {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 0 2px #38bdf8 !important;
+}
+
+/* Cantina - Abas de Categorias em Alto Contraste */
+.dark-high-contrast .canteen-category-btn {
+  background-color: #1e293b !important;
+  border: 1px solid #334155 !important;
+  color: #cbd5e1 !important;
+}
+
+.dark-high-contrast .canteen-category-btn:hover {
+  border-color: #38bdf8 !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .canteen-category-btn.active {
+  background-color: #0284c7 !important;
+  border-color: #38bdf8 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4) !important;
+}
+
+.dark-high-contrast .announcement-card-standardized {
+  background-color: #151e2e !important;
+  border-color: #2b3a4f !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .announcement-card-standardized h3 {
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .announcement-card-standardized p {
+  color: #cbd5e1 !important;
+}
+
+
+/* Textarea em largura total e tipografia heradada */
+textarea,
+.form-textarea {
+  width: 100% !important;
+  min-width: 100% !important;
+  font-family: inherit !important;
+  font-size: 0.925rem !important;
+  padding: 0.85rem 1rem !important;
+  border-radius: 10px !important;
+  border: 1px solid var(--border-light) !important;
+  background-color: #ffffff;
+  color: var(--text-main);
+  box-sizing: border-box !important;
+  resize: vertical;
+  line-height: 1.6 !important;
+  display: block !important;
+}
+
+.dark-high-contrast textarea,
+.dark-high-contrast .form-textarea {
+  background-color: #101726 !important;
+  color: #f8fafc !important;
+  border: 1px solid #2b3a4f !important;
+}
+
+/* Rodape do Card de Aviso no Tema Claro e Alto Contraste */
+.announcement-card-footer {
+  background-color: #fafbfc;
+  border-top: 1px solid var(--border-light);
+}
+
+.dark-high-contrast .announcement-card-footer {
+  background-color: #0f172a !important;
+  border-top: 1px solid #2b3a4f !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .announcement-card-footer span,
+.dark-high-contrast .announcement-card-footer div {
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .announcement-card-footer .announcement-card-date {
+  color: #94a3b8 !important;
+}
+
+.dark-high-contrast .announcement-card-footer .announcement-card-read-more {
+  color: #38bdf8 !important;
+}

@@ -9,15 +9,31 @@ import { db } from '@/lib/db';
 import { getCurrentSession } from '@/lib/auth';
 import { SECURITY_HEADERS, sanitizeInput } from '@/lib/security';
 
+const linkSchema = z.object({
+  id: z.string(),
+  label: z.string().min(1).max(100),
+  url: z.string().min(1),
+});
+
+const attachmentSchema = z.object({
+  id: z.string(),
+  title: z.string().min(1).max(150),
+  url: z.string().min(1),
+  type: z.enum(['IMAGEM', 'DOCUMENTO']).default('DOCUMENTO'),
+});
+
 const updateAnnouncementSchema = z.object({
   title: z.string().min(4).max(200).optional(),
   content: z.string().min(5).optional(),
   priority: z.enum(['BAIXA', 'MEDIA', 'ALTA', 'URGENTE'] as const).optional(),
   target_course: z.enum(['IA', 'ESG'] as const).optional().nullable(),
   target_semester: z.number().int().min(1).max(4).optional().nullable(),
+  banner_type: z.enum(['PADRAO_AZUL', 'PADRAO_VERDE', 'PADRAO_ROXO', 'PADRAO_AMBAR', 'PADRAO_GRAFITE', 'CUSTOM'] as const).optional().nullable(),
   image_url: z.string().optional().nullable(),
   link_url: z.string().optional().nullable(),
   link_label: z.string().optional().nullable(),
+  links: z.array(linkSchema).optional().nullable(),
+  attachments: z.array(attachmentSchema).optional().nullable(),
   author_role: z.string().optional().nullable(),
   is_pinned: z.boolean().optional(),
   expires_at: z.string().datetime().optional().nullable(),
@@ -94,9 +110,12 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       ...(parsed.data.priority ? { priority: parsed.data.priority } : {}),
       ...(parsed.data.target_course !== undefined ? { target_course: parsed.data.target_course } : {}),
       ...(parsed.data.target_semester !== undefined ? { target_semester: parsed.data.target_semester } : {}),
+      ...(parsed.data.banner_type !== undefined ? { banner_type: parsed.data.banner_type } : {}),
       ...(parsed.data.image_url !== undefined ? { image_url: parsed.data.image_url ? sanitizeInput(parsed.data.image_url) : null } : {}),
       ...(parsed.data.link_url !== undefined ? { link_url: parsed.data.link_url ? sanitizeInput(parsed.data.link_url) : null } : {}),
       ...(parsed.data.link_label !== undefined ? { link_label: parsed.data.link_label ? sanitizeInput(parsed.data.link_label) : null } : {}),
+      ...(parsed.data.links !== undefined ? { links: parsed.data.links || [] } : {}),
+      ...(parsed.data.attachments !== undefined ? { attachments: parsed.data.attachments || [] } : {}),
       ...(parsed.data.author_role !== undefined ? { author_role: parsed.data.author_role ? sanitizeInput(parsed.data.author_role) : null } : {}),
       ...(parsed.data.is_pinned !== undefined ? { is_pinned: parsed.data.is_pinned } : {}),
       ...(parsed.data.expires_at !== undefined ? { expires_at: parsed.data.expires_at } : {}),
