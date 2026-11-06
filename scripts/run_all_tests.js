@@ -208,6 +208,31 @@ async function runFullQAPipeline() {
     'Suítes de testes unitários da Sprint 2 estruturadas em /tests/unit'
   );
 
+  // ------------------------------------------------------------------
+  // SUÍTE 6: SPRINT 3 - BACKEND ANALYTICS, SEGURANÇA E PERFORMANCE (CESAR)
+  // ------------------------------------------------------------------
+  console.log('📈 [SUÍTE 6/6] Validando Módulos Analíticos, Otimizações de Banco e Documentação (Sprint 3)...');
+  const sprint3Analytics = [
+    'src/app/api/ca/analytics/financial/route.ts',
+    'src/app/api/ca/analytics/products/route.ts',
+    'src/app/api/ca/analytics/audit/route.ts',
+    'src/app/api/ca/analytics/export/route.ts',
+  ];
+  const allAnalyticsRoutesExist = sprint3Analytics.every((rel) => fs.existsSync(path.join(rootDir, rel)));
+  assert(allAnalyticsRoutesExist, 'Sprint3-Analytics', 'Rotas analíticas do Centro Acadêmico (Financeiro, Produtos, Auditoria, CSV) criadas');
+
+  const optimizationSqlPath = path.join(rootDir, 'database', 'optimization_indexes.sql');
+  assert(fs.existsSync(optimizationSqlPath), 'Sprint3-DB', 'Script de índices avançados database/optimization_indexes.sql presente');
+
+  const explainDocPath = path.join(rootDir, 'docs', 'analise_planos_execucao_explain.md');
+  assert(fs.existsSync(explainDocPath), 'Sprint3-DB', 'Relatório de planos de execução EXPLAIN ANALYZE presente em docs/');
+
+  const manualDocPath = path.join(rootDir, 'docs', 'manual_tecnico_backend_db.md');
+  assert(fs.existsSync(manualDocPath), 'Sprint3-Docs', 'Manual Técnico de Backend & Banco de Dados completo em docs/');
+
+  const relatorioSprint3Path = path.join(rootDir, 'docs', 'relatorio_estagio_sprint3_cesar.md');
+  assert(fs.existsSync(relatorioSprint3Path), 'Sprint3-Docs', 'Relatório de Estágio Sprint 3 (67h / 200h totais) homologado');
+
   console.log('\n===================================================================');
   console.log(`📊 RESUMO DA ESTEIRA DE QA: ${totalPassed} testes aprovados | ${totalFailed} falhas`);
   if (totalFailed === 0) {

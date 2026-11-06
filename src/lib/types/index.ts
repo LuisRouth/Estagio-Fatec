@@ -177,6 +177,46 @@ export interface PixValidationResult {
 }
 
 // ====================================================================
+// TIPOS ANALÍTICOS DO CENTRO ACADÊMICO (SPRINT 3 - CESAR)
+// ====================================================================
+
+export interface CanteenFinancialAnalytics {
+  totalRevenue: number;
+  totalOrders: number;
+  paidOrdersCount: number;
+  pendingOrdersCount: number;
+  cancelledOrdersCount: number;
+  inAnalysisOrdersCount: number;
+  averageTicket: number;
+  conversionRatePercent: number;
+  revenueByPeriod: {
+    today: number;
+    last7Days: number;
+    last30Days: number;
+  };
+  revenueByCategory: Record<ItemCategory, number>;
+}
+
+export interface ProductSalesRankingItem {
+  productId: string;
+  productName: string;
+  category: ItemCategory;
+  unitsSold: number;
+  totalRevenue: number;
+  currentStock: number;
+  minStockAlert: number;
+  isLowStock: boolean;
+}
+
+export interface AuditAnalyticsReport {
+  totalEvents: number;
+  uniqueUsersCount: number;
+  actionsBreakdown: Record<string, number>;
+  criticalSecurityEvents: AuditLog[];
+  recentLogs: AuditLog[];
+}
+
+// ====================================================================
 // TIPOS DO MÓDULO DE INTELIGÊNCIA ARTIFICIAL (GOOGLE GEMINI SDK)
 // Responsável: Guilherme (DevOps, IA & QA)
 // ====================================================================

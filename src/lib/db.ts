@@ -21,6 +21,9 @@ import {
   TransactionStatus,
   CourseType,
   MaterialType,
+  CanteenFinancialAnalytics,
+  ProductSalesRankingItem,
+  AuditAnalyticsReport,
 } from './types';
 import bcrypt from 'bcryptjs';
 
@@ -1799,6 +1802,310 @@ export const db = {
       }
       const res = await pool.query('SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT $1', [limit]);
       return res.rows;
+    },
+  },
+
+  // ------------------------------------------------------------------
+  // 7. ANÁLISE DE DADOS E RELATÓRIOS DO CENTRO ACADÊMICO (SPRINT 3 - CESAR)
+  // ------------------------------------------------------------------
+  analytics: {
+    getFinancial: async (filters?: { startDate?: string; endDate?: string }): Promise<CanteenFinancialAnalytics> => {
+      if (isMock || !pool) {
+        let txs = [...mockTransactions];
+
+        if (filters?.startDate) {
+          const start = new Date(filters.startDate).getTime();
+          txs = txs.filter((t) => new Date(t.created_at).getTime() >= start);
+        }
+        if (filters?.endDate) {
+          const end = new Date(filters.endDate).getTime();
+          txs = txs.filter((t) => new Date(t.created_at).getTime() <= end);
+        }
+
+        const paidTxs = txs.filter((t) => t.status === 'PAGO');
+        const totalRevenue = Number(paidTxs.reduce((sum, t) => sum + Number(t.total_amount), 0).toFixed(2));
+        const totalOrders = txs.length;
+        const paidOrdersCount = paidTxs.length;
+        const pendingOrdersCount = txs.filter((t) => t.status === 'PENDENTE').length;
+        const cancelledOrdersCount = txs.filter((t) => t.status === 'CANCELADO').length;
+        const inAnalysisOrdersCount = txs.filter((t) => t.status === 'EM_ANALISE').length;
+        const averageTicket = paidOrdersCount > 0 ? Number((totalRevenue / paidOrdersCount).toFixed(2)) : 0;
+        const conversionRatePercent = totalOrders > 0 ? Number(((paidOrdersCount / totalOrders) * 100).toFixed(1)) : 0;
+
+        const now = Date.now();
+        const startOfToday = new Date().setHours(0, 0, 0, 0);
+        const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
+        const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+
+        const todayRevenue = Number(
+          paidTxs
+            .filter((t) => new Date(t.created_at).getTime() >= startOfToday)
+            .reduce((sum, t) => sum + Number(t.total_amount), 0)
+            .toFixed(2)
+        );
+
+        const last7DaysRevenue = Number(
+          paidTxs
+            .filter((t) => new Date(t.created_at).getTime() >= sevenDaysAgo)
+            .reduce((sum, t) => sum + Number(t.total_amount), 0)
+            .toFixed(2)
+        );
+
+        const last30DaysRevenue = Number(
+          paidTxs
+            .filter((t) => new Date(t.created_at).getTime() >= thirtyDaysAgo)
+            .reduce((sum, t) => sum + Number(t.total_amount), 0)
+            .toFixed(2)
+        );
+
+        const revenueByCategory: Record<ItemCategory, number> = {
+          DOCE: 0,
+          SALGADO: 0,
+          BEBIDA: 0,
+          CONGELADO: 0,
+          OUTRO: 0,
+        };
+
+        const paidTxIds = new Set(paidTxs.map((t) => t.id));
+        mockTransactionItems.forEach((item) => {
+          if (paidTxIds.has(item.transaction_id)) {
+            const product = mockProducts.find((p) => p.id === item.product_id);
+            if (product && revenueByCategory[product.category] !== undefined) {
+              revenueByCategory[product.category] = Number(
+                (revenueByCategory[product.category] + Number(item.subtotal)).toFixed(2)
+              );
+            }
+          }
+        });
+
+        return {
+          totalRevenue,
+          totalOrders,
+          paidOrdersCount,
+          pendingOrdersCount,
+          cancelledOrdersCount,
+          inAnalysisOrdersCount,
+          averageTicket,
+          conversionRatePercent,
+          revenueByPeriod: {
+            today: todayRevenue,
+            last7Days: last7DaysRevenue,
+            last30Days: last30DaysRevenue,
+          },
+          revenueByCategory,
+        };
+      }
+
+      // Conexão PostgreSQL com agregação analítica otimizada
+      const financialRes = await pool.query(`
+        SELECT 
+          COALESCE(SUM(CASE WHEN status = 'PAGO' THEN total_amount ELSE 0 END), 0) as total_revenue,
+          COUNT(*) as total_orders,
+          COUNT(CASE WHEN status = 'PAGO' THEN 1 END) as paid_count,
+          COUNT(CASE WHEN status = 'PENDENTE' THEN 1 END) as pending_count,
+          COUNT(CASE WHEN status = 'CANCELADO' THEN 1 END) as cancelled_count,
+          COUNT(CASE WHEN status = 'EM_ANALISE' THEN 1 END) as in_analysis_count,
+          COALESCE(SUM(CASE WHEN status = 'PAGO' AND created_at >= CURRENT_DATE THEN total_amount ELSE 0 END), 0) as today_revenue,
+          COALESCE(SUM(CASE WHEN status = 'PAGO' AND created_at >= CURRENT_DATE - INTERVAL '7 days' THEN total_amount ELSE 0 END), 0) as last7_revenue,
+          COALESCE(SUM(CASE WHEN status = 'PAGO' AND created_at >= CURRENT_DATE - INTERVAL '30 days' THEN total_amount ELSE 0 END), 0) as last30_revenue
+        FROM canteen_transactions
+      `);
+
+      const row = financialRes.rows[0];
+      const totalRevenue = Number(parseFloat(row.total_revenue).toFixed(2));
+      const totalOrders = parseInt(row.total_orders, 10);
+      const paidOrdersCount = parseInt(row.paid_count, 10);
+      const pendingOrdersCount = parseInt(row.pending_count, 10);
+      const cancelledOrdersCount = parseInt(row.cancelled_count, 10);
+      const inAnalysisOrdersCount = parseInt(row.in_analysis_count, 10);
+
+      const averageTicket = paidOrdersCount > 0 ? Number((totalRevenue / paidOrdersCount).toFixed(2)) : 0;
+      const conversionRatePercent = totalOrders > 0 ? Number(((paidOrdersCount / totalOrders) * 100).toFixed(1)) : 0;
+
+      const categoryRes = await pool.query(`
+        SELECT p.category, COALESCE(SUM(ti.subtotal), 0) as cat_revenue
+        FROM canteen_transaction_items ti
+        JOIN canteen_transactions t ON t.id = ti.transaction_id
+        JOIN canteen_products p ON p.id = ti.product_id
+        WHERE t.status = 'PAGO'
+        GROUP BY p.category
+      `);
+
+      const revenueByCategory: Record<ItemCategory, number> = {
+        DOCE: 0,
+        SALGADO: 0,
+        BEBIDA: 0,
+        CONGELADO: 0,
+        OUTRO: 0,
+      };
+
+      categoryRes.rows.forEach((r: any) => {
+        if (r.category in revenueByCategory) {
+          revenueByCategory[r.category as ItemCategory] = Number(parseFloat(r.cat_revenue).toFixed(2));
+        }
+      });
+
+      return {
+        totalRevenue,
+        totalOrders,
+        paidOrdersCount,
+        pendingOrdersCount,
+        cancelledOrdersCount,
+        inAnalysisOrdersCount,
+        averageTicket,
+        conversionRatePercent,
+        revenueByPeriod: {
+          today: Number(parseFloat(row.today_revenue).toFixed(2)),
+          last7Days: Number(parseFloat(row.last7_revenue).toFixed(2)),
+          last30Days: Number(parseFloat(row.last30_revenue).toFixed(2)),
+        },
+        revenueByCategory,
+      };
+    },
+
+    getProductRanking: async (limit = 10): Promise<ProductSalesRankingItem[]> => {
+      if (isMock || !pool) {
+        const rankingMap = new Map<string, { unitsSold: number; totalRevenue: number }>();
+
+        const paidTxIds = new Set(mockTransactions.filter((t) => t.status === 'PAGO').map((t) => t.id));
+
+        mockTransactionItems.forEach((item) => {
+          if (paidTxIds.has(item.transaction_id)) {
+            const current = rankingMap.get(item.product_id) || { unitsSold: 0, totalRevenue: 0 };
+            current.unitsSold += item.quantity;
+            current.totalRevenue += Number(item.subtotal);
+            rankingMap.set(item.product_id, current);
+          }
+        });
+
+        const ranking: ProductSalesRankingItem[] = mockProducts.map((p) => {
+          const stats = rankingMap.get(p.id) || { unitsSold: 0, totalRevenue: 0 };
+          return {
+            productId: p.id,
+            productName: p.name,
+            category: p.category,
+            unitsSold: stats.unitsSold,
+            totalRevenue: Number(stats.totalRevenue.toFixed(2)),
+            currentStock: p.current_stock,
+            minStockAlert: p.min_stock_alert,
+            isLowStock: p.current_stock <= p.min_stock_alert,
+          };
+        });
+
+        ranking.sort((a, b) => b.unitsSold - a.unitsSold || b.totalRevenue - a.totalRevenue);
+        return ranking.slice(0, limit);
+      }
+
+      const res = await pool.query(
+        `
+        SELECT 
+          p.id as product_id,
+          p.name as product_name,
+          p.category,
+          p.current_stock,
+          p.min_stock_alert,
+          COALESCE(SUM(CASE WHEN t.status = 'PAGO' THEN ti.quantity ELSE 0 END), 0) as units_sold,
+          COALESCE(SUM(CASE WHEN t.status = 'PAGO' THEN ti.subtotal ELSE 0 END), 0) as total_revenue
+        FROM canteen_products p
+        LEFT JOIN canteen_transaction_items ti ON ti.product_id = p.id
+        LEFT JOIN canteen_transactions t ON t.id = ti.transaction_id
+        GROUP BY p.id, p.name, p.category, p.current_stock, p.min_stock_alert
+        ORDER BY units_sold DESC, total_revenue DESC
+        LIMIT $1
+      `,
+        [limit]
+      );
+
+      return res.rows.map((r: any) => ({
+        productId: r.product_id,
+        productName: r.product_name,
+        category: r.category,
+        unitsSold: parseInt(r.units_sold, 10),
+        totalRevenue: Number(parseFloat(r.total_revenue).toFixed(2)),
+        currentStock: parseInt(r.current_stock, 10),
+        minStockAlert: parseInt(r.min_stock_alert, 10),
+        isLowStock: parseInt(r.current_stock, 10) <= parseInt(r.min_stock_alert, 10),
+      }));
+    },
+
+    getAuditReport: async (limit = 100): Promise<AuditAnalyticsReport> => {
+      if (isMock || !pool) {
+        const logs = [...mockAuditLogs];
+        const uniqueUsers = new Set(logs.map((l) => l.user_id).filter(Boolean));
+        const actionsBreakdown: Record<string, number> = {};
+
+        logs.forEach((l) => {
+          actionsBreakdown[l.action] = (actionsBreakdown[l.action] || 0) + 1;
+        });
+
+        const criticalSecurityEvents = logs.filter((l) =>
+          /DELETED|ADJUSTED|FAILED|BRUTE|BLOCKED|SECURITY|ROLE/i.test(l.action)
+        );
+
+        return {
+          totalEvents: logs.length,
+          uniqueUsersCount: uniqueUsers.size,
+          actionsBreakdown,
+          criticalSecurityEvents: criticalSecurityEvents.slice(-20).reverse(),
+          recentLogs: logs.slice(-limit).reverse(),
+        };
+      }
+
+      const totalRes = await pool.query('SELECT COUNT(*) as total, COUNT(DISTINCT user_id) as unique_users FROM audit_logs');
+      const actionsRes = await pool.query('SELECT action, COUNT(*) as count FROM audit_logs GROUP BY action ORDER BY count DESC');
+      const recentRes = await pool.query('SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT $1', [limit]);
+      const criticalRes = await pool.query(
+        `SELECT * FROM audit_logs 
+         WHERE action ~* 'DELETED|ADJUSTED|FAILED|BRUTE|BLOCKED|SECURITY|ROLE' 
+         ORDER BY created_at DESC LIMIT 20`
+      );
+
+      const actionsBreakdown: Record<string, number> = {};
+      actionsRes.rows.forEach((r: any) => {
+        actionsBreakdown[r.action] = parseInt(r.count, 10);
+      });
+
+      return {
+        totalEvents: parseInt(totalRes.rows[0].total, 10),
+        uniqueUsersCount: parseInt(totalRes.rows[0].unique_users, 10),
+        actionsBreakdown,
+        criticalSecurityEvents: criticalRes.rows,
+        recentLogs: recentRes.rows,
+      };
+    },
+
+    exportFinancialCsv: async (): Promise<string> => {
+      let txsWithItems: Array<CanteenTransaction & { items: CanteenTransactionItem[] }> = [];
+
+      if (isMock || !pool) {
+        txsWithItems = mockTransactions.map((tx) => ({
+          ...tx,
+          items: mockTransactionItems.filter((i) => i.transaction_id === tx.id),
+        }));
+      } else {
+        txsWithItems = await db.transactions.listAll({ limit: 1000 });
+      }
+
+      const header = ['ID_Transacao', 'Data_Hora', 'Usuario', 'Email', 'Valor_Total_BRL', 'Status', 'Metodo', 'Qtd_Itens', 'Itens_Discriminados'];
+      const rows = txsWithItems.map((tx) => {
+        const itemSummary = (tx.items || [])
+          .map((i) => `${i.quantity}x ${i.product_name || 'Produto'} (R$ ${Number(i.unit_price).toFixed(2)})`)
+          .join('; ');
+
+        return [
+          `"${tx.id}"`,
+          `"${new Date(tx.created_at).toLocaleString('pt-BR')}"`,
+          `"${tx.user_name || 'Aluno FATEC'}"`,
+          `"${tx.user_email || ''}"`,
+          `"${Number(tx.total_amount).toFixed(2)}"`,
+          `"${tx.status}"`,
+          `"${tx.payment_method}"`,
+          `"${tx.items?.length || 0}"`,
+          `"${itemSummary.replace(/"/g, '""')}"`,
+        ].join(',');
+      });
+
+      return [header.join(','), ...rows].join('\r\n');
     },
   },
 };

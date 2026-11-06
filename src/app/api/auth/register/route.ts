@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { hashPassword, sanitizeUser } from '@/lib/auth';
-import { validatePasswordStrength, sanitizeInput, SECURITY_HEADERS } from '@/lib/security';
+import { validatePasswordStrength, sanitizeInput, SECURITY_HEADERS, checkRateLimit } from '@/lib/security';
 import { ApiResponse, SafeUser } from '@/lib/types';
 
 const RegisterSchema = z.object({
@@ -21,6 +21,18 @@ const RegisterSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get('x-forwarded-for') || '127.0.0.1';
+    const rateCheck = checkRateLimit(ip, 'auth_register');
+    if (!rateCheck.allowed) {
+      return NextResponse.json<ApiResponse>(
+        {
+          success: false,
+          error: `Muitas tentativas de cadastro a partir deste endereço. Tente novamente em ${rateCheck.retryAfter}s.`,
+        },
+        { status: 429, headers: { ...SECURITY_HEADERS, ...rateCheck.headers } }
+      );
+    }
+
     const body = await req.json();
     const parseResult = RegisterSchema.safeParse(body);
 

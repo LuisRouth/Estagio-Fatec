@@ -100,8 +100,29 @@ flowchart LR
 
 ---
 
-### 🎯 COLUNA 4: SPRINT 3 — BACKLOG FUTURO (10/11 A 16/11/2026 — 67H POR INTEGRANTE)
+### 🎯 COLUNA 4: SPRINT 3 — OTIMIZAÇÕES, ANALYTICS E HOMOLOGAÇÃO (10/11 A 16/11/2026 — 67H POR INTEGRANTE)
 
+#### 🔹 Entregas de Backend, Banco de Dados & Segurança — **Cesar (67h / Total: 200h CUMPRIDAS — 100% CONCLUÍDO)**
+* **Card #S3-C1 — Endpoints Analíticos do Centro Acadêmico (Faturamento, Produtos e Auditoria)** `[BACKEND & DB]` `(18h)` — ✅ Concluído
+  - [x] Endpoint `GET /api/ca/analytics/financial`: faturamento total, ticket médio, conversão e receita por período/categoria.
+  - [x] Endpoint `GET /api/ca/analytics/products`: ranking de vendas por unidades e receita, alertas de reposição de estoque baixo.
+  - [x] Endpoint `GET /api/ca/analytics/audit`: consolidação de logs de auditoria por severidade, usuário e tipo de ação.
+  - [x] Endpoint `GET /api/ca/analytics/export`: exportação contábil sob demanda em formato CSV com headers de download.
+
+* **Card #S3-C2 — Sanitização Profunda contra XSS, SQLi e Rate Limiting de Força Bruta** `[SEGURANÇA OWASP]` `(16h)` — ✅ Concluído
+  - [x] Sanitizador profundo anti-XSS e anti-SQLi com escape de tags HTML, iframes, manipuladores inline e wildcards SQL.
+  - [x] Limitação de taxa de requisições (`checkRateLimit`) com políticas diferenciadas por rota sensível (`auth_login`, `auth_register`, `canteen_checkout`, `materials_upload`).
+  - [x] Validação estrita de identificadores dinâmicos contra SQL Injection (`assertSafeSqlIdentifier`).
+
+* **Card #S3-C3 — Otimização de Consultas SQL, Índices de Alta Performance e EXPLAIN ANALYZE** `[BACKEND & DB]` `(17h)` — ✅ Concluído
+  - [x] Criação de 6 índices de alta performance no PostgreSQL (`database/optimization_indexes.sql`): compostos, parciais e invertidos GIN.
+  - [x] Elaboração do relatório técnico comparativo de planos de execução (`docs/analise_planos_execucao_explain.md`) com ganho de até 45.8x.
+
+* **Card #S3-C4 — Elaboração do Manual Técnico de Backend, Banco de Dados e Relatório de Estágio** `[BACKEND & DB]` `(16h)` — ✅ Concluído
+  - [x] Manual técnico abrangente de arquitetura, DDL, catálogo REST e Pix EMV (`docs/manual_tecnico_backend_db.md`).
+  - [x] Relatório de atividades de estágio supervisionado Sprint 3 totalizando 200h (`docs/relatorio_estagio_sprint3_cesar.md`).
+  - [x] Suíte de testes automatizados da Sprint 3 homologada (`scripts/test_sprint3_cesar.js`).
+
+#### 🔹 Demais Entregas da Sprint 3 (Colegas):
 * **Card #S3-G1 (Guilherme — IA & DevOps):** Assistente Acadêmico Conversacional Gemini no Repositório Didático + Monitoramento de Métricas em Produção na Vercel.
-* **Card #S3-C1 (Cesar — Backend & Segurança):** Exportação de Relatórios Financeiros da Cantina para o Centro Acadêmico e Auditoria Avançada de Segurança (Pentest OWASP ZAP).
 * **Card #S3-L1 (Luis — Frontend & PWA):** Service Workers para Cache Offline de Notas de Aula no PWA, Vitrine Interativa de TCCs (`/vitrine`) e Homologação Final com Leitores de Tela (NVDA).

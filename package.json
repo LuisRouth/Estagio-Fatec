@@ -14,6 +14,7 @@
     "test": "node scripts/run_all_tests.js",
     "test:backend": "node scripts/test_backend.js",
     "test:sprint2": "node scripts/test_sprint2_cesar.js",
+    "test:sprint3": "node scripts/test_sprint3_cesar.js",
     "test:gemini": "node scripts/test_gemini.js",
     "test:unit": "vitest run",
     "test:watch": "vitest",

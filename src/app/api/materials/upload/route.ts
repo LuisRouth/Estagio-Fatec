@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs';
 import { getCurrentSession } from '@/lib/auth';
-import { SECURITY_HEADERS, sanitizeInput } from '@/lib/security';
+import { SECURITY_HEADERS, sanitizeInput, checkRateLimit } from '@/lib/security';
 
 const ALLOWED_EXTENSIONS = new Set([
   '.pdf',
@@ -37,6 +37,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Autenticação necessária para realizar upload de arquivos.' },
         { status: 401, headers: SECURITY_HEADERS }
+      );
+    }
+
+    const rateCheck = checkRateLimit(session.sub, 'materials_upload');
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { success: false, error: `Limite de uploads excedido. Aguarde ${rateCheck.retryAfter}s antes de enviar outro arquivo.` },
+        { status: 429, headers: { ...SECURITY_HEADERS, ...rateCheck.headers } }
       );
     }
 

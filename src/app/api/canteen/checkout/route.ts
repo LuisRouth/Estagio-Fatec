@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { getCurrentSession } from '@/lib/auth';
 import { generatePixPayload, generateTxId } from '@/lib/pix';
-import { SECURITY_HEADERS, sanitizeInput } from '@/lib/security';
+import { SECURITY_HEADERS, sanitizeInput, checkRateLimit } from '@/lib/security';
 
 const checkoutSchema = z.object({
   items: z.array(
@@ -32,6 +32,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Autenticação necessária para realizar compras na cantina.' },
         { status: 401, headers: SECURITY_HEADERS }
+      );
+    }
+
+    const rateCheck = checkRateLimit(session.sub, 'canteen_checkout');
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { success: false, error: `Limite de pedidos por minuto atingido. Aguarde ${rateCheck.retryAfter}s.` },
+        { status: 429, headers: { ...SECURITY_HEADERS, ...rateCheck.headers } }
       );
     }
 
