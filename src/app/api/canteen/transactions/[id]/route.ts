@@ -105,10 +105,13 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     const isPrivileged = session.role === 'CA_MEMBRO' || session.role === 'ADMIN';
 
     // Aluno comum só pode solicitar análise anexando comprovante (status EM_ANALISE)
+    // ou cancelar seu próprio pedido que ainda está PENDENTE ao retornar sem concluir
     if (!isPrivileged) {
-      if (!isOwner || parsed.data.status !== 'EM_ANALISE') {
+      const isOwnerCancellingPending = isOwner && existingTx.status === 'PENDENTE' && parsed.data.status === 'CANCELADO';
+      const isOwnerSubmittingAnalysis = isOwner && parsed.data.status === 'EM_ANALISE';
+      if (!isOwnerCancellingPending && !isOwnerSubmittingAnalysis) {
         return NextResponse.json(
-          { success: false, error: 'Apenas membros do CA podem alterar status para PAGO ou CANCELADO.' },
+          { success: false, error: 'Apenas membros do CA podem alterar status para PAGO ou CANCELADO de pedidos já confirmados.' },
           { status: 403, headers: SECURITY_HEADERS }
         );
       }

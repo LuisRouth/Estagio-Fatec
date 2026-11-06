@@ -28,17 +28,17 @@ export default function HomePage() {
     {
       tag: 'Ambiente Discente Oficial',
       badge: 'FATEC Rio Claro',
-      title: 'Portal Integrado dos Estudantes — Ensino, Cantina e Comunicação',
-      description: 'Plataforma unificada para atendimento da comunidade discente dos cursos de Inteligência Artificial e Gestão ESG. Centralize o acesso às aulas, consulte a cantina e acompanhe comunicados institucionais.',
-      primaryBtn: { label: 'Acessar Cantina Discente', href: '/cantina' },
+      title: 'Portal Integrado dos Estudantes — Ensino, Projetos e Comunicação',
+      description: 'Plataforma unificada para atendimento da comunidade discente dos cursos de Inteligência Artificial e Gestão ESG. Centralize o acesso às aulas, comunicados institucionais e projetos acadêmicos.',
+      primaryBtn: { label: 'Mural de Avisos', href: '/avisos' },
       secondaryBtn: { label: 'Repositório de Aulas', href: '/repositorio' },
     },
     {
-      tag: 'Convivência e Autoatendimento',
-      badge: 'Intervalos do Campus',
-      title: 'Cantina Discente: Agilidade e Pagamento Autônomo via Pix',
-      description: 'Espaço discente dedicado para consulta de itens e valores nos intervalos da manhã e da noite. Pagamentos rápidos via Pix sem necessidade de anotações em pranchetas de papel.',
-      primaryBtn: { label: 'Ir para a Cantina', href: '/cantina' },
+      tag: 'Inovação e Pesquisa Aplicada',
+      badge: 'Inteligência Artificial & ESG',
+      title: 'Vitrine de Projetos: Portfólio Tecnológico e Inovação',
+      description: 'Espaço discente para divulgação dos projetos interdisciplinares, modelos de Machine Learning, soluções ambientais e pesquisas desenvolvidas nos cursos de IA e Gestão ESG.',
+      primaryBtn: { label: 'Conhecer Projetos', href: '/vitrine' },
       secondaryBtn: { label: 'Mural de Avisos', href: '/avisos' },
     },
     {
@@ -320,124 +320,6 @@ export default function HomePage() {
               </p>
             </div>
           </div>
-        </section>
-
-        {/* 2. CANTINA DISCENTE — SEÇÃO EXISTENTE & EM ESTADO VAZIO */}
-        <section
-          className="card-interactive"
-          style={{
-            padding: '2.25rem',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-            <div>
-              <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
-                Cantina Discente
-              </h2>
-              <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                Consulte os preços e realize o pagamento via Pix no intervalo
-              </p>
-            </div>
-
-            <Link href="/cantina" className="btn btn-primary" style={{ fontSize: '0.85rem', padding: '0.55rem 1.15rem' }}>
-              Abrir Painel da Cantina
-            </Link>
-          </div>
-
-          {canteenProducts.length === 0 ? (
-            <div
-              style={{
-                padding: '3.5rem 1.5rem',
-                backgroundColor: 'var(--bg-muted)',
-                borderRadius: '12px',
-                border: '1px dashed var(--border-light)',
-                textAlign: 'center',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.75rem',
-              }}
-            >
-              <div style={{ maxWidth: '480px' }}>
-                <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '1.05rem' }}>
-                  Carregando catálogo da cantina...
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-                gap: '1.25rem',
-              }}
-            >
-              {canteenProducts.map((p) => (
-                <div
-                  key={p.id}
-                  style={{
-                    backgroundColor: '#ffffff',
-                    borderRadius: '12px',
-                    border: '1px solid var(--border-light)',
-                    padding: '1.25rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    boxShadow: 'var(--shadow-sm)',
-                  }}
-                >
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                      <span className="badge badge-blue" style={{ fontSize: '0.7rem' }}>
-                        {p.category}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: '0.7rem',
-                          fontWeight: 700,
-                          color: p.current_stock > 5 ? 'var(--accent-emerald)' : 'var(--color-danger, #ef4444)',
-                        }}
-                      >
-                        {p.current_stock} em estoque
-                      </span>
-                    </div>
-                    <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-main)', marginBottom: '0.35rem' }}>
-                      {p.name}
-                    </div>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-sub)', lineHeight: 1.4 }}>
-                      {p.description || 'Disponível na cantina discente'}
-                    </p>
-                  </div>
-
-                  <div
-                    style={{
-                      marginTop: '1.25rem',
-                      paddingTop: '0.85rem',
-                      borderTop: '1px solid var(--border-light)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                    }}
-                  >
-                    <div>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Preço unitário</span>
-                      <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent-primary)' }}>
-                        R$ {Number(p.price).toFixed(2).replace('.', ',')}
-                      </div>
-                    </div>
-                    <Link
-                      href="/cantina"
-                      className="btn btn-primary"
-                      style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem' }}
-                    >
-                      Comprar
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </section>
 
         {/* 3. REPOSITÓRIO ACADÊMICO — SEÇÃO EM ESTADO VAZIO */}

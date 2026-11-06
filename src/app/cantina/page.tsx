@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import Link from 'next/link';
+import ConfirmModal from '@/components/ui/ConfirmModal';
+import ToastNotification from '@/components/ui/ToastNotification';
 
 interface Product {
   id: string;
@@ -40,7 +42,62 @@ export default function CantinaPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isCartMounted, setIsCartMounted] = useState(false);
+
+  // Restaurar carrinho do localStorage ao inicializar
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('fatec_canteen_cart');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setCart(parsed);
+        }
+      }
+    } catch (e) {
+      console.error('Erro ao recuperar carrinho salvo:', e);
+    }
+    setIsCartMounted(true);
+  }, []);
+
+  // Sincronizar alterações do carrinho no localStorage
+  useEffect(() => {
+    if (!isCartMounted) return;
+    try {
+      if (cart.length > 0) {
+        localStorage.setItem('fatec_canteen_cart', JSON.stringify(cart));
+      } else {
+        localStorage.removeItem('fatec_canteen_cart');
+      }
+    } catch (e) {
+      console.error('Erro ao persistir carrinho:', e);
+    }
+  }, [cart, isCartMounted]);
   
+  // Toast e Modal de Confirmação 100% Frontend (Sem alertas feios do navegador)
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('success');
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    isDanger?: boolean;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
+
+  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToastMessage(msg);
+    setToastType(type);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
   // Estados do Modal de Checkout
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
@@ -100,7 +157,7 @@ export default function CantinaPage() {
     return matchesCategory && matchesSearch;
   });
 
-  // Funções do Carrinho
+  // Funções do Carrinho (Não abre a gaveta abruptamente na cara do aluno)
   const addToCart = (product: Product) => {
     setCart((prev) => {
       const existing = prev.find((item) => item.product.id === product.id);
@@ -112,7 +169,7 @@ export default function CantinaPage() {
       }
       return [...prev, { product, quantity: 1 }];
     });
-    setIsCartOpen(true);
+    // Não abre o carrinho toda vez que clica: ele fica discreto e fixo no canto inferior!
   };
 
   const updateQuantity = (productId: string, delta: number) => {
@@ -179,7 +236,7 @@ export default function CantinaPage() {
 
       setCheckoutData(normalizedData);
       setIsCheckoutModalOpen(true);
-      setCart([]); // Esvazia o carrinho pós checkout
+      // Mantém os itens no carrinho caso o aluno volte sem concluir a compra
       setIsCartOpen(false);
       fetchProducts(); // Atualiza estoque em tela
     } catch (err: any) {
@@ -188,6 +245,41 @@ export default function CantinaPage() {
     } finally {
       setIsProcessingCheckout(false);
     }
+  };
+
+  // Retornar ao carrinho sem concluir a compra (cancela pedido pendente no backend para repor estoque e mantém itens no carrinho)
+  const handleCloseCheckoutWithoutFinishing = async () => {
+    if (checkoutData?.orderId) {
+      try {
+        await fetch(`/api/canteen/transactions/${checkoutData.orderId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'CANCELADO' }),
+        });
+      } catch (err) {
+        console.error('Falha ao cancelar pedido pendente:', err);
+      }
+    }
+    setIsCheckoutModalOpen(false);
+    setCheckoutData(null);
+    setProofSubmitted(false);
+    setProofText('');
+    setIsCartOpen(true); // Reabre o carrinho para o aluno conferir ou adicionar mais itens
+    fetchProducts(); // Recarrega o estoque atualizado
+  };
+
+  // Concluir compra quando o aluno já realizou o Pix no aplicativo do banco
+  const handleFinishPurchase = () => {
+    setCart([]);
+    try {
+      localStorage.removeItem('fatec_canteen_cart');
+    } catch {}
+    setIsCheckoutModalOpen(false);
+    setCheckoutData(null);
+    setProofSubmitted(false);
+    setProofText('');
+    showToast('✓ Compra concluída com sucesso! Obrigado pela colaboração na Cantina FATEC.', 'success');
+    fetchProducts();
   };
 
   // Copiar chave Pix Copia-e-Cola
@@ -217,6 +309,12 @@ export default function CantinaPage() {
 
       if (res.ok) {
         setProofSubmitted(true);
+        // Compra concluída com comprovante: esvazia o carrinho e o localStorage
+        setCart([]);
+        try {
+          localStorage.removeItem('fatec_canteen_cart');
+        } catch {}
+        fetchProducts();
       }
     } catch (err) {
       console.error('Falha ao enviar comprovante:', err);
@@ -232,47 +330,123 @@ export default function CantinaPage() {
       case 'BEBIDA':
         return (
           <div className="canteen-card-bg-effect">
-            <div className="canteen-liquid-fill">
-              <div className="canteen-liquid-wave" />
-              <div className="canteen-bubble" />
-              <div className="canteen-bubble" />
-              <div className="canteen-bubble" />
-              <div className="canteen-bubble" />
-              <div className="canteen-bubble" />
+            <div className="canteen-liquid-swell">
+              {/* Onda fluida contínua sem cortes no topo */}
+              <div className="canteen-wave-track">
+                <svg className="canteen-wave-svg wave-back" viewBox="0 0 1200 60" preserveAspectRatio="none">
+                  <path d="M0,30 C150,5 300,55 450,30 C600,5 750,55 900,30 C1050,5 1200,55 1200,30 L1200,60 L0,60 Z" fill="rgba(56, 189, 248, 0.45)" />
+                </svg>
+                <svg className="canteen-wave-svg wave-front" viewBox="0 0 1200 60" preserveAspectRatio="none">
+                  <path d="M0,25 C150,50 300,0 450,25 C600,50 750,0 900,25 C1050,50 1200,0 1200,25 L1200,60 L0,60 Z" fill="rgba(186, 230, 253, 0.65)" />
+                </svg>
+              </div>
+              {/* Microbolhas de gás puro em CSS (Zero emojis) */}
+              <div className="canteen-gas-bubble" />
+              <div className="canteen-gas-bubble" />
+              <div className="canteen-gas-bubble" />
+              <div className="canteen-gas-bubble" />
+              <div className="canteen-gas-bubble" />
             </div>
           </div>
         );
       case 'DOCE':
         return (
           <div className="canteen-card-bg-effect">
-            <div className="canteen-candy-fill">
-              <span className="canteen-falling-candy">🍫</span>
-              <span className="canteen-falling-candy">🍬</span>
-              <span className="canteen-falling-candy">🍭</span>
-              <span className="canteen-falling-candy">🍪</span>
-              <span className="canteen-falling-candy">✨</span>
+            <div className="canteen-sweet-shower">
+              {/* Bombom Rosa */}
+              <div className="canteen-falling-sweet">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <polygon points="2,8 7,12 2,16" fill="#f43f5e" opacity="0.85" />
+                  <polygon points="22,8 17,12 22,16" fill="#f43f5e" opacity="0.85" />
+                  <ellipse cx="12" cy="12" rx="6" ry="4" fill="#fb7185" />
+                  <ellipse cx="12" cy="11" rx="4" ry="2" fill="#ffe4e6" opacity="0.7" />
+                </svg>
+              </div>
+              {/* Tablete de Chocolate */}
+              <div className="canteen-falling-sweet">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <rect x="2" y="3" width="20" height="18" rx="3" fill="#78350f" />
+                  <rect x="5" y="6" width="6" height="5" rx="1" fill="#92400e" />
+                  <rect x="13" y="6" width="6" height="5" rx="1" fill="#92400e" />
+                  <rect x="5" y="13" width="6" height="5" rx="1" fill="#92400e" />
+                  <rect x="13" y="13" width="6" height="5" rx="1" fill="#92400e" />
+                </svg>
+              </div>
+              {/* Confeito Sprinkles Dourado */}
+              <div className="canteen-falling-sweet">
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                  <rect x="4" y="8" width="12" height="4" rx="2" transform="rotate(-30 10 10)" fill="#f59e0b" />
+                </svg>
+              </div>
+              {/* Bala Redonda Menta */}
+              <div className="canteen-falling-sweet">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="8" fill="#10b981" />
+                  <circle cx="12" cy="12" r="5" fill="#34d399" />
+                  <circle cx="12" cy="12" r="2" fill="#ecfdf5" />
+                </svg>
+              </div>
+              {/* Confeito Sprinkles Roxo */}
+              <div className="canteen-falling-sweet">
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                  <rect x="4" y="8" width="12" height="4" rx="2" transform="rotate(45 10 10)" fill="#8b5cf6" />
+                </svg>
+              </div>
+              {/* Estrela de Açúcar */}
+              <div className="canteen-falling-sweet">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#fbbf24">
+                  <polygon points="12,2 15,9 22,12 15,15 12,22 9,15 2,12 9,9" />
+                </svg>
+              </div>
             </div>
           </div>
         );
       case 'CONGELADO':
         return (
           <div className="canteen-card-bg-effect">
-            <div className="canteen-frost-overlay" />
-            <span className="canteen-snowflake">❄️</span>
-            <span className="canteen-snowflake">🧊</span>
-            <span className="canteen-snowflake">❄️</span>
-            <span className="canteen-snowflake">✨</span>
+            {/* Flocos de neve caindo suavemente - simples e limpo */}
+            <div className="canteen-snow-fall">
+              <span className="canteen-snowflake">❄</span>
+              <span className="canteen-snowflake">❅</span>
+              <span className="canteen-snowflake">❆</span>
+              <span className="canteen-snowflake">❄</span>
+              <span className="canteen-snowflake">❅</span>
+              <span className="canteen-snowflake">❆</span>
+            </div>
           </div>
         );
       case 'SALGADO':
         return (
           <div className="canteen-card-bg-effect">
-            <div className="canteen-crispy-fill" />
-            <span className="canteen-spice-flake">✨</span>
-            <span className="canteen-spice-flake">🥐</span>
-            <span className="canteen-spice-flake">🔥</span>
-            <span className="canteen-spice-flake">🧂</span>
-            <span className="canteen-spice-flake">✨</span>
+            {/* Fogo Limpo e Estilizado (Sem Emojis, Sem Poluição Visual) */}
+            <div className="canteen-clean-fire">
+              <div className="canteen-clean-fire-glow" />
+              <svg className="canteen-clean-fire-svg" viewBox="0 0 240 120" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="cleanFlameGrad1" x1="0%" y1="100%" x2="0%" y2="0%">
+                    <stop offset="0%" stopColor="#dc2626" stopOpacity="0.85" />
+                    <stop offset="60%" stopColor="#f97316" stopOpacity="0.9" />
+                    <stop offset="100%" stopColor="#fbbf24" stopOpacity="0.95" />
+                  </linearGradient>
+                  <linearGradient id="cleanFlameGrad2" x1="0%" y1="100%" x2="0%" y2="0%">
+                    <stop offset="0%" stopColor="#ea580c" stopOpacity="0.9" />
+                    <stop offset="50%" stopColor="#f59e0b" stopOpacity="0.95" />
+                    <stop offset="100%" stopColor="#fef08a" stopOpacity="1" />
+                  </linearGradient>
+                  <linearGradient id="cleanFlameCore" x1="0%" y1="100%" x2="0%" y2="0%">
+                    <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.9" />
+                    <stop offset="70%" stopColor="#fef08a" stopOpacity="0.98" />
+                    <stop offset="100%" stopColor="#ffffff" stopOpacity="1" />
+                  </linearGradient>
+                </defs>
+                <path className="clean-flame flame-left" d="M30,120 C35,85 25,60 48,35 C55,22 62,8 65,0 C66,15 75,35 72,55 C82,40 92,25 98,15 C102,28 100,55 95,75 C105,60 115,48 122,40 C125,58 120,85 110,120 Z" fill="url(#cleanFlameGrad1)" />
+                <path className="clean-flame flame-center" d="M70,120 C80,80 75,50 102,25 C110,15 118,5 120,0 C124,18 132,42 128,65 C140,45 155,28 165,15 C170,32 168,65 158,90 C170,72 182,58 190,48 C192,68 185,95 175,120 Z" fill="url(#cleanFlameGrad2)" />
+                <path className="clean-flame flame-core" d="M95,120 C100,92 98,70 112,48 C116,40 120,30 120,25 C122,35 126,50 124,65 C132,50 142,38 148,30 C150,42 148,65 142,85 L142,120 Z" fill="url(#cleanFlameCore)" />
+              </svg>
+              <div className="clean-fire-spark spark-1" />
+              <div className="clean-fire-spark spark-2" />
+              <div className="clean-fire-spark spark-3" />
+            </div>
           </div>
         );
       default:
@@ -280,7 +454,7 @@ export default function CantinaPage() {
     }
   };
 
-  // Ícones ilustrativos nativos para fallback de imagem dos produtos
+    // Ícones ilustrativos nativos para fallback de imagem dos produtos
   const getProductFallbackEmoji = (cat: string) => {
     switch (cat) {
       case 'BEBIDA': return '🥤';
@@ -297,9 +471,8 @@ export default function CantinaPage() {
         
         {/* Cabeçalho da Cantina com Identidade FATEC */}
         <div
+          className="canteen-discente-header-card card-interactive"
           style={{
-            backgroundColor: 'rgba(255, 255, 255, 0.92)',
-            backdropFilter: 'blur(16px)',
             borderRadius: '20px',
             padding: '2.25rem 2rem',
             border: '1px solid var(--border-light)',
@@ -322,32 +495,34 @@ export default function CantinaPage() {
               Cantina Discente dos Estudantes
             </h1>
             <p style={{ color: 'var(--text-sub)', fontSize: '0.95rem', marginTop: '0.35rem', maxWidth: '680px', lineHeight: 1.6 }}>
-              Pegue o produto na prateleira física, adicione ao seu pedido abaixo e escaneie o <strong>QR Code Pix com valor exato</strong>. Sem filas, sem pranchetas de papel e com extrato em tempo real.
+              Pegue o produto na prateleira física, adicione ao seu pedido abaixo e escaneie o <strong>QR Code Pix com valor exato</strong>.Sem pranchetas de papel e com extrato em tempo real.
             </p>
           </div>
 
-          {/* Ações do Topo: Gerenciar Estoque e Meu Pedido */}
+          {/* Ações do Topo: Gerenciar Estoque (Apenas CA e ADMIN) e Meu Pedido */}
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            <Link
-              href="/cantina/admin"
-              className="btn btn-secondary"
-              style={{
-                padding: '0.8rem 1.25rem',
-                fontSize: '0.925rem',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                backgroundColor: '#ffffff',
-                border: '1px solid #cbd5e1',
-                color: '#1e293b',
-                fontWeight: 600,
-                boxShadow: 'var(--shadow-sm)',
-              }}
-              title="Acessar painel do Centro Acadêmico e Secretaria para reposição, novos itens e preços"
-            >
-              <span>⚙️</span>
-              <span>Gerenciar Estoque (CA / Secretaria)</span>
-            </Link>
+            {(currentUser?.role === 'ADMIN' || currentUser?.role === 'CA_MEMBRO') && (
+              <Link
+                href="/cantina/admin"
+                className="btn btn-secondary"
+                style={{
+                  padding: '0.8rem 1.25rem',
+                  fontSize: '0.925rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  color: '#1e293b',
+                  fontWeight: 600,
+                  boxShadow: 'var(--shadow-sm)',
+                }}
+                title="Acessar painel do Centro Acadêmico e Secretaria para reposição, novos itens e preços"
+              >
+                <span>⚙️</span>
+                <span>Gerenciar Estoque (CA / Secretaria)</span>
+              </Link>
+            )}
 
             {/* Botão de Atalho para o Carrinho */}
             <button
@@ -428,9 +603,108 @@ export default function CantinaPage() {
 
         {/* Grade de Produtos do Catálogo */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '5rem 0', color: 'var(--text-muted)' }}>
-            <div style={{ fontSize: '2rem', marginBottom: '1rem', animation: 'spin 1s infinite linear' }}>⏳</div>
-            Carregando catálogo de produtos da cantina em tempo real...
+          <div>
+            {/* Banner Moderno de Carregamento FATEC */}
+            <div className="canteen-loading-banner card-interactive">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                <div
+                  style={{
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '50%',
+                    background: 'rgba(2, 132, 199, 0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#0284c7"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    style={{ animation: 'spin 1s linear infinite' }}
+                  >
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-main)', margin: 0 }}>
+                    Carregando Cardápio da Cantina FATEC...
+                  </h4>
+                  <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', margin: '0.2rem 0 0 0' }}>
+                    Sincronizando prateleiras, disponibilidade de estoque e tabela de preços via Pix em tempo real.
+                  </p>
+                </div>
+              </div>
+              <div className="canteen-loading-bar" />
+            </div>
+
+            {/* Grade de Skeletons dos Cards de Produtos */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+                gap: '1.5rem',
+              }}
+            >
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                <div
+                  key={i}
+                  className="card-interactive"
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    padding: '1.5rem',
+                    borderRadius: '16px',
+                    border: '1px solid var(--border-light)',
+                    minHeight: '340px',
+                    background: 'var(--card-bg, #ffffff)',
+                  }}
+                >
+                  <div>
+                    {/* Skeleton: Categoria & Estoque */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+                      <div className="skeleton-shimmer" style={{ width: '70px', height: '22px', borderRadius: '20px' }} />
+                      <div className="skeleton-shimmer" style={{ width: '60px', height: '18px', borderRadius: '12px' }} />
+                    </div>
+
+                    {/* Skeleton: Imagem do Produto */}
+                    <div className="skeleton-shimmer" style={{ width: '100%', height: '135px', borderRadius: '12px', marginBottom: '1rem' }} />
+
+                    {/* Skeleton: Nome do Produto */}
+                    <div className="skeleton-shimmer" style={{ width: '85%', height: '18px', borderRadius: '6px', marginBottom: '0.5rem' }} />
+                    <div className="skeleton-shimmer" style={{ width: '55%', height: '16px', borderRadius: '6px', marginBottom: '0.75rem' }} />
+
+                    {/* Skeleton: Descrição */}
+                    <div className="skeleton-shimmer" style={{ width: '92%', height: '13px', borderRadius: '4px' }} />
+                  </div>
+
+                  {/* Skeleton: Preço e Botão Adicionar */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginTop: '1.5rem',
+                      paddingTop: '1rem',
+                      borderTop: '1px solid var(--border-light)',
+                    }}
+                  >
+                    <div>
+                      <div className="skeleton-shimmer" style={{ width: '50px', height: '12px', marginBottom: '4px' }} />
+                      <div className="skeleton-shimmer" style={{ width: '68px', height: '22px', borderRadius: '6px' }} />
+                    </div>
+                    <div className="skeleton-shimmer" style={{ width: '100px', height: '38px', borderRadius: '10px' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         ) : filteredProducts.length === 0 ? (
           <div
@@ -503,6 +777,7 @@ export default function CantinaPage() {
 
                   {/* Foto / Imagem com Fallback Visual */}
                   <div
+                    className="canteen-product-img-box"
                     style={{
                       height: '135px',
                       borderRadius: '12px',
@@ -610,6 +885,71 @@ export default function CantinaPage() {
           </div>
         )}
 
+        {/* Carrinho Flutuante Fixo no Canto Inferior Direito (Não fecha nem atrapalha as compras) */}
+        {totalCartCount > 0 && !isCartOpen && (
+          <div
+            style={{
+              position: 'fixed',
+              bottom: '24px',
+              right: '24px',
+              zIndex: 90,
+              animation: 'cartPillPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setIsCartOpen(true)}
+              className="canteen-floating-cart-btn"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.85rem',
+                backgroundColor: 'var(--accent-blue)',
+                color: '#ffffff',
+                padding: '0.8rem 1.35rem',
+                borderRadius: '50px',
+                border: 'none',
+                boxShadow: '0 8px 24px rgba(2, 132, 199, 0.4)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <span style={{ fontSize: '1.3rem' }}>🛒</span>
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: '-6px',
+                    right: '-8px',
+                    backgroundColor: '#ef4444',
+                    color: '#ffffff',
+                    fontSize: '0.72rem',
+                    fontWeight: 800,
+                    borderRadius: '10px',
+                    padding: '0.1rem 0.35rem',
+                    minWidth: '18px',
+                    textAlign: 'center',
+                    border: '2px solid #ffffff',
+                  }}
+                >
+                  {totalCartCount}
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.2 }}>
+                <span style={{ fontSize: '0.68rem', opacity: 0.9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Meu Pedido
+                </span>
+                <span style={{ fontSize: '0.98rem', fontWeight: 800 }}>
+                  R$ {totalCartAmount.toFixed(2).replace('.', ',')}
+                </span>
+              </div>
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, paddingLeft: '0.2rem' }}>
+                Ver Carrinho →
+              </span>
+            </button>
+          </div>
+        )}
+
         {/* Modal de Carrinho Lateral (Drawer Responsivo) */}
         {isCartOpen && (
           <div
@@ -623,6 +963,7 @@ export default function CantinaPage() {
             }}
           >
             <div
+              className="canteen-cart-drawer"
               style={{
                 width: '100%',
                 maxWidth: '420px',
@@ -646,12 +987,52 @@ export default function CantinaPage() {
                       {totalCartCount} {totalCartCount === 1 ? 'item selecionado' : 'itens selecionados'}
                     </span>
                   </div>
-                  <button
-                    onClick={() => setIsCartOpen(false)}
-                    style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: 'var(--text-muted)' }}
-                  >
-                    ✕
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                    {cart.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setConfirmDialog({
+                            isOpen: true,
+                            title: 'Esvaziar Carrinho?',
+                            message: 'Deseja realmente remover todos os itens selecionados do seu pedido da cantina?',
+                            confirmLabel: 'Sim, esvaziar',
+                            cancelLabel: 'Manter itens',
+                            isDanger: true,
+                            onConfirm: () => {
+                              setCart([]);
+                              try {
+                                localStorage.removeItem('fatec_canteen_cart');
+                              } catch {}
+                              setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+                              showToast('Carrinho esvaziado com sucesso.', 'info');
+                            },
+                          });
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#ef4444',
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          padding: '0.2rem 0.4rem',
+                          borderRadius: '4px',
+                        }}
+                        title="Esvaziar todos os itens do carrinho"
+                      >
+                        🗑️ Limpar
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setIsCartOpen(false)}
+                      style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: 'var(--text-muted)' }}
+                      title="Fechar gaveta de pedidos"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
 
                 {cart.length === 0 ? (
@@ -664,6 +1045,7 @@ export default function CantinaPage() {
                     {cart.map((item) => (
                       <div
                         key={item.product.id}
+                        className="canteen-cart-item-row"
                         style={{
                           display: 'flex',
                           alignItems: 'center',
@@ -750,6 +1132,7 @@ export default function CantinaPage() {
             }}
           >
             <div
+              className="canteen-checkout-modal"
               style={{
                 width: '100%',
                 maxWidth: '520px',
@@ -763,13 +1146,9 @@ export default function CantinaPage() {
               }}
             >
               <button
-                onClick={() => {
-                  setIsCheckoutModalOpen(false);
-                  setCheckoutData(null);
-                  setProofSubmitted(false);
-                  setProofText('');
-                }}
+                onClick={handleCloseCheckoutWithoutFinishing}
                 style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: 'var(--text-muted)' }}
+                title="Voltar ao carrinho e manter itens"
               >
                 ✕
               </button>
@@ -807,7 +1186,7 @@ export default function CantinaPage() {
                   </div>
 
                   {/* Valor Total do Pedido */}
-                  <div style={{ backgroundColor: 'var(--bg-muted)', borderRadius: '12px', padding: '1rem', textAlign: 'center', marginBottom: '1.5rem', border: '1px solid var(--border-light)' }}>
+                  <div className="canteen-checkout-amount-box" style={{ backgroundColor: 'var(--bg-muted)', borderRadius: '12px', padding: '1rem', textAlign: 'center', marginBottom: '1.5rem', border: '1px solid var(--border-light)' }}>
                     <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Valor Exato da Compra:</span>
                     <div style={{ fontSize: '2.1rem', fontWeight: 800, color: 'var(--accent-emerald)', marginTop: '0.2rem' }}>
                       R$ {checkoutData.totalAmount.toFixed(2).replace('.', ',')}
@@ -854,6 +1233,39 @@ export default function CantinaPage() {
                     </div>
                   </div>
 
+                  {/* Ações de Retorno ou Conclusão Rápida */}
+                  <div style={{ display: 'flex', gap: '0.65rem', marginBottom: '1.25rem' }}>
+                    <button
+                      type="button"
+                      onClick={handleCloseCheckoutWithoutFinishing}
+                      className="btn btn-secondary"
+                      style={{
+                        flex: 1,
+                        padding: '0.65rem 0.75rem',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        backgroundColor: '#f8fafc',
+                        border: '1px solid #cbd5e1',
+                        color: 'var(--text-main)',
+                      }}
+                    >
+                      ← Voltar ao Carrinho (Manter Itens)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleFinishPurchase}
+                      className="btn btn-emerald"
+                      style={{
+                        flex: 1,
+                        padding: '0.65rem 0.75rem',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                      }}
+                    >
+                      ✓ Já Paguei no App / Concluir
+                    </button>
+                  </div>
+
                   {/* Formulário de Envio do Comprovante */}
                   <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: '1.25rem' }}>
                     {proofSubmitted ? (
@@ -898,6 +1310,25 @@ export default function CantinaPage() {
         )}
 
       </div>
+
+      {/* Modal de Confirmação 100% Frontend */}
+      <ConfirmModal
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmLabel={confirmDialog.confirmLabel}
+        cancelLabel={confirmDialog.cancelLabel}
+        isDanger={confirmDialog.isDanger}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
+      />
+
+      {/* Toast Notifier Flutuante 100% Frontend */}
+      <ToastNotification
+        message={toastMessage}
+        type={toastType}
+        onClose={() => setToastMessage(null)}
+      />
     </AppLayout>
   );
 }

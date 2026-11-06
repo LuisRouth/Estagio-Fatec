@@ -785,14 +785,16 @@ input, select, textarea, .form-input, .form-select {
   box-shadow: 0 12px 24px -8px rgba(15, 23, 42, 0.12), 0 4px 8px -4px rgba(15, 23, 42, 0.06);
 }
 
-/* Camada de fundo animada */
+/* Camada de fundo animada - Efeitos Aprimorados da Cantina */
 .canteen-card-bg-effect {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 0;
   opacity: 0;
-  transition: opacity 0.35s ease;
+  overflow: hidden;
+  border-radius: 16px;
+  transition: opacity 0.4s ease;
 }
 
 .canteen-card-interactive:hover .canteen-card-bg-effect {
@@ -809,181 +811,458 @@ input, select, textarea, .form-input, .form-select {
   height: 100%;
 }
 
-/* -------------------------------------------------------------------- */
-/* 1. BEBIDA: Refrigerante / Líquido subindo com ondas e bolhas         */
-/* -------------------------------------------------------------------- */
+/* ==================================================================== */
+/* 1. BEBIDA: Onda Líquida Perfeita Sem Cortes + Microbolhas Subindo    */
+/* ==================================================================== */
 .canteen-card-interactive.cat-bebida:hover {
   border-color: #0284c7;
+  box-shadow: 0 12px 30px rgba(2, 132, 199, 0.22);
 }
 
-.canteen-liquid-fill {
+.canteen-liquid-swell {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
   height: 0%;
-  background: linear-gradient(180deg, rgba(56, 189, 248, 0.35) 0%, rgba(2, 132, 199, 0.22) 100%);
-  transition: height 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.45) 0%, rgba(2, 132, 199, 0.3) 100%);
+  transition: height 0.75s cubic-bezier(0.22, 1, 0.36, 1);
   overflow: hidden;
 }
 
-.canteen-card-interactive.cat-bebida:hover .canteen-liquid-fill {
+.canteen-card-interactive.cat-bebida:hover .canteen-liquid-swell {
   height: 100%;
 }
 
-/* Ondinha no topo do líquido */
-.canteen-liquid-wave {
+/* Trilho duplo de onda fluida contínua - sem cortes e sem saltos */
+.canteen-wave-track {
   position: absolute;
-  top: -12px;
-  left: -50%;
+  top: -18px;
+  left: 0;
   width: 200%;
-  height: 24px;
-  background: radial-gradient(ellipse at center, rgba(186, 230, 253, 0.8) 0%, transparent 70%);
-  border-radius: 40%;
-  animation: waveFlow 2s linear infinite;
+  height: 38px;
+  pointer-events: none;
 }
 
-@keyframes waveFlow {
-  0% { transform: translateX(0) rotate(0deg); }
-  50% { transform: translateX(-25%) rotate(180deg); }
-  100% { transform: translateX(-50%) rotate(360deg); }
-}
-
-/* Bolhas subindo */
-.canteen-bubble {
+.canteen-wave-svg.wave-front {
   position: absolute;
-  bottom: -10px;
-  background: rgba(255, 255, 255, 0.75);
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  animation: waveSeamlessScroll 2.4s linear infinite;
+}
+
+.canteen-wave-svg.wave-back {
+  position: absolute;
+  top: -4px;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.65;
+  animation: waveSeamlessScrollBack 3.6s linear infinite;
+}
+
+@keyframes waveSeamlessScroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes waveSeamlessScrollBack {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* Microbolhas de gás puro em CSS (Zero emojis) */
+.canteen-gas-bubble {
+  position: absolute;
+  bottom: -15px;
   border-radius: 50%;
-  animation: bubbleRise 2s infinite ease-in;
+  background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.95) 0%, rgba(186, 230, 253, 0.6) 60%, rgba(2, 132, 199, 0.3) 100%);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+  animation: bubbleSwellRise 2.2s infinite ease-in;
 }
 
-.canteen-bubble:nth-child(1) { left: 15%; width: 8px; height: 8px; animation-duration: 1.6s; animation-delay: 0.1s; }
-.canteen-bubble:nth-child(2) { left: 35%; width: 12px; height: 12px; animation-duration: 2.2s; animation-delay: 0.3s; }
-.canteen-bubble:nth-child(3) { left: 55%; width: 7px; height: 7px; animation-duration: 1.8s; animation-delay: 0.6s; }
-.canteen-bubble:nth-child(4) { left: 75%; width: 10px; height: 10px; animation-duration: 2s; animation-delay: 0.2s; }
-.canteen-bubble:nth-child(5) { left: 88%; width: 6px; height: 6px; animation-duration: 1.5s; animation-delay: 0.5s; }
+.canteen-gas-bubble:nth-child(2) { left: 14%; width: 10px; height: 10px; animation-duration: 1.8s; animation-delay: 0.1s; }
+.canteen-gas-bubble:nth-child(3) { left: 32%; width: 14px; height: 14px; animation-duration: 2.3s; animation-delay: 0.4s; }
+.canteen-gas-bubble:nth-child(4) { left: 52%; width: 8px; height: 8px; animation-duration: 1.7s; animation-delay: 0.2s; }
+.canteen-gas-bubble:nth-child(5) { left: 70%; width: 16px; height: 16px; animation-duration: 2.5s; animation-delay: 0.5s; }
+.canteen-gas-bubble:nth-child(6) { left: 86%; width: 11px; height: 11px; animation-duration: 2s; animation-delay: 0.3s; }
 
-@keyframes bubbleRise {
-  0% { transform: translateY(0) scale(0.8); opacity: 0; }
-  20% { opacity: 0.9; }
-  80% { opacity: 0.8; }
-  100% { transform: translateY(-280px) scale(1.2); opacity: 0; }
+@keyframes bubbleSwellRise {
+  0% { transform: translateY(0) scale(0.6); opacity: 0; }
+  25% { opacity: 0.95; transform: translateY(-60px) scale(1); }
+  75% { opacity: 0.9; transform: translateY(-200px) scale(1.35); }
+  100% { transform: translateY(-300px) scale(1.6); opacity: 0; }
 }
 
-/* -------------------------------------------------------------------- */
-/* 2. DOCE: Doces, confeitos e bombons caindo e preenchendo             */
-/* -------------------------------------------------------------------- */
+/* ==================================================================== */
+/* 2. DOCE: Doces, Bombons e Confeitos caindo em Cascata (MANTIDO!)      */
+/* ==================================================================== */
 .canteen-card-interactive.cat-doce:hover {
   border-color: #f43f5e;
+  box-shadow: 0 12px 30px rgba(244, 63, 94, 0.18);
 }
 
-.canteen-candy-fill {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 0%;
-  background: linear-gradient(180deg, rgba(253, 164, 175, 0.3) 0%, rgba(244, 63, 94, 0.18) 100%);
-  transition: height 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.canteen-card-interactive.cat-doce:hover .canteen-candy-fill {
-  height: 100%;
-}
-
-.canteen-falling-candy {
-  position: absolute;
-  top: -30px;
-  font-size: 1.15rem;
-  animation: candyFall 2s infinite ease-in;
-  user-select: none;
-}
-
-.canteen-falling-candy:nth-child(1) { left: 12%; animation-duration: 1.7s; animation-delay: 0.1s; }
-.canteen-falling-candy:nth-child(2) { left: 32%; animation-duration: 2.1s; animation-delay: 0.4s; }
-.canteen-falling-candy:nth-child(3) { left: 52%; animation-duration: 1.9s; animation-delay: 0.2s; }
-.canteen-falling-candy:nth-child(4) { left: 72%; animation-duration: 2.3s; animation-delay: 0.5s; }
-.canteen-falling-candy:nth-child(5) { left: 88%; animation-duration: 1.8s; animation-delay: 0.3s; }
-
-@keyframes candyFall {
-  0% { transform: translateY(0) rotate(0deg); opacity: 0; }
-  15% { opacity: 0.85; }
-  85% { opacity: 0.85; }
-  100% { transform: translateY(320px) rotate(360deg); opacity: 0; }
-}
-
-/* -------------------------------------------------------------------- */
-/* 3. CONGELADO: Cristalização gélida, névoa e flocos de neve           */
-/* -------------------------------------------------------------------- */
-.canteen-card-interactive.cat-congelado:hover {
-  border-color: #06b6d4;
-}
-
-.canteen-frost-overlay {
+.canteen-sweet-shower {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at center, rgba(165, 243, 252, 0.38) 0%, rgba(6, 182, 212, 0.22) 100%);
-  backdrop-filter: blur(1.5px);
-  border: 2px solid rgba(165, 243, 252, 0.7);
-  box-shadow: inset 0 0 25px rgba(6, 182, 212, 0.35);
-  animation: frostPulse 3s ease-in-out infinite alternate;
+  background: radial-gradient(circle at 50% 0%, rgba(253, 164, 175, 0.25) 0%, rgba(244, 63, 94, 0.08) 100%);
 }
 
-@keyframes frostPulse {
-  0% { box-shadow: inset 0 0 15px rgba(6, 182, 212, 0.25); }
-  100% { box-shadow: inset 0 0 35px rgba(165, 243, 252, 0.65); }
+.canteen-falling-sweet {
+  position: absolute;
+  top: -35px;
+  animation: sweetCascade 2.5s infinite linear;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.12));
+}
+
+.canteen-falling-sweet:nth-child(1) { left: 10%; animation-duration: 2.1s; animation-delay: 0.1s; }
+.canteen-falling-sweet:nth-child(2) { left: 28%; animation-duration: 2.6s; animation-delay: 0.6s; }
+.canteen-falling-sweet:nth-child(3) { left: 48%; animation-duration: 2.2s; animation-delay: 0.3s; }
+.canteen-falling-sweet:nth-child(4) { left: 68%; animation-duration: 2.8s; animation-delay: 0.8s; }
+.canteen-falling-sweet:nth-child(5) { left: 84%; animation-duration: 2.4s; animation-delay: 0.4s; }
+.canteen-falling-sweet:nth-child(6) { left: 38%; animation-duration: 2.7s; animation-delay: 1.1s; }
+
+@keyframes sweetCascade {
+  0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+  15% { opacity: 0.95; }
+  85% { opacity: 0.95; }
+  100% { transform: translateY(350px) rotate(360deg); opacity: 0; }
+}
+
+/* ==================================================================== */
+/* 3. CONGELADO: Flocos de Neve Caindo (Simples e Limpo)                */
+/* ==================================================================== */
+.canteen-card-interactive.cat-congelado:hover {
+  border-color: #38bdf8;
+  box-shadow: 0 12px 30px rgba(56, 189, 248, 0.25);
+}
+
+.canteen-snow-fall {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 0%, rgba(186, 230, 253, 0.22) 0%, rgba(56, 189, 248, 0.05) 100%);
 }
 
 .canteen-snowflake {
   position: absolute;
-  top: -20px;
-  color: #0891b2;
-  font-size: 1.25rem;
-  animation: snowDrift 2.5s infinite linear;
+  top: -30px;
+  color: #38bdf8;
   user-select: none;
+  filter: drop-shadow(0 2px 4px rgba(56, 189, 248, 0.35));
+  animation: snowflakeFall 2.6s infinite linear;
 }
 
-.canteen-snowflake:nth-child(1) { left: 15%; animation-duration: 2.2s; animation-delay: 0.2s; }
-.canteen-snowflake:nth-child(2) { left: 38%; animation-duration: 2.7s; animation-delay: 0.5s; }
-.canteen-snowflake:nth-child(3) { left: 62%; animation-duration: 2.3s; animation-delay: 0.1s; }
-.canteen-snowflake:nth-child(4) { left: 82%; animation-duration: 2.9s; animation-delay: 0.4s; }
+.canteen-snowflake:nth-child(1) { left: 12%; font-size: 1.15rem; animation-duration: 2.3s; animation-delay: 0.1s; }
+.canteen-snowflake:nth-child(2) { left: 28%; font-size: 0.9rem; animation-duration: 2.8s; animation-delay: 0.6s; opacity: 0.75; }
+.canteen-snowflake:nth-child(3) { left: 48%; font-size: 1.35rem; animation-duration: 2.4s; animation-delay: 0.2s; }
+.canteen-snowflake:nth-child(4) { left: 68%; font-size: 0.95rem; animation-duration: 3s; animation-delay: 0.8s; opacity: 0.75; }
+.canteen-snowflake:nth-child(5) { left: 84%; font-size: 1.2rem; animation-duration: 2.2s; animation-delay: 0.4s; }
+.canteen-snowflake:nth-child(6) { left: 38%; font-size: 1.05rem; animation-duration: 2.7s; animation-delay: 1.1s; opacity: 0.8; }
 
-@keyframes snowDrift {
-  0% { transform: translateY(0) rotate(0deg) scale(0.8); opacity: 0; }
-  20% { opacity: 0.9; }
-  80% { opacity: 0.9; }
-  100% { transform: translateY(300px) rotate(180deg) scale(1.1); opacity: 0; }
+@keyframes snowflakeFall {
+  0% {
+    transform: translateY(0) rotate(0deg) translateX(0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.95;
+  }
+  50% {
+    transform: translateY(140px) rotate(180deg) translateX(8px);
+  }
+  85% {
+    opacity: 0.95;
+  }
+  100% {
+    transform: translateY(340px) rotate(360deg) translateX(-8px);
+    opacity: 0;
+  }
 }
 
-/* -------------------------------------------------------------------- */
-/* 4. SALGADO: Efeito Estalo Quentinho / Crocância (Crispy Waves & Gergelim/Tempero) */
-/* -------------------------------------------------------------------- */
+/* ==================================================================== */
+/* 4. SALGADO: Fogo Limpo e Estilizado (Sem Emojis, Sem Poluição)       */
+/* ==================================================================== */
 .canteen-card-interactive.cat-salgado:hover {
-  border-color: #f59e0b;
+  border-color: #f97316;
+  box-shadow: 0 12px 30px rgba(239, 68, 68, 0.35);
 }
 
-.canteen-crispy-fill {
+.canteen-clean-fire {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at center, rgba(254, 243, 199, 0.45) 0%, rgba(245, 158, 11, 0.18) 100%);
+  overflow: hidden;
+  pointer-events: none;
 }
 
-.canteen-spice-flake {
+.canteen-clean-fire-glow {
   position: absolute;
-  font-size: 0.85rem;
-  user-select: none;
-  animation: spicePop 1.6s infinite ease-out;
+  bottom: -15px;
+  left: -15%;
+  width: 130%;
+  height: 85px;
+  background: radial-gradient(ellipse at bottom, rgba(239, 68, 68, 0.6) 0%, rgba(245, 158, 11, 0.35) 50%, transparent 75%);
+  filter: blur(12px);
+  animation: cleanGlowPulse 1.4s ease-in-out infinite alternate;
 }
 
-.canteen-spice-flake:nth-child(1) { left: 20%; top: 40%; animation-delay: 0.1s; }
-.canteen-spice-flake:nth-child(2) { left: 45%; top: 60%; animation-delay: 0.4s; }
-.canteen-spice-flake:nth-child(3) { left: 70%; top: 35%; animation-delay: 0.2s; }
-.canteen-spice-flake:nth-child(4) { left: 30%; top: 75%; animation-delay: 0.5s; }
-.canteen-spice-flake:nth-child(5) { left: 80%; top: 65%; animation-delay: 0.3s; }
+@keyframes cleanGlowPulse {
+  0% { transform: scaleY(0.9); opacity: 0.7; }
+  100% { transform: scaleY(1.3); opacity: 1; }
+}
 
-@keyframes spicePop {
-  0% { transform: scale(0.4) rotate(0deg); opacity: 0; }
-  40% { transform: scale(1.2) rotate(45deg); opacity: 0.9; }
-  100% { transform: scale(1) translateY(-25px) rotate(90deg); opacity: 0; }
+.canteen-clean-fire-svg {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 105px;
+  filter: drop-shadow(0 -3px 8px rgba(249, 115, 22, 0.6));
+}
+
+.clean-flame {
+  transform-origin: bottom center;
+}
+
+.clean-flame.flame-left {
+  animation: cleanFlameSwayLeft 1.4s ease-in-out infinite alternate;
+}
+
+.clean-flame.flame-center {
+  animation: cleanFlameSwayCenter 1.1s ease-in-out infinite alternate;
+}
+
+.clean-flame.flame-core {
+  animation: cleanFlameSwayCore 0.85s ease-in-out infinite alternate;
+}
+
+@keyframes cleanFlameSwayLeft {
+  0% { transform: scaleY(0.92) skewX(-2deg); }
+  100% { transform: scaleY(1.1) skewX(3deg); }
+}
+
+@keyframes cleanFlameSwayCenter {
+  0% { transform: scaleY(1.08) skewX(2deg); }
+  100% { transform: scaleY(0.94) skewX(-3deg); }
+}
+
+@keyframes cleanFlameSwayCore {
+  0% { transform: scaleY(0.95); opacity: 0.9; }
+  100% { transform: scaleY(1.12); opacity: 1; }
+}
+
+/* 3 fagulhas limpas e suaves */
+.clean-fire-spark {
+  position: absolute;
+  bottom: 15px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #fef08a;
+  box-shadow: 0 0 6px #f97316;
+  animation: cleanSparkFloat 1.8s infinite linear;
+}
+
+.clean-fire-spark.spark-1 { left: 25%; animation-duration: 1.5s; animation-delay: 0.1s; }
+.clean-fire-spark.spark-2 { left: 52%; animation-duration: 2.1s; animation-delay: 0.5s; width: 5px; height: 5px; }
+.clean-fire-spark.spark-3 { left: 78%; animation-duration: 1.7s; animation-delay: 0.3s; }
+
+@keyframes cleanSparkFloat {
+  0% { transform: translateY(0) translateX(0); opacity: 1; }
+  50% { transform: translateY(-70px) translateX(-5px); opacity: 0.8; }
+  100% { transform: translateY(-160px) translateX(8px); opacity: 0; }
+}
+
+
+
+
+
+/* Botão Flutuante do Carrinho */
+.canteen-floating-cart-btn:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 12px 28px rgba(2, 132, 199, 0.45) !important;
+}
+
+@keyframes cartPillPop {
+  0% { transform: translateY(30px) scale(0.7); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* SUPORTE COMPLETO AO ALTO CONTRASTE NA CANTINA E ADMIN DA CANTINA     */
+/* ==================================================================== */
+
+/* Card de Cabeçalho da Cantina Discente */
+.dark-high-contrast .canteen-discente-header-card {
+  background-color: #151e2e !important;
+  border: 1px solid #3b4a63 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+}
+
+.dark-high-contrast .canteen-discente-header-card h1 {
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .canteen-discente-header-card p {
+  color: #cbd5e1 !important;
+}
+
+/* Modais e Drawers da Cantina (Admin Modal, Checkout Modal e Carrinho) */
+.dark-high-contrast .canteen-admin-modal-card,
+.dark-high-contrast .canteen-checkout-modal,
+.dark-high-contrast .canteen-cart-drawer,
+.dark-high-contrast .custom-confirm-card {
+  background-color: #151e2e !important;
+  border: 1px solid #3b4a63 !important;
+  color: #f8fafc !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75) !important;
+}
+
+/* Sub-containers do Modal de Edição de Produto e Seletor de Galeria */
+.dark-high-contrast .canteen-gallery-container,
+.dark-high-contrast .canteen-preview-box,
+.dark-high-contrast .canteen-upload-dropzone,
+.dark-high-contrast .canteen-url-container {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+/* Cards individuais de preset de fotos na Galeria FATEC */
+.dark-high-contrast .canteen-preset-card {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .canteen-preset-card.selected {
+  background-color: #0c4a6e !important;
+  border-color: #38bdf8 !important;
+}
+
+.dark-high-contrast .canteen-preset-card .canteen-preset-thumb {
+  background-color: #0f172a !important;
+  border: 1px solid #334155 !important;
+}
+
+/* Botões de aba do Seletor de Fotos */
+.dark-high-contrast .canteen-img-tab-btn {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #94a3b8 !important;
+}
+
+.dark-high-contrast .canteen-img-tab-btn.active {
+  background-color: #0284c7 !important;
+  border-color: #38bdf8 !important;
+  color: #ffffff !important;
+}
+
+/* Cards dos Produtos na Vitrine da Cantina */
+.dark-high-contrast .canteen-card-interactive {
+  background-color: #151e2e !important;
+  border: 1px solid #3b4a63 !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .canteen-card-interactive:hover {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5) !important;
+}
+
+.dark-high-contrast .canteen-product-img-box {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+}
+
+/* Itens da lista do carrinho lateral */
+.dark-high-contrast .canteen-cart-item-row {
+  background-color: #1e293b !important;
+  border: 1px solid #334155 !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .canteen-cart-item-row button {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+/* Botão Flutuante do Carrinho em Alto Contraste */
+.dark-high-contrast .canteen-floating-cart-btn {
+  background-color: #0284c7 !important;
+  border: 2px solid #38bdf8 !important;
+  color: #ffffff !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Chave Pix e Bloco de Valor do Checkout */
+.dark-high-contrast .canteen-checkout-amount-box {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+}
+
+/* ==================================================================== */
+/* SKELETON LOADING & PAINEL DA CANTINA CARREGANDO                      */
+/* ==================================================================== */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: skeletonWave 1.5s infinite ease-in-out;
+  border-radius: 8px;
+}
+
+@keyframes skeletonWave {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (prefers-color-scheme: dark) {
+  .skeleton-shimmer {
+    background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+    background-size: 200% 100%;
+  }
+}
+
+.high-contrast .skeleton-shimmer {
+  background: #000000 !important;
+  border: 1px dashed #ffff00 !important;
+}
+
+.canteen-loading-banner {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 1.25rem 1.75rem;
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.high-contrast .canteen-loading-banner {
+  background: #000000 !important;
+  border: 2px solid #ffffff !important;
+}
+
+.canteen-loading-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, #0284c7, #38bdf8, #0284c7);
+  background-size: 200% 100%;
+  animation: skeletonWave 1.4s infinite linear;
 }

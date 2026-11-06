@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 // ====================================================================
 // CAMADA DE ACESSO A DADOS (POSTGRESQL + MOCK HÍBRIDO)
 // Responsável: Cesar (Backend, Banco de Dados & Segurança)
@@ -136,7 +138,41 @@ const mockUsers: User[] = [
   },
 ];
 
-const mockProducts: CanteenProduct[] = [
+const PRODUCTS_STORAGE_FILE = path.join(process.cwd(), 'data', 'canteen_products.json');
+
+function saveMockProductsToDisk() {
+  try {
+    const dir = path.dirname(PRODUCTS_STORAGE_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(PRODUCTS_STORAGE_FILE, JSON.stringify(mockProducts, null, 2), 'utf8');
+  } catch (err) {
+    console.error('Falha ao persistir data/canteen_products.json:', err);
+  }
+}
+
+function loadMockProductsFromDisk(initial: CanteenProduct[]): CanteenProduct[] {
+  try {
+    if (fs.existsSync(PRODUCTS_STORAGE_FILE)) {
+      const data = fs.readFileSync(PRODUCTS_STORAGE_FILE, 'utf8');
+      const parsed = JSON.parse(data);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (err) {
+    console.error('Falha ao carregar data/canteen_products.json:', err);
+  }
+  try {
+    const dir = path.dirname(PRODUCTS_STORAGE_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(PRODUCTS_STORAGE_FILE, JSON.stringify(initial, null, 2), 'utf8');
+  } catch {}
+  return [...initial];
+}
+
+const initialMockProducts: CanteenProduct[] = [
   {
     "id": "b0000000-0000-0000-0000-000000000001",
     "name": "Salgadinho Torcida Churrasco 70g",
@@ -648,6 +684,9 @@ const mockTransactions: CanteenTransaction[] = [
   },
 ];
 
+// Carrega os produtos salvos em disco (mantém fotos e edições permanentemente)
+const mockProducts: CanteenProduct[] = loadMockProductsFromDisk(initialMockProducts);
+
 const mockTransactionItems: CanteenTransactionItem[] = [
   {
     id: 'i0000000-0000-0000-0000-000000000001',
@@ -926,6 +965,7 @@ export const db = {
 
       if (isMock || !pool) {
         mockProducts.push(newProduct);
+        saveMockProductsToDisk();
         return newProduct;
       }
 
@@ -962,6 +1002,7 @@ export const db = {
           updated_at: now,
         };
         mockProducts[idx] = updated;
+        saveMockProductsToDisk();
         return updated;
       }
 
@@ -988,6 +1029,7 @@ export const db = {
         const idx = mockProducts.findIndex((p) => p.id === id);
         if (idx === -1) return false;
         mockProducts.splice(idx, 1);
+        saveMockProductsToDisk();
         return true;
       }
       const res = await pool.query('DELETE FROM canteen_products WHERE id = $1', [id]);
@@ -1086,6 +1128,7 @@ export const db = {
             p.current_stock -= item.quantity;
             p.updated_at = now;
           }
+          saveMockProductsToDisk();
         }
 
         const user = mockUsers.find((u) => u.id === txData.user_id);
@@ -1383,6 +1426,7 @@ export const db = {
             const p = mockProducts.find((prod) => prod.id === item.product_id);
             if (p) p.current_stock += item.quantity;
           }
+          saveMockProductsToDisk();
         }
 
         tx.status = status;

@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import AppLayout from '@/components/layout/AppLayout';
+import ConfirmModal from '@/components/ui/ConfirmModal';
+import ToastNotification from '@/components/ui/ToastNotification';
 
 interface Product {
   id: string;
@@ -37,10 +39,25 @@ export default function CantinaAdminPage() {
   // Modal de Criação / Edição
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('success');
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    isDanger?: boolean;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
   const [formName, setFormName] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formCategory, setFormCategory] = useState<'SALGADO' | 'BEBIDA' | 'DOCE' | 'CONGELADO' | 'OUTRO'>('SALGADO');
-  const [formPrice, setFormPrice] = useState<number>(3.50);
+  const [formPrice, setFormPrice] = useState<string>('3.50');
   const [formStock, setFormStock] = useState<number>(20);
   const [formMinStock, setFormMinStock] = useState<number>(5);
   const [formImageUrl, setFormImageUrl] = useState('');
@@ -57,6 +74,26 @@ export default function CantinaAdminPage() {
   const [imageInputTab, setImageInputTab] = useState<'upload' | 'gallery' | 'url'>('gallery');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [gallerySearch, setGallerySearch] = useState('');
+  const [imageLoadError, setImageLoadError] = useState(false);
+
+  // Estados da Galeria Dinâmica
+  interface GalleryItem {
+    filename: string;
+    path: string;
+    label: string;
+    category: string;
+  }
+  const [galleryImages, setGalleryImages] = useState<GalleryItem[]>([]);
+  const [isLoadingGallery, setIsLoadingGallery] = useState(false);
+
+  // Estados da aba "Enviar Foto" (com nome personalizado)
+  const [uploadCustomName, setUploadCustomName] = useState('');
+  const [selectedUploadFile, setSelectedUploadFile] = useState<File | null>(null);
+
+  // Estados da aba "Link Web" (com nome personalizado)
+  const [webUrlInput, setWebUrlInput] = useState('');
+  const [webCustomName, setWebCustomName] = useState('');
+  const [isDownloadingWeb, setIsDownloadingWeb] = useState(false);
 
   const CANTEEN_PRESET_IMAGES = [
     { label: 'Torcida Churrasco', path: '/images/products/torcida_churrasco.jpg', category: 'SALGADO' },
@@ -91,16 +128,100 @@ export default function CantinaAdminPage() {
     { label: 'Energético X-UP', path: '/images/products/xup_energetico.jpg', category: 'BEBIDA' },
   ];
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Carrega dinamicamente todas as fotos do diretório public/images/products
+  const loadGallery = async () => {
+    setIsLoadingGallery(true);
+    try {
+      const res = await fetch('/api/canteen/gallery');
+      const data = await res.json();
+      if (res.ok && data.success && Array.isArray(data.images) && data.images.length > 0) {
+        setGalleryImages(data.images);
+      } else {
+        setGalleryImages(
+          CANTEEN_PRESET_IMAGES.map((p) => ({
+            filename: p.path.split('/').pop() || '',
+            path: p.path,
+            label: p.label,
+            category: p.category,
+          }))
+        );
+      }
+    } catch {
+      setGalleryImages(
+        CANTEEN_PRESET_IMAGES.map((p) => ({
+          filename: p.path.split('/').pop() || '',
+          path: p.path,
+          label: p.label,
+          category: p.category,
+        }))
+      );
+    } finally {
+      setIsLoadingGallery(false);
+    }
+  };
+
+  // Exclui/Tira uma imagem do servidor e da Galeria (100% Frontend ConfirmModal)
+  const handleDeleteFromGallery = (filename: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const cleanFilename = filename.split('/').pop() || filename;
+
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Tirar Foto da Galeria?',
+      message: `Deseja realmente remover o arquivo "${cleanFilename}" da Galeria?`,
+      confirmLabel: 'Sim, tirar foto',
+      cancelLabel: 'Cancelar',
+      isDanger: true,
+      onConfirm: async () => {
+        setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+        try {
+          const res = await fetch(`/api/canteen/gallery?filename=${encodeURIComponent(cleanFilename)}`, {
+            method: 'DELETE',
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            showToast(`Foto "${cleanFilename}" retirada da Galeria!`, 'success');
+            if (formImageUrl.endsWith(cleanFilename)) {
+              setFormImageUrl('');
+              setImageLoadError(false);
+            }
+            await loadGallery();
+          } else {
+            showToast(data.error || 'Erro ao tirar foto da galeria.', 'error');
+          }
+        } catch {
+          showToast('Erro de conexão ao remover foto.', 'error');
+        }
+      },
+    });
+  };
+
+  // Seleciona arquivo local para upload
+  const handleSelectFileToUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setSelectedUploadFile(file);
+    if (!uploadCustomName) {
+      const baseSuggest = formName
+        ? formName.toLowerCase().trim().replace(/\s+/g, '_')
+        : file.name.substring(0, file.name.lastIndexOf('.')).toLowerCase().replace(/\s+/g, '_');
+      setUploadCustomName(baseSuggest);
+    }
+  };
+
+  // Confirma e envia arquivo com o nome personalizado
+  const handleConfirmFileUpload = async () => {
+    if (!selectedUploadFile) return;
 
     setIsUploadingImage(true);
     setFormError('');
 
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', selectedUploadFile);
+      if (uploadCustomName.trim()) {
+        formData.append('customName', uploadCustomName.trim());
+      }
 
       const res = await fetch('/api/canteen/upload', {
         method: 'POST',
@@ -110,30 +231,63 @@ export default function CantinaAdminPage() {
       const data = await res.json();
       if (res.ok && data.success && data.url) {
         setFormImageUrl(data.url);
-        showToast('Foto do produto enviada e salva!');
+        setImageLoadError(false);
+        showToast(`✓ Foto salva como "${data.filename || uploadCustomName}" na Galeria!`);
+        setSelectedUploadFile(null);
+        setUploadCustomName('');
+        await loadGallery();
       } else {
-        const reader = new FileReader();
-        reader.onload = () => {
-          setFormImageUrl(reader.result as string);
-          showToast('Foto importada via arquivo local!');
-        };
-        reader.readAsDataURL(file);
+        showToast(data.error || 'Falha ao salvar foto.');
       }
     } catch {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setFormImageUrl(reader.result as string);
-        showToast('Foto importada com sucesso!');
-      };
-      reader.readAsDataURL(file);
+      showToast('Erro ao enviar foto para o servidor.');
     } finally {
       setIsUploadingImage(false);
     }
   };
 
-  const showToast = (msg: string) => {
+  // Baixa imagem de link web e salva com o nome personalizado
+  const handleDownloadFromWeb = async () => {
+    if (!webUrlInput.trim()) {
+      showToast('Por favor, informe a URL da imagem.');
+      return;
+    }
+
+    setIsDownloadingWeb(true);
+    setFormError('');
+
+    try {
+      const res = await fetch('/api/canteen/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: webUrlInput.trim(),
+          customName: webCustomName.trim() || formName.trim().toLowerCase().replace(/\s+/g, '_'),
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success && data.url) {
+        setFormImageUrl(data.url);
+        setImageLoadError(false);
+        showToast(`✓ Imagem baixada e salva como "${data.filename || webCustomName}" na Galeria!`);
+        setWebUrlInput('');
+        setWebCustomName('');
+        await loadGallery();
+      } else {
+        showToast(data.error || 'Erro ao baixar imagem da Web.');
+      }
+    } catch {
+      showToast('Erro de conexão ao baixar imagem da Web.');
+    } finally {
+      setIsDownloadingWeb(false);
+    }
+  };
+
+    const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'success') => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+    setToastType(type);
+    setTimeout(() => setToastMessage(null), 3500);
   };
 
   const handleQuickAdminLogin = async () => {
@@ -150,11 +304,11 @@ export default function CantinaAdminPage() {
       if (res.ok) {
         window.location.reload();
       } else {
-        alert('Não foi possível conectar como admin de demonstração.');
+        showToast('Não foi possível conectar como admin de demonstração.', 'error');
       }
     } catch (err) {
       console.error(err);
-      alert('Erro de rede ao conectar.');
+      showToast('Erro de rede ao conectar.', 'error');
     } finally {
       setIsQuickLoggingIn(false);
     }
@@ -163,6 +317,7 @@ export default function CantinaAdminPage() {
   // 1. Verificar autenticação e permissão (ADMIN ou CA_MEMBRO)
   useEffect(() => {
     checkPermission();
+    loadGallery();
   }, []);
 
   const checkPermission = async () => {
@@ -223,7 +378,7 @@ export default function CantinaAdminPage() {
         showToast(`Estoque atualizado: ${data.data.current_stock} un.`);
       } else {
         const errData = await res.json();
-        alert(errData.error || 'Não foi possível alterar o estoque.');
+        showToast(errData.error || 'Não foi possível alterar o estoque.', 'error');
       }
     } catch (err) {
       console.error('Falha no ajuste de estoque:', err);
@@ -234,12 +389,17 @@ export default function CantinaAdminPage() {
   const handleOpenModal = (product?: Product) => {
     setFormError('');
     setFormSuccess('');
+    setImageLoadError(false);
+    setSelectedUploadFile(null);
+    setUploadCustomName('');
+    setWebUrlInput('');
+    setWebCustomName('');
     if (product) {
       setEditingProduct(product);
       setFormName(product.name);
       setFormDescription(product.description || '');
       setFormCategory(product.category);
-      setFormPrice(product.price);
+      setFormPrice(Number(product.price).toFixed(2));
       setFormStock(product.current_stock);
       setFormMinStock(product.min_stock_alert);
       setFormImageUrl(product.image_url || '');
@@ -249,13 +409,15 @@ export default function CantinaAdminPage() {
       setFormName('');
       setFormDescription('');
       setFormCategory('SALGADO');
-      setFormPrice(3.50);
+      setFormPrice('3.50');
       setFormStock(15);
       setFormMinStock(5);
       setFormImageUrl('');
       setFormAvailable(true);
     }
+    setImageInputTab('gallery');
     setIsModalOpen(true);
+    loadGallery();
   };
 
   // 4. Salvar (Criar ou Atualizar)
@@ -270,7 +432,7 @@ export default function CantinaAdminPage() {
         name: formName,
         description: formDescription.trim() || undefined,
         category: formCategory,
-        price: Number(formPrice),
+        price: Number(parseFloat(String(formPrice).replace(',', '.')) || 0),
         current_stock: Number(formStock),
         min_stock_alert: Number(formMinStock),
         image_url: formImageUrl.trim() || undefined,
@@ -313,25 +475,35 @@ export default function CantinaAdminPage() {
     }
   };
 
-  // 5. Excluir produto
-  const handleDeleteProduct = async (product: Product) => {
-    if (!confirm(`Tem certeza que deseja excluir "${product.name}" do catálogo da cantina?`)) return;
+  // 5. Excluir produto (100% Frontend ConfirmModal)
+  const handleDeleteProduct = (product: Product) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Excluir Produto?',
+      message: `Tem certeza que deseja excluir "${product.name}" do catálogo da cantina? Esta ação não pode ser desfeita.`,
+      confirmLabel: 'Sim, excluir produto',
+      cancelLabel: 'Cancelar',
+      isDanger: true,
+      onConfirm: async () => {
+        setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+        try {
+          const res = await fetch(`/api/canteen/products/${product.id}`, {
+            method: 'DELETE',
+          });
 
-    try {
-      const res = await fetch(`/api/canteen/products/${product.id}`, {
-        method: 'DELETE',
-      });
-
-      if (res.ok) {
-        setProducts((prev) => prev.filter((p) => p.id !== product.id));
-        showToast(`"${product.name}" foi removido do catálogo.`);
-      } else {
-        const err = await res.json();
-        alert(err.error || 'Erro ao excluir produto.');
-      }
-    } catch (err) {
-      console.error('Erro na exclusão:', err);
-    }
+          if (res.ok) {
+            setProducts((prev) => prev.filter((p) => p.id !== product.id));
+            showToast(`"${product.name}" foi removido do catálogo.`, 'success');
+          } else {
+            const err = await res.json();
+            showToast(err.error || 'Erro ao excluir produto.', 'error');
+          }
+        } catch (err) {
+          console.error('Erro na exclusão:', err);
+          showToast('Erro de rede ao tentar excluir produto.', 'error');
+        }
+      },
+    });
   };
 
   // Filtragem de produtos
@@ -350,27 +522,22 @@ export default function CantinaAdminPage() {
     <AppLayout activePath="/cantina">
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
         
-        {/* Toast Notifier */}
-        {toastMessage && (
-          <div
-            style={{
-              position: 'fixed',
-              top: '80px',
-              right: '24px',
-              backgroundColor: '#0f172a',
-              color: '#ffffff',
-              padding: '0.85rem 1.5rem',
-              borderRadius: '10px',
-              fontSize: '0.9rem',
-              fontWeight: 600,
-              zIndex: 9999,
-              boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)',
-              animation: 'fadeIn 0.2s ease',
-            }}
-          >
-            ✓ {toastMessage}
-          </div>
-        )}
+                <ConfirmModal
+          isOpen={confirmDialog.isOpen}
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          confirmLabel={confirmDialog.confirmLabel}
+          cancelLabel={confirmDialog.cancelLabel}
+          isDanger={confirmDialog.isDanger}
+          onConfirm={confirmDialog.onConfirm}
+          onCancel={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
+        />
+
+        <ToastNotification
+          message={toastMessage}
+          type={toastType}
+          onClose={() => setToastMessage(null)}
+        />
 
         {/* Topo do Painel Administrativo */}
         <div
@@ -518,13 +685,13 @@ export default function CantinaAdminPage() {
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
                   <thead>
-                    <tr style={{ backgroundColor: 'var(--bg-muted)', borderBottom: '1px solid var(--border-light)', color: 'var(--text-muted)' }}>
-                      <th style={{ padding: '1rem 1.5rem', fontWeight: 700 }}>Produto / Categoria</th>
-                      <th style={{ padding: '1rem', fontWeight: 700 }}>Preço Unitário</th>
-                      <th style={{ padding: '1rem', fontWeight: 700 }}>Estoque Atual</th>
-                      <th style={{ padding: '1rem', fontWeight: 700 }}>Ajuste Rápido (+ / -)</th>
-                      <th style={{ padding: '1rem', fontWeight: 700 }}>Status</th>
-                      <th style={{ padding: '1rem 1.5rem', fontWeight: 700, textAlign: 'right' }}>Ações</th>
+                    <tr style={{ backgroundColor: 'var(--bg-muted)', borderBottom: '1px solid var(--border-light)', color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      <th style={{ padding: '1rem 1.5rem', fontWeight: 700, whiteSpace: 'nowrap', minWidth: '260px' }}>Produto / Categoria</th>
+                      <th style={{ padding: '1rem 1.25rem', fontWeight: 700, whiteSpace: 'nowrap', width: '140px' }}>Preço Unitário</th>
+                      <th style={{ padding: '1rem 1.25rem', fontWeight: 700, whiteSpace: 'nowrap', width: '130px' }}>Estoque Atual</th>
+                      <th style={{ padding: '1rem 1.25rem', fontWeight: 700, whiteSpace: 'nowrap', width: '160px' }}>Ajuste Rápido (+ / -)</th>
+                      <th style={{ padding: '1rem 1.25rem', fontWeight: 700, whiteSpace: 'nowrap', width: '120px' }}>Status</th>
+                      <th style={{ padding: '1rem 1.5rem', fontWeight: 700, textAlign: 'right', whiteSpace: 'nowrap', width: '160px' }}>Ações</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -548,7 +715,7 @@ export default function CantinaAdminPage() {
                             }}
                           >
                             {/* Nome + Categoria */}
-                            <td style={{ padding: '1.15rem 1.5rem' }}>
+                            <td style={{ padding: '1.15rem 1.5rem', verticalAlign: 'middle' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
                                 <div
                                   style={{
@@ -590,12 +757,12 @@ export default function CantinaAdminPage() {
                             </td>
 
                             {/* Preço */}
-                            <td style={{ padding: '1.15rem 1rem', fontWeight: 800, color: 'var(--accent-primary)', fontSize: '1rem' }}>
+                            <td style={{ padding: '1.15rem 1.25rem', fontWeight: 800, color: 'var(--accent-primary)', fontSize: '1rem', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
                               R$ {Number(p.price).toFixed(2).replace('.', ',')}
                             </td>
 
                             {/* Estoque */}
-                            <td style={{ padding: '1.15rem 1rem' }}>
+                            <td style={{ padding: '1.15rem 1.25rem', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <span
                                   style={{
@@ -610,14 +777,12 @@ export default function CantinaAdminPage() {
                                 >
                                   {p.current_stock}
                                 </span>
-                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                  (mín: {p.min_stock_alert})
-                                </span>
+                                
                               </div>
                             </td>
 
                             {/* Ajuste Rápido */}
-                            <td style={{ padding: '1.15rem 1rem' }}>
+                            <td style={{ padding: '1.15rem 1.25rem', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                                 <button
                                   onClick={() => handleQuickStockAdjust(p.id, -1)}
@@ -671,7 +836,7 @@ export default function CantinaAdminPage() {
                             </td>
 
                             {/* Status */}
-                            <td style={{ padding: '1.15rem 1rem' }}>
+                            <td style={{ padding: '1.15rem 1.25rem', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
                               {isOutOfStock ? (
                                 <span className="badge" style={{ backgroundColor: '#ffe4e6', color: '#e11d48', fontSize: '0.72rem' }}>
                                   Esgotado
@@ -688,7 +853,7 @@ export default function CantinaAdminPage() {
                             </td>
 
                             {/* Ações */}
-                            <td style={{ padding: '1.15rem 1.5rem', textAlign: 'right' }}>
+                            <td style={{ padding: '1.15rem 1.5rem', textAlign: 'right', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
                               <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                                 <button
                                   onClick={() => handleOpenModal(p)}
@@ -741,6 +906,7 @@ export default function CantinaAdminPage() {
             }}
           >
             <div
+              className="canteen-admin-modal-card"
               style={{
                 width: '100%',
                 maxWidth: '560px',
@@ -805,44 +971,42 @@ export default function CantinaAdminPage() {
                   <div className="form-group">
                     <label className="form-label">Preço Unitário (R$) *</label>
                     <input
-                      type="number"
-                      step="0.10"
-                      min="0.10"
+                      type="text"
+                      inputMode="decimal"
                       required
                       value={formPrice}
-                      onChange={(e) => setFormPrice(Number(e.target.value))}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^\d.,]/g, '').replace(',', '.');
+                        setFormPrice(val);
+                      }}
+                      onBlur={() => {
+                        const num = parseFloat(formPrice);
+                        if (!isNaN(num)) {
+                          setFormPrice(num.toFixed(2));
+                        } else {
+                          setFormPrice('0.00');
+                        }
+                      }}
                       className="form-input"
+                      placeholder="0.00"
                     />
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div className="form-group">
-                    <label className="form-label">Estoque Inicial (un.) *</label>
-                    <input
-                      type="number"
-                      min="0"
-                      required
-                      value={formStock}
-                      onChange={(e) => setFormStock(Number(e.target.value))}
-                      className="form-input"
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Alerta de Estoque Mínimo</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={formMinStock}
-                      onChange={(e) => setFormMinStock(Number(e.target.value))}
-                      className="form-input"
-                    />
-                  </div>
+                <div className="form-group">
+                  <label className="form-label">Estoque (unidades) *</label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={formStock}
+                    onChange={(e) => setFormStock(Number(e.target.value))}
+                    className="form-input"
+                  />
                 </div>
 
-                {/* Gerenciador de Imagem do Produto (Multi-modo: Upload, Galeria FATEC ou Link) */}
-                <div className="form-group" style={{ backgroundColor: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
+                {/* Gerenciador de Imagem do Produto (Multi-modo: Upload, Galeria ou Link Web com Nomes Personalizados) */}
+                <div className="form-group canteen-gallery-container" style={{ backgroundColor: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
                     <label className="form-label" style={{ margin: 0, fontWeight: 700 }}>
                       Foto do Produto
@@ -850,7 +1014,10 @@ export default function CantinaAdminPage() {
                     <div style={{ display: 'flex', gap: '0.35rem' }}>
                       <button
                         type="button"
-                        onClick={() => setImageInputTab('gallery')}
+                        onClick={() => {
+                          setImageInputTab('gallery');
+                          loadGallery();
+                        }}
                         style={{
                           padding: '0.3rem 0.65rem',
                           fontSize: '0.75rem',
@@ -862,7 +1029,7 @@ export default function CantinaAdminPage() {
                           cursor: 'pointer',
                         }}
                       >
-                        🖼️ Galeria FATEC
+                        🖼️ Galeria
                       </button>
                       <button
                         type="button"
@@ -899,15 +1066,29 @@ export default function CantinaAdminPage() {
                     </div>
                   </div>
 
-                  {/* Pré-visualização da Imagem Atual */}
-                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '0.85rem', backgroundColor: '#ffffff', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                  {/* Pré-visualização da Imagem Atual com Alerta de Erro e Opção de Tirar */}
+                  <div
+                    className="canteen-preview-box"
+                    style={{
+                      display: 'flex',
+                      gap: '1rem',
+                      alignItems: 'center',
+                      marginBottom: '0.85rem',
+                      backgroundColor: imageLoadError ? '#fef2f2' : '#ffffff',
+                      padding: '0.75rem',
+                      borderRadius: '10px',
+                      border: '1px solid',
+                      borderColor: imageLoadError ? '#fca5a5' : '#e2e8f0',
+                    }}
+                  >
                     <div
                       style={{
                         width: '72px',
                         height: '72px',
                         borderRadius: '8px',
-                        backgroundColor: '#f1f5f9',
-                        border: '1px solid #cbd5e1',
+                        backgroundColor: imageLoadError ? '#fee2e2' : '#f1f5f9',
+                        border: '1px solid',
+                        borderColor: imageLoadError ? '#ef4444' : '#cbd5e1',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -916,84 +1097,155 @@ export default function CantinaAdminPage() {
                       }}
                     >
                       {formImageUrl ? (
-                        <img
-                          src={formImageUrl}
-                          alt="Pré-visualização"
-                          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                          onError={(e) => {
-                            (e.target as HTMLElement).style.display = 'none';
-                          }}
-                        />
+                        !imageLoadError ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img
+                            src={formImageUrl}
+                            alt="Pré-visualização"
+                            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                            onLoad={() => setImageLoadError(false)}
+                            onError={() => setImageLoadError(true)}
+                          />
+                        ) : (
+                          <span style={{ fontSize: '1.5rem' }} title="Imagem não encontrada ou corrompida">⚠️</span>
+                        )
                       ) : (
                         <span style={{ fontSize: '0.7rem', color: '#94a3b8', textAlign: 'center' }}>Sem foto</span>
                       )}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div
+                        style={{
+                          fontSize: '0.8rem',
+                          fontWeight: 700,
+                          color: imageLoadError ? '#b91c1c' : 'var(--text-main)',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
                         {formImageUrl ? formImageUrl.split('/').pop() : 'Nenhuma imagem selecionada'}
                       </div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
-                        {formImageUrl ? 'Imagem ativa para exibição no catálogo' : 'Escolha uma foto da galeria, envie do seu celular/PC ou cole uma URL'}
+                      <div
+                        style={{
+                          fontSize: '0.72rem',
+                          color: imageLoadError ? '#ef4444' : 'var(--text-muted)',
+                          marginTop: '0.15rem',
+                        }}
+                      >
+                        {imageLoadError
+                          ? '⚠️ Falha ao carregar arquivo (inexistente ou link quebrado)'
+                          : formImageUrl
+                          ? 'Imagem ativa para exibição no catálogo'
+                          : 'Escolha uma foto da galeria, envie do seu celular/PC ou cole uma URL'}
                       </div>
                       {formImageUrl && (
-                        <button
-                          type="button"
-                          onClick={() => setFormImageUrl('')}
-                          style={{
-                            marginTop: '0.35rem',
-                            background: 'none',
-                            border: 'none',
-                            color: '#ef4444',
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            padding: 0,
-                          }}
-                        >
-                          ✕ Remover imagem
-                        </button>
+                        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginTop: '0.35rem' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormImageUrl('');
+                              setImageLoadError(false);
+                            }}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: '#ef4444',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              padding: 0,
+                            }}
+                          >
+                            ✕ Tirar imagem deste produto
+                          </button>
+                          {formImageUrl.startsWith('/images/products/') && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteFromGallery(formImageUrl)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#b91c1c',
+                                fontSize: '0.7rem',
+                                fontWeight: 500,
+                                cursor: 'pointer',
+                                padding: 0,
+                                textDecoration: 'underline',
+                              }}
+                            >
+                              🗑️ Excluir da Galeria
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Conteúdo da Aba Ativa */}
+                  {/* ABA 1: Galeria Dinâmica com Opção de Tirar Foto */}
                   {imageInputTab === 'gallery' && (
                     <div>
-                      <input
-                        type="text"
-                        placeholder="Filtrar fotos da cantina (ex.: coxinha, torcida, paçoquita, bauducco)..."
-                        value={gallerySearch}
-                        onChange={(e) => setGallerySearch(e.target.value)}
-                        className="form-input"
-                        style={{ fontSize: '0.8rem', padding: '0.45rem 0.75rem', marginBottom: '0.6rem' }}
-                      />
+                      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.6rem' }}>
+                        <input
+                          type="text"
+                          placeholder="Filtrar fotos da cantina (ex.: coxinha, torcida, paçoquita, suco)..."
+                          value={gallerySearch}
+                          onChange={(e) => setGallerySearch(e.target.value)}
+                          className="form-input"
+                          style={{ fontSize: '0.8rem', padding: '0.45rem 0.75rem', flex: 1 }}
+                        />
+                        <button
+                          type="button"
+                          onClick={loadGallery}
+                          disabled={isLoadingGallery}
+                          style={{
+                            padding: '0.45rem 0.75rem',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            borderRadius: '6px',
+                            border: '1px solid #cbd5e1',
+                            backgroundColor: '#ffffff',
+                            cursor: 'pointer',
+                          }}
+                          title="Atualizar galeria do servidor"
+                        >
+                          {isLoadingGallery ? '⏳' : '🔄'}
+                        </button>
+                      </div>
+
                       <div
                         style={{
                           display: 'grid',
-                          gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))',
+                          gridTemplateColumns: 'repeat(auto-fill, minmax(95px, 1fr))',
                           gap: '0.5rem',
-                          maxHeight: '140px',
+                          maxHeight: '190px',
                           overflowY: 'auto',
-                          padding: '0.25rem',
+                          padding: '0.35rem',
                           backgroundColor: '#ffffff',
                           borderRadius: '8px',
                           border: '1px solid #e2e8f0',
                         }}
                       >
-                        {CANTEEN_PRESET_IMAGES.filter((item) =>
-                          item.label.toLowerCase().includes(gallerySearch.toLowerCase()) ||
-                          item.category.toLowerCase().includes(gallerySearch.toLowerCase())
-                        ).map((preset, idx) => {
-                          const isSelected = formImageUrl === preset.path;
+                        {((galleryImages.length > 0
+                          ? galleryImages
+                          : CANTEEN_PRESET_IMAGES.map((p) => ({
+                              filename: p.path.split('/').pop() || '',
+                              path: p.path,
+                              label: p.label,
+                              category: p.category,
+                            }))
+                        ).filter(
+                          (item) =>
+                            item.label.toLowerCase().includes(gallerySearch.toLowerCase()) ||
+                            item.filename.toLowerCase().includes(gallerySearch.toLowerCase()) ||
+                            item.category.toLowerCase().includes(gallerySearch.toLowerCase())
+                        )).map((item, idx) => {
+                          const isSelected = formImageUrl === item.path || formImageUrl.endsWith('/' + item.filename);
                           return (
-                            <button
-                              key={idx}
-                              type="button"
-                              onClick={() => {
-                                setFormImageUrl(preset.path);
-                                showToast(`Foto vinculada: ${preset.label}`);
-                              }}
+                            <div
+                              key={item.filename || idx}
                               style={{
+                                position: 'relative',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
@@ -1004,25 +1256,75 @@ export default function CantinaAdminPage() {
                                 cursor: 'pointer',
                                 transition: 'all 0.15s ease',
                               }}
-                              title={preset.label}
+                              onClick={() => {
+                                setFormImageUrl(item.path);
+                                setImageLoadError(false);
+                                showToast(`Foto vinculada: ${item.label}`);
+                              }}
+                              title={item.label}
                             >
+                              {/* Botão para Tirar/Excluir Imagem da Galeria */}
+                              <button
+                                type="button"
+                                onClick={(e) => handleDeleteFromGallery(item.filename, e)}
+                                title="Tirar/Excluir esta foto da Galeria"
+                                style={{
+                                  position: 'absolute',
+                                  top: '2px',
+                                  right: '2px',
+                                  width: '18px',
+                                  height: '18px',
+                                  borderRadius: '50%',
+                                  backgroundColor: '#ef4444',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  fontSize: '0.65rem',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  cursor: 'pointer',
+                                  zIndex: 2,
+                                  boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                                }}
+                              >
+                                ✕
+                              </button>
+
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
-                                src={preset.path}
-                                alt={preset.label}
+                                src={item.path}
+                                alt={item.label}
                                 style={{ width: '48px', height: '48px', objectFit: 'contain', marginBottom: '0.2rem' }}
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src =
+                                    'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="%23ef4444" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+                                }}
                               />
-                              <span style={{ fontSize: '0.68rem', fontWeight: isSelected ? 700 : 500, color: 'var(--text-main)', textAlign: 'center', lineHeight: 1.15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '80px' }}>
-                                {preset.label}
+                              <span
+                                style={{
+                                  fontSize: '0.68rem',
+                                  fontWeight: isSelected ? 700 : 500,
+                                  color: 'var(--text-main)',
+                                  textAlign: 'center',
+                                  lineHeight: 1.15,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  maxWidth: '80px',
+                                }}
+                              >
+                                {item.label}
                               </span>
-                            </button>
+                            </div>
                           );
                         })}
                       </div>
                     </div>
                   )}
 
+                  {/* ABA 2: Enviar Foto com Nome Personalizado */}
                   {imageInputTab === 'upload' && (
-                    <div>
+                    <div style={{ backgroundColor: '#ffffff', padding: '0.85rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                       <label
                         style={{
                           display: 'flex',
@@ -1032,14 +1334,15 @@ export default function CantinaAdminPage() {
                           padding: '1.25rem',
                           borderRadius: '10px',
                           border: '2px dashed #cbd5e1',
-                          backgroundColor: '#ffffff',
+                          backgroundColor: '#f8fafc',
                           cursor: isUploadingImage ? 'wait' : 'pointer',
                           transition: 'all 0.15s ease',
+                          marginBottom: '0.65rem',
                         }}
                       >
                         <span style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>📷</span>
                         <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--accent-blue)' }}>
-                          {isUploadingImage ? 'Enviando e salvando foto...' : 'Clique para selecionar foto do celular ou PC'}
+                          {selectedUploadFile ? selectedUploadFile.name : 'Clique para selecionar foto do celular ou PC'}
                         </span>
                         <span style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.2rem' }}>
                           Suporta JPG, PNG ou WebP até 5MB
@@ -1047,24 +1350,115 @@ export default function CantinaAdminPage() {
                         <input
                           type="file"
                           accept="image/*"
-                          onChange={handleFileUpload}
+                          onChange={handleSelectFileToUpload}
                           disabled={isUploadingImage}
                           style={{ display: 'none' }}
                         />
                       </label>
+
+                      {selectedUploadFile && (
+                        <div style={{ marginTop: '0.5rem' }}>
+                          <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-main)', display: 'block', marginBottom: '0.25rem' }}>
+                            Nome para salvar o arquivo na Galeria:
+                          </label>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.65rem' }}>
+                            <input
+                              type="text"
+                              value={uploadCustomName}
+                              onChange={(e) => setUploadCustomName(e.target.value)}
+                              placeholder="ex: coxinha_frango ou torcida_costela"
+                              className="form-input"
+                              style={{ fontSize: '0.8rem', padding: '0.45rem 0.65rem', flex: 1 }}
+                            />
+                            <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>
+                              {selectedUploadFile.name.substring(selectedUploadFile.name.lastIndexOf('.')) || '.jpg'}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleConfirmFileUpload}
+                            disabled={isUploadingImage}
+                            className="btn btn-primary"
+                            style={{ width: '100%', padding: '0.6rem', fontSize: '0.825rem', fontWeight: 700 }}
+                          >
+                            {isUploadingImage ? 'Salvando foto...' : '📤 Salvar Foto com Este Nome na Galeria'}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
 
+                  {/* ABA 3: Link Web com Opção de Baixar e Salvar com Nome Personalizado */}
                   {imageInputTab === 'url' && (
-                    <div>
-                      <input
-                        type="text"
-                        placeholder="Cole o link direto da imagem (ex.: https://.../foto.jpg ou /images/products/...)"
-                        value={formImageUrl}
-                        onChange={(e) => setFormImageUrl(e.target.value)}
-                        className="form-input"
-                        style={{ fontSize: '0.825rem' }}
-                      />
+                    <div style={{ backgroundColor: '#ffffff', padding: '0.85rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                      <div style={{ marginBottom: '0.65rem' }}>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-main)', display: 'block', marginBottom: '0.25rem' }}>
+                          Link da Imagem na Web (URL):
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Cole o link direto da imagem (https://...)"
+                          value={webUrlInput}
+                          onChange={(e) => {
+                            setWebUrlInput(e.target.value);
+                            if (!webCustomName) {
+                              setWebCustomName(formName.toLowerCase().replace(/\s+/g, '_') || 'foto_web');
+                            }
+                          }}
+                          className="form-input"
+                          style={{ fontSize: '0.8rem', padding: '0.45rem 0.65rem' }}
+                        />
+                      </div>
+
+                      <div style={{ marginBottom: '0.75rem' }}>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-main)', display: 'block', marginBottom: '0.25rem' }}>
+                          Nome para salvar na Galeria:
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="ex: coxinha_frango ou refrigerante_lata"
+                          value={webCustomName}
+                          onChange={(e) => setWebCustomName(e.target.value)}
+                          className="form-input"
+                          style={{ fontSize: '0.8rem', padding: '0.45rem 0.65rem' }}
+                        />
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                        <button
+                          type="button"
+                          onClick={handleDownloadFromWeb}
+                          disabled={isDownloadingWeb || !webUrlInput.trim()}
+                          className="btn btn-primary"
+                          style={{ width: '100%', padding: '0.6rem', fontSize: '0.825rem', fontWeight: 700 }}
+                        >
+                          {isDownloadingWeb ? 'Baixando e salvando imagem...' : '📥 Baixar e Salvar Imagem na Galeria'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!webUrlInput.trim()) {
+                              showToast('Insira uma URL primeiro.');
+                              return;
+                            }
+                            setFormImageUrl(webUrlInput.trim());
+                            setImageLoadError(false);
+                            showToast('Link web vinculado diretamente ao produto.');
+                          }}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'var(--text-muted)',
+                            fontSize: '0.725rem',
+                            cursor: 'pointer',
+                            padding: '0.25rem',
+                            textDecoration: 'underline',
+                            textAlign: 'center',
+                          }}
+                        >
+                          Ou usar apenas como link web externo (sem salvar arquivo local)
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
