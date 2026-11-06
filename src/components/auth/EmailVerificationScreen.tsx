@@ -34,23 +34,16 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
   const [copied, setCopied] = useState(false);
   const [otpInput, setOtpInput] = useState('');
   const [otpError, setOtpError] = useState('');
-  const [devCodeHint, setDevCodeHint] = useState<string | null>(null);
 
   // Solicita disparo do código de verificação ao montar a tela
   useEffect(() => {
     async function triggerCode() {
       try {
-        const res = await fetch('/api/auth/send-verification', {
+        await fetch('/api/auth/send-verification', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, purpose: 'ACCOUNT_ACTIVATION' }),
         });
-        if (res.ok) {
-          const json = await res.json();
-          if (json.data?.devVerificationCode) {
-            setDevCodeHint(json.data.devVerificationCode);
-          }
-        }
       } catch {}
     }
     if (email) triggerCode();
@@ -99,11 +92,20 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
     }
   }, [cooldown]);
 
-  const handleResend = () => {
+  const handleResend = async () => {
     if (!canResend) return;
     setCanResend(false);
     setCooldown(60);
-    setToastMsg(`✓ Um novo link de confirmação foi despachado para ${email}`);
+    try {
+      await fetch('/api/auth/send-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, purpose: 'ACCOUNT_ACTIVATION' }),
+      });
+      setToastMsg(`✓ Um novo código de confirmação foi despachado para ${email}`);
+    } catch {
+      setToastMsg(`✓ Solicitação de reenvio despachada para ${email}`);
+    }
     setTimeout(() => setToastMsg(null), 4500);
   };
 
@@ -432,12 +434,6 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.85rem' }}>
                 Enviado para seu e-mail institucional para confirmar a existência da conta:
               </p>
-
-              {devCodeHint && (
-                <div style={{ padding: '0.4rem 0.6rem', backgroundColor: '#fef3c7', borderRadius: '6px', fontSize: '0.75rem', color: '#92400e', marginBottom: '0.85rem', fontWeight: 600 }}>
-                  Código gerado no banco: <b>{devCodeHint}</b>
-                </div>
-              )}
 
               <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginBottom: '0.5rem' }}>
                 <input

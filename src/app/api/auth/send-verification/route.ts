@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 import { SECURITY_HEADERS, checkRateLimit } from '@/lib/security';
 import { ApiResponse } from '@/lib/types';
+import { sendVerificationEmail } from '@/lib/email';
 
 export async function POST(req: NextRequest) {
   try {
@@ -61,19 +62,26 @@ export async function POST(req: NextRequest) {
 
     const verification = await db.verifications.create(userId, cleanEmail, body.purpose || 'ACCOUNT_ACTIVATION');
 
-    console.log(`[VERIFICAÇÃO DE E-MAIL] Código OTP para ${cleanEmail}: ${verification.verificationCode}`);
+    // Dispara e-mail real via SMTP com template FATEC
+    const emailResult = await sendVerificationEmail({
+      to: cleanEmail,
+      code: verification.verificationCode,
+    });
 
+    console.log(`[VERIFICAÇÃO DE E-MAIL] Código gerado para ${cleanEmail}. Enviado via SMTP: ${emailResult.sent}`);
+
+    // NUNCA retorna o código de 6 dígitos no payload JSON para o navegador
     return NextResponse.json<ApiResponse>(
       {
         success: true,
         data: {
           email: cleanEmail,
           expiresInMinutes: 15,
-          // Em ambiente acadêmico / desenvolvimento retornamos o código para permitir validação imediata em tela
-          devVerificationCode: verification.verificationCode,
-          verificationUrl: `/verificar-email?code=${verification.verificationCode}&email=${encodeURIComponent(cleanEmail)}`,
+          sentViaSmtp: emailResult.sent,
         },
-        message: `Código de verificação de 6 dígitos gerado e despachado para ${cleanEmail}. Válido por 15 minutos.`,
+        message: emailResult.sent
+          ? `Código de verificação enviado com sucesso para ${cleanEmail}.`
+          : `Código de verificação gerado. Verifique sua caixa de entrada em ${cleanEmail}.`,
       },
       { headers: SECURITY_HEADERS }
     );
@@ -85,4 +93,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

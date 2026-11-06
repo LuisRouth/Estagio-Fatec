@@ -41,6 +41,9 @@ export default function ConfiguracoesPage() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
 
@@ -49,7 +52,6 @@ export default function ConfiguracoesPage() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpError, setOtpError] = useState('');
-  const [otpDevHint, setOtpDevHint] = useState<string | null>(null);
 
   // Estados de Auditoria de Segurança
   const [securityLogs, setSecurityLogs] = useState<UserSecurityAudit[]>([]);
@@ -206,7 +208,6 @@ export default function ConfiguracoesPage() {
   const handleSendVerificationCode = async () => {
     setOtpLoading(true);
     setOtpError('');
-    setOtpDevHint(null);
 
     try {
       const res = await fetch('/api/auth/send-verification', {
@@ -218,9 +219,6 @@ export default function ConfiguracoesPage() {
       const json = await res.json();
       if (res.ok && json.success) {
         setOtpSent(true);
-        if (json.data?.devVerificationCode) {
-          setOtpDevHint(json.data.devVerificationCode);
-        }
         showToast(`✓ Código de verificação despachado para ${config.primaryEmail}`);
       } else {
         setOtpError(json.error || 'Não foi possível despachar o código.');
@@ -252,7 +250,6 @@ export default function ConfiguracoesPage() {
         setConfig((prev) => ({ ...prev, isEmailVerified: true }));
         setOtpSent(false);
         setOtpCode('');
-        setOtpDevHint(null);
         showToast('✓ E-mail institucional validado com sucesso!');
         loadSecurityAudit();
       } else {
@@ -687,12 +684,6 @@ export default function ConfiguracoesPage() {
                         Digite o código de 6 dígitos enviado para validar a existência da conta:
                       </p>
 
-                      {otpDevHint && (
-                        <div style={{ padding: '0.4rem 0.6rem', backgroundColor: '#fef3c7', borderRadius: '6px', fontSize: '0.75rem', color: '#92400e', marginBottom: '0.75rem', fontWeight: 600 }}>
-                          Código gerado no banco: <b>{otpDevHint}</b>
-                        </div>
-                      )}
-
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <input
                           type="text"
@@ -785,42 +776,106 @@ export default function ConfiguracoesPage() {
                   <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: isDark ? '#f8fafc' : 'var(--text-main)', marginBottom: '0.35rem' }}>
                     Senha Atual
                   </label>
-                  <input
-                    type="password"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    placeholder="••••••••"
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem 1rem',
-                      borderRadius: '8px',
-                      border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)',
-                      backgroundColor: isDark ? '#101726' : '#ffffff',
-                      color: isDark ? '#f8fafc' : 'var(--text-main)',
-                      fontSize: '0.925rem',
-                    }}
-                  />
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={showCurrentPassword ? 'text' : 'password'}
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="••••••••"
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem 2.5rem 0.75rem 1rem',
+                        borderRadius: '8px',
+                        border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)',
+                        backgroundColor: isDark ? '#101726' : '#ffffff',
+                        color: isDark ? '#f8fafc' : 'var(--text-main)',
+                        fontSize: '0.925rem',
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      aria-label={showCurrentPassword ? 'Ocultar senha' : 'Exibir senha'}
+                      style={{
+                        position: 'absolute',
+                        right: '10px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: isDark ? '#94a3b8' : 'var(--text-muted)',
+                        padding: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                    >
+                      {showCurrentPassword ? (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                          <line x1="1" y1="1" x2="23" y2="23"></line>
+                        </svg>
+                      ) : (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
+                          <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: isDark ? '#f8fafc' : 'var(--text-main)', marginBottom: '0.35rem' }}>
                     Nova Senha Forte
                   </label>
-                  <input
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Mínimo 8 caracteres"
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem 1rem',
-                      borderRadius: '8px',
-                      border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)',
-                      backgroundColor: isDark ? '#101726' : '#ffffff',
-                      color: isDark ? '#f8fafc' : 'var(--text-main)',
-                      fontSize: '0.925rem',
-                    }}
-                  />
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={showNewPassword ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Mínimo 8 caracteres"
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem 2.5rem 0.75rem 1rem',
+                        borderRadius: '8px',
+                        border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)',
+                        backgroundColor: isDark ? '#101726' : '#ffffff',
+                        color: isDark ? '#f8fafc' : 'var(--text-main)',
+                        fontSize: '0.925rem',
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      aria-label={showNewPassword ? 'Ocultar senha' : 'Exibir senha'}
+                      style={{
+                        position: 'absolute',
+                        right: '10px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: isDark ? '#94a3b8' : 'var(--text-muted)',
+                        padding: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                    >
+                      {showNewPassword ? (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                          <line x1="1" y1="1" x2="23" y2="23"></line>
+                        </svg>
+                      ) : (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
+                          <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                   {strength && (
                     <div style={{ marginTop: '0.4rem' }}>
                       <div style={{ height: '4px', width: '100%', backgroundColor: isDark ? '#2b3a4f' : 'var(--border-light)', borderRadius: '2px', overflow: 'hidden' }}>
@@ -837,21 +892,53 @@ export default function ConfiguracoesPage() {
                   <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: isDark ? '#f8fafc' : 'var(--text-main)', marginBottom: '0.35rem' }}>
                     Confirmar Nova Senha
                   </label>
-                  <input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Repita a nova senha"
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem 1rem',
-                      borderRadius: '8px',
-                      border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)',
-                      backgroundColor: isDark ? '#101726' : '#ffffff',
-                      color: isDark ? '#f8fafc' : 'var(--text-main)',
-                      fontSize: '0.925rem',
-                    }}
-                  />
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Repita a nova senha"
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem 2.5rem 0.75rem 1rem',
+                        borderRadius: '8px',
+                        border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)',
+                        backgroundColor: isDark ? '#101726' : '#ffffff',
+                        color: isDark ? '#f8fafc' : 'var(--text-main)',
+                        fontSize: '0.925rem',
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      aria-label={showConfirmPassword ? 'Ocultar senha' : 'Exibir senha'}
+                      style={{
+                        position: 'absolute',
+                        right: '10px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: isDark ? '#94a3b8' : 'var(--text-muted)',
+                        padding: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                    >
+                      {showConfirmPassword ? (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                          <line x1="1" y1="1" x2="23" y2="23"></line>
+                        </svg>
+                      ) : (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
+                          <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
 
