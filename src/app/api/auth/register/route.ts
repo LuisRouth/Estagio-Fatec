@@ -12,7 +12,19 @@ import { ApiResponse, SafeUser } from '@/lib/types';
 
 const RegisterSchema = z.object({
   name: z.string().min(3).max(150),
-  email: z.string().email().max(180),
+  email: z
+    .string()
+    .email('Formato de e-mail institucional inválido')
+    .max(180)
+    .refine(
+      (email) => {
+        const clean = email.toLowerCase().trim();
+        return clean.endsWith('@aluno.cps.sp.gov.br') || clean.endsWith('@fatec.sp.gov.br');
+      },
+      {
+        message: 'O cadastro requer e-mail discente oficial padrão (@aluno.cps.sp.gov.br) ou institucional (@fatec.sp.gov.br).',
+      }
+    ),
   ra: z.string().min(5).max(20).optional(),
   password: z.string().min(8),
   course: z.enum(['IA', 'ESG']),
