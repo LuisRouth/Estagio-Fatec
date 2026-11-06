@@ -52,10 +52,18 @@ export default function CantinaPage() {
   const [proofText, setProofText] = useState('');
   const [isSubmittingProof, setIsSubmittingProof] = useState(false);
   const [proofSubmitted, setProofSubmitted] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   // Carregar produtos da API
   useEffect(() => {
     fetchProducts();
+    // Verificar se usuário logado é CA ou ADMIN para mostrar botão de gerenciar
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success && d.data) setCurrentUser(d.data);
+      })
+      .catch(() => {});
   }, []);
 
   const fetchProducts = async () => {
@@ -318,32 +326,56 @@ export default function CantinaPage() {
             </p>
           </div>
 
-          {/* Botão de Atalho para o Carrinho */}
-          <button
-            onClick={() => setIsCartOpen(!isCartOpen)}
-            className="btn btn-primary"
-            style={{ padding: '0.8rem 1.4rem', fontSize: '0.95rem', position: 'relative' }}
-          >
-            <span>🛒 Meu Pedido</span>
-            {totalCartCount > 0 && (
-              <span
-                style={{
-                  backgroundColor: '#ef4444',
-                  color: '#ffffff',
-                  fontSize: '0.75rem',
-                  fontWeight: 800,
-                  borderRadius: '9999px',
-                  padding: '2px 8px',
-                  marginLeft: '0.35rem',
-                }}
-              >
-                {totalCartCount}
+          {/* Ações do Topo: Gerenciar Estoque e Meu Pedido */}
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <Link
+              href="/cantina/admin"
+              className="btn btn-secondary"
+              style={{
+                padding: '0.8rem 1.25rem',
+                fontSize: '0.925rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                backgroundColor: '#ffffff',
+                border: '1px solid #cbd5e1',
+                color: '#1e293b',
+                fontWeight: 600,
+                boxShadow: 'var(--shadow-sm)',
+              }}
+              title="Acessar painel do Centro Acadêmico e Secretaria para reposição, novos itens e preços"
+            >
+              <span>⚙️</span>
+              <span>Gerenciar Estoque (CA / Secretaria)</span>
+            </Link>
+
+            {/* Botão de Atalho para o Carrinho */}
+            <button
+              onClick={() => setIsCartOpen(!isCartOpen)}
+              className="btn btn-primary"
+              style={{ padding: '0.8rem 1.4rem', fontSize: '0.95rem', position: 'relative' }}
+            >
+              <span>🛒 Meu Pedido</span>
+              {totalCartCount > 0 && (
+                <span
+                  style={{
+                    backgroundColor: '#ef4444',
+                    color: '#ffffff',
+                    fontSize: '0.75rem',
+                    fontWeight: 800,
+                    borderRadius: '9999px',
+                    padding: '2px 8px',
+                    marginLeft: '0.35rem',
+                  }}
+                >
+                  {totalCartCount}
+                </span>
+              )}
+              <span style={{ fontWeight: 700, marginLeft: '0.5rem', borderLeft: '1px solid rgba(255,255,255,0.3)', paddingLeft: '0.5rem' }}>
+                R$ {totalCartAmount.toFixed(2).replace('.', ',')}
               </span>
-            )}
-            <span style={{ fontWeight: 700, marginLeft: '0.5rem', borderLeft: '1px solid rgba(255,255,255,0.3)', paddingLeft: '0.5rem' }}>
-              R$ {totalCartAmount.toFixed(2).replace('.', ',')}
-            </span>
-          </button>
+            </button>
+          </div>
         </div>
 
         {/* Barra de Filtros por Categoria e Busca em Tempo Real */}
@@ -469,21 +501,38 @@ export default function CantinaPage() {
                     )}
                   </div>
 
-                  {/* Foto / Ícone em Destaque */}
+                  {/* Foto / Imagem com Fallback Visual */}
                   <div
                     style={{
-                      height: '130px',
+                      height: '135px',
                       borderRadius: '12px',
-                      backgroundColor: 'var(--bg-muted)',
+                      backgroundColor: '#ffffff',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       marginBottom: '1rem',
-                      fontSize: '4rem',
-                      userSelect: 'none',
+                      overflow: 'hidden',
+                      border: '1px solid var(--border-light)',
+                      position: 'relative',
                     }}
                   >
-                    {getProductFallbackEmoji(product.category)}
+                    {product.image_url ? (
+                      <img
+                        src={product.image_url}
+                        alt={product.name}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'contain',
+                          padding: '0.4rem',
+                          position: 'relative',
+                          zIndex: 1,
+                          transition: 'transform 0.3s ease',
+                        }}
+                      />
+                    ) : (
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Sem foto</span>
+                    )}
                   </div>
 
                   {/* Detalhes do Produto */}
