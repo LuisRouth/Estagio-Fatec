@@ -11,7 +11,7 @@ const crypto = require('crypto');
 async function runFullQAPipeline() {
   console.log('===================================================================');
   console.log('🚀 ESTEIRA DE TESTES AUTOMATIZADOS (QA, DEVOPS, SEGURANÇA & IA)');
-  console.log('Projeto: Portal Integrado FATEC Rio Claro | Sprints 1 & 2');
+  console.log('Projeto: Portal Integrado FATEC Rio Claro | Sprints 1, 2 & 3');
   console.log('===================================================================\n');
 
   let totalPassed = 0;
@@ -32,7 +32,7 @@ async function runFullQAPipeline() {
   // ------------------------------------------------------------------
   // SUÍTE 1: INFRAESTRUTURA DEVOPS (VERCEL, SUPABASE & CI/CD)
   // ------------------------------------------------------------------
-  console.log('📦 [SUÍTE 1/5] Validando Infraestrutura DevOps (Vercel, Supabase & CI/CD)...');
+  console.log('📦 [SUÍTE 1/7] Validando Infraestrutura DevOps (Vercel, Supabase & CI/CD)...');
   const envExamplePath = path.join(rootDir, '.env.example');
   const vercelJsonPath = path.join(rootDir, 'vercel.json');
   const ciWorkflowPath = path.join(rootDir, '.github', 'workflows', 'ci-cd.yml');
@@ -63,7 +63,7 @@ async function runFullQAPipeline() {
   // ------------------------------------------------------------------
   // SUÍTE 2: SEGURANÇA OWASP, AUTENTICAÇÃO & RATE LIMITING
   // ------------------------------------------------------------------
-  console.log('\n🔐 [SUÍTE 2/5] Testando Segurança OWASP, Validação de Senha e Sanitização...');
+  console.log('\n🔐 [SUÍTE 2/7] Testando Segurança OWASP, Validação de Senha e Sanitização...');
   function validatePassword(pw) {
     return (
       typeof pw === 'string' &&
@@ -93,13 +93,27 @@ async function runFullQAPipeline() {
   assert(token.split('.').length === 3, 'Security', 'Emissão e estrutura criptográfica de token JWT HS256 validada');
 
   // ------------------------------------------------------------------
-  // SUÍTE 3: INTELIGÊNCIA ARTIFICIAL (GOOGLE GEMINI SDK & OCR PIX)
+  // SUÍTE 3: INTELIGÊNCIA ARTIFICIAL (PIPELINE OCR VISÃO PIX & MOTOR RAG)
   // ------------------------------------------------------------------
-  console.log('\n🤖 [SUÍTE 3/5] Testando Conectividade SDK Google Gemini e Motor OCR Pix...');
+  console.log('\n🤖 [SUÍTE 3/7] Testando Pipeline OCR/Visão Computacional Pix e Motor de IA RAG...');
   const geminiLibPath = path.join(rootDir, 'src', 'lib', 'gemini.ts');
   const geminiRoutePath = path.join(rootDir, 'src', 'app', 'api', 'ai', 'status', 'route.ts');
+  const ragRoutePath = path.join(rootDir, 'src', 'app', 'api', 'ai', 'rag', 'route.ts');
   assert(fs.existsSync(geminiLibPath), 'Gemini-AI', 'Módulo src/lib/gemini.ts implementado');
   assert(fs.existsSync(geminiRoutePath), 'Gemini-AI', 'Endpoint REST /api/ai/status implementado');
+  assert(fs.existsSync(ragRoutePath), 'Gemini-RAG', 'Endpoint REST /api/ai/rag implementado para consultas baseadas nos PDFs');
+
+  const geminiLibSource = fs.readFileSync(geminiLibPath, 'utf8');
+  assert(
+    geminiLibSource.includes('analyzePixReceiptPipeline') && geminiLibSource.includes('GEMINI_VISION_MULTIMODAL'),
+    'Gemini-Vision',
+    'Pipeline de OCR e Visão Computacional Multimodal (analyzePixReceiptPipeline) configurado'
+  );
+  assert(
+    geminiLibSource.includes('queryAcademicRAG') && geminiLibSource.includes('buildAcademicKnowledgeCorpus'),
+    'Gemini-RAG',
+    'Motor de IA RAG (Retrieval-Augmented Generation) com citações de PDFs implementado'
+  );
 
   function evaluateReceipt(text, expected) {
     const brlMatch = text.match(/R\$\s*(\d+[.,]\d{2})/i);
@@ -123,11 +137,9 @@ async function runFullQAPipeline() {
   );
 
   // ------------------------------------------------------------------
-  // SUÍTE 4: MÓDULOS CENTRAIS DA SPRINT 2 (CESAR - CANTINA, PIX, EXTRATO & TCC)
+  // SUÍTE 4: MÓDULOS CENTRAIS DA SPRINT 2 (CANTINA, PIX, EXTRATO & TCC)
   // ------------------------------------------------------------------
-  console.log('\n💳 [SUÍTE 4/5] Validando Módulos Centrais Sprint 2 (Cesar: Pix Dinâmico, Catálogo, Checkout, Histórico & TCC)...');
-  
-  // 1. Pix EMV
+  console.log('\n💳 [SUÍTE 4/7] Validando Módulos Centrais Sprint 2 (Pix Dinâmico, Catálogo, Checkout, Histórico & TCC)...');
   function calculateCRC16(data) {
     let crc = 0xffff;
     for (let i = 0; i < data.length; i++) {
@@ -151,21 +163,26 @@ async function runFullQAPipeline() {
   assert(fs.existsSync(pixGenerate), 'Sprint2-Pix', 'API de geração Pix dinâmica (/api/pix/generate) presente');
   assert(fs.existsSync(pixValidate), 'Sprint2-Pix', 'API de validação Pix (/api/pix/validate) presente');
 
-  // 2. Catálogo & Estoque
   const canteenProdRoute = path.join(rootDir, 'src', 'app', 'api', 'canteen', 'products', 'route.ts');
   const canteenStockRoute = path.join(rootDir, 'src', 'app', 'api', 'canteen', 'products', '[id]', 'stock', 'route.ts');
   assert(fs.existsSync(canteenProdRoute), 'Sprint2-Canteen', 'CRUD de catálogo (/api/canteen/products) presente');
   assert(fs.existsSync(canteenStockRoute), 'Sprint2-Canteen', 'Controle de estoque (/api/canteen/products/[id]/stock) presente');
 
-  // 3. Checkout e Histórico / Extrato
   const checkoutRoute = path.join(rootDir, 'src', 'app', 'api', 'canteen', 'checkout', 'route.ts');
   const historyRoute = path.join(rootDir, 'src', 'app', 'api', 'canteen', 'history', 'route.ts');
   const txRoute = path.join(rootDir, 'src', 'app', 'api', 'canteen', 'transactions', 'route.ts');
+  const proofRoute = path.join(rootDir, 'src', 'app', 'api', 'canteen', 'transactions', '[id]', 'proof', 'route.ts');
   assert(fs.existsSync(checkoutRoute), 'Sprint2-Orders', 'Checkout com Pix EMV (/api/canteen/checkout) presente');
   assert(fs.existsSync(historyRoute), 'Sprint2-Orders', 'Extrato de compras do aluno (/api/canteen/history) presente');
   assert(fs.existsSync(txRoute), 'Sprint2-Orders', 'Histórico e auditoria de compras (/api/canteen/transactions) presente');
 
-  // 4. Repositório e TCC
+  const proofSource = fs.readFileSync(proofRoute, 'utf8');
+  assert(
+    proofSource.includes('analyzePixReceiptPipeline') && proofSource.includes("ocrResult.status === 'APROVADO_IA'"),
+    'Sprint2-OCR-Proof',
+    'Rota /api/canteen/transactions/[id]/proof integrada ao pipeline OCR/Visão com liquidação automática PAGO'
+  );
+
   const materialsRoute = path.join(rootDir, 'src', 'app', 'api', 'materials', 'route.ts');
   const materialsUpload = path.join(rootDir, 'src', 'app', 'api', 'materials', 'upload', 'route.ts');
   const announcementsRoute = path.join(rootDir, 'src', 'app', 'api', 'announcements', 'route.ts');
@@ -174,9 +191,34 @@ async function runFullQAPipeline() {
   assert(fs.existsSync(announcementsRoute), 'Sprint2-Materials', 'Mural de comunicados (/api/announcements) presente');
 
   // ------------------------------------------------------------------
-  // SUÍTE 5: ARQUITETURA FRONTEND, ROTAS E DOCUMENTAÇÃO DE REQUISITOS
+  // SUÍTE 5: TESTES DE INTEGRAÇÃO DO CHECKOUT E USABILIDADE MOBILE (GUILHERME)
   // ------------------------------------------------------------------
-  console.log('\n🧭 [SUÍTE 5/5] Verificando Rotas da Aplicação, Configs Vitest/Playwright e Documentação...');
+  console.log('\n📱 [SUÍTE 5/7] Validando Testes de Integração de Checkout da Cantina e Usabilidade Mobile...');
+  const checkoutIntegrationTestPath = path.join(rootDir, 'tests', 'unit', 'canteen_checkout_integration.test.ts');
+  const mobileUsabilityDocPath = path.join(rootDir, 'docs', 'relatorio_usabilidade_mobile_e_qa_guilherme.md');
+  const e2eSpecPath = path.join(rootDir, 'tests', 'e2e', 'portal.spec.ts');
+
+  assert(
+    fs.existsSync(checkoutIntegrationTestPath),
+    'QA-Integration',
+    'Suíte de testes de integração do fluxo de checkout e compra na cantina (tests/unit/canteen_checkout_integration.test.ts) presente'
+  );
+  assert(
+    fs.existsSync(mobileUsabilityDocPath),
+    'QA-Mobile-UX',
+    'Relatório de testes preliminares de usabilidade mobile com alunos do 1º e 2º semestres presente em docs/'
+  );
+  const e2eContent = fs.readFileSync(e2eSpecPath, 'utf8');
+  assert(
+    e2eContent.includes('setViewportSize({ width: 390, height: 844 })') && e2eContent.includes('/api/ai/rag'),
+    'QA-Mobile-E2E',
+    'Cenários E2E mobile (390x844) e validação do motor RAG para semestres iniciais configurados no Playwright'
+  );
+
+  // ------------------------------------------------------------------
+  // SUÍTE 6: ARQUITETURA FRONTEND, ROTAS E DOCUMENTAÇÃO DE REQUISITOS
+  // ------------------------------------------------------------------
+  console.log('\n🧭 [SUÍTE 6/7] Verificando Rotas da Aplicação, Configs Vitest/Playwright e Documentação...');
   const requiredRoutes = [
     'src/app/page.tsx',
     'src/app/login/page.tsx',
@@ -188,10 +230,11 @@ async function runFullQAPipeline() {
     'src/app/historico/page.tsx',
     'src/app/api/health/route.ts',
     'src/app/api/ai/status/route.ts',
+    'src/app/api/ai/rag/route.ts',
   ];
 
   const allRoutesExist = requiredRoutes.every((rel) => fs.existsSync(path.join(rootDir, rel)));
-  assert(allRoutesExist, 'QA-Routes', 'Todas as 10 rotas críticas de Frontend e API existem e estão íntegras');
+  assert(allRoutesExist, 'QA-Routes', 'Todas as 11 rotas críticas de Frontend e API (incluindo /api/ai/rag) existem e estão íntegras');
 
   assert(
     fs.existsSync(path.join(rootDir, 'vitest.config.ts')) &&
@@ -203,15 +246,16 @@ async function runFullQAPipeline() {
   assert(
     fs.existsSync(path.join(rootDir, 'tests', 'unit', 'security.test.ts')) &&
       fs.existsSync(path.join(rootDir, 'tests', 'unit', 'canteen_pix.test.ts')) &&
+      fs.existsSync(path.join(rootDir, 'tests', 'unit', 'canteen_checkout_integration.test.ts')) &&
       fs.existsSync(path.join(rootDir, 'tests', 'unit', 'materials.test.ts')),
     'QA-Suites',
-    'Suítes de testes unitários da Sprint 2 estruturadas em /tests/unit'
+    'Suítes de testes unitários e de integração estruturadas em /tests/unit'
   );
 
   // ------------------------------------------------------------------
-  // SUÍTE 6: SPRINT 3 - BACKEND ANALYTICS, SEGURANÇA E PERFORMANCE (CESAR)
+  // SUÍTE 7: SPRINT 3 - BACKEND ANALYTICS, SEGURANÇA E RELATÓRIOS 200H
   // ------------------------------------------------------------------
-  console.log('📈 [SUÍTE 6/6] Validando Módulos Analíticos, Otimizações de Banco e Documentação (Sprint 3)...');
+  console.log('\n📈 [SUÍTE 7/7] Validando Módulos Analíticos, Otimizações de Banco e Relatórios de Estágio...');
   const sprint3Analytics = [
     'src/app/api/ca/analytics/financial/route.ts',
     'src/app/api/ca/analytics/products/route.ts',
@@ -230,8 +274,14 @@ async function runFullQAPipeline() {
   const manualDocPath = path.join(rootDir, 'docs', 'manual_tecnico_backend_db.md');
   assert(fs.existsSync(manualDocPath), 'Sprint3-Docs', 'Manual Técnico de Backend & Banco de Dados completo em docs/');
 
-  const relatorioSprint3Path = path.join(rootDir, 'docs', 'relatorio_estagio_sprint3_cesar.md');
-  assert(fs.existsSync(relatorioSprint3Path), 'Sprint3-Docs', 'Relatório de Estágio Sprint 3 (67h / 200h totais) homologado');
+  const relatorioSprint3Cesar = path.join(rootDir, 'docs', 'relatorio_estagio_sprint3_cesar.md');
+  const relatorioSprint2Gui = path.join(rootDir, 'docs', 'relatorio_estagio_sprint2_guilherme.md');
+  const relatorioSprint3Gui = path.join(rootDir, 'docs', 'relatorio_estagio_sprint3_guilherme.md');
+  assert(
+    fs.existsSync(relatorioSprint3Cesar) && fs.existsSync(relatorioSprint2Gui) && fs.existsSync(relatorioSprint3Gui),
+    'Sprint3-Docs',
+    'Relatórios de Estágio Supervisionado (Sprints 1, 2 e 3 - 200h totais) homologados'
+  );
 
   console.log('\n===================================================================');
   console.log(`📊 RESUMO DA ESTEIRA DE QA: ${totalPassed} testes aprovados | ${totalFailed} falhas`);

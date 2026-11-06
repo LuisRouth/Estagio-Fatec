@@ -273,8 +273,52 @@ export interface PixReceiptOCRResult {
   payerName?: string | null;
   receiverName?: string | null;
   paymentDate?: string | null;
+  ocrMethod?: 'GEMINI_VISION_MULTIMODAL' | 'GEMINI_TEXT_LLM' | 'HEURISTIC_FALLBACK';
+  imageAnalyzed?: boolean;
   status: 'APROVADO_IA' | 'DIVERGENTE' | 'REQUER_REVISAO_CA';
   analysisNotes: string;
+}
+
+export interface PixReceiptVisionInput {
+  receiptText?: string | null;
+  imageBase64?: string | null;
+  imageMimeType?: string | null;
+  proofImageUrl?: string | null;
+  expectedAmount: number;
+  expectedMerchant?: string;
+}
+
+export interface RAGSourceCitation {
+  id: string;
+  title: string;
+  subject: string;
+  course: CourseType;
+  semester: number;
+  materialType: MaterialType;
+  fileUrl: string;
+  githubUrl?: string | null;
+  authorName?: string;
+  relevanceScore: number;
+  excerpt: string;
+}
+
+export interface RAGQueryInput {
+  question: string;
+  course?: CourseType | 'TODOS';
+  semester?: number | null;
+  topK?: number;
+}
+
+export interface RAGQueryResult {
+  question: string;
+  answer: string;
+  sources: RAGSourceCitation[];
+  courseFilter: CourseType | 'TODOS';
+  semesterFilter: number | null;
+  confidence: number;
+  mode: 'LIVE_GEMINI_RAG' | 'DETERMINISTIC_RAG';
+  latencyMs: number;
+  timestamp: string;
 }
 
 // ====================================================================

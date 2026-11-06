@@ -1,11 +1,11 @@
 // ====================================================================
-// ENDPOINT: DIAGNÓSTICO DE CONECTIVIDADE E OCR DO GOOGLE GEMINI SDK
+// ENDPOINT: DIAGNÓSTICO DE CONECTIVIDADE E OCR/VISÃO DO GOOGLE GEMINI SDK
 // Rota: GET /api/ai/status | POST /api/ai/status
 // Responsável: Guilherme (DevOps, IA & QA)
 // ====================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { testGeminiConnectivity, validatePixReceiptWithGemini } from '@/lib/gemini';
+import { testGeminiConnectivity, analyzePixReceiptPipeline } from '@/lib/gemini';
 import { SECURITY_HEADERS } from '@/lib/security';
 import { ApiResponse } from '@/lib/types';
 
@@ -35,19 +35,25 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { receiptText, expectedAmount } = body || {};
+    const { receiptText, imageBase64, imageMimeType, expectedAmount } = body || {};
 
-    if (!receiptText || typeof expectedAmount !== 'number') {
+    if ((!receiptText && !imageBase64) || typeof expectedAmount !== 'number') {
       return NextResponse.json<ApiResponse>(
         {
           success: false,
-          error: 'Informe "receiptText" (string) e "expectedAmount" (number) para validar o comprovante Pix via IA.',
+          error:
+            'Informe "receiptText" (string) ou "imageBase64" (string) e "expectedAmount" (number) para validar o comprovante Pix via IA.',
         },
         { status: 400, headers: SECURITY_HEADERS }
       );
     }
 
-    const ocrResult = await validatePixReceiptWithGemini(receiptText, expectedAmount);
+    const ocrResult = await analyzePixReceiptPipeline({
+      receiptText,
+      imageBase64,
+      imageMimeType,
+      expectedAmount,
+    });
 
     return NextResponse.json<ApiResponse<typeof ocrResult>>(
       {

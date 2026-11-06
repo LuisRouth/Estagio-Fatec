@@ -10,25 +10,31 @@ interface TransactionItem {
   product_name: string;
   quantity: number;
   unit_price: number;
-  total_price: number;
+  subtotal?: number;
+  total_price?: number;
 }
 
 interface Transaction {
   id: string;
-  txid: string;
+  txid?: string;
   total_amount: number;
-  status: 'PENDENTE' | 'CONFIRMADO' | 'CANCELADO' | 'REVISAO_CA';
+  status: 'PENDENTE' | 'PAGO' | 'CONFIRMADO' | 'CANCELADO' | 'EM_ANALISE' | 'REVISAO_CA';
   created_at: string;
   receipt_text?: string;
+  notes?: string | null;
+  pix_end_to_end_id?: string | null;
   e2e_id?: string;
   items?: TransactionItem[];
 }
 
 interface StatementSummary {
   totalSpent: number;
-  confirmedCount: number;
+  paidCount?: number;
+  confirmedCount?: number;
   pendingCount: number;
-  totalOrders: number;
+  inAnalysisCount?: number;
+  totalTransactions?: number;
+  totalOrders?: number;
 }
 
 export default function HistoricoPage() {
@@ -67,10 +73,12 @@ export default function HistoricoPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
+      case 'PAGO':
       case 'CONFIRMADO':
-        return { label: '✓ Pago e Aprovado', bg: 'var(--accent-emerald-light)', color: 'var(--accent-emerald)' };
+        return { label: '✓ Pago e Aprovado (OCR IA)', bg: 'var(--accent-emerald-light)', color: 'var(--accent-emerald)' };
       case 'PENDENTE':
         return { label: '⏳ Aguardando Pix', bg: 'var(--accent-amber-light)', color: 'var(--accent-amber)' };
+      case 'EM_ANALISE':
       case 'REVISAO_CA':
         return { label: '🔍 Em Revisão pelo CA', bg: 'var(--accent-blue-light)', color: 'var(--accent-blue-hover)' };
       case 'CANCELADO':
@@ -79,6 +87,9 @@ export default function HistoricoPage() {
         return { label: status, bg: 'var(--bg-muted)', color: 'var(--text-muted)' };
     }
   };
+
+  const paidOrdersCount = summary ? (summary.paidCount ?? summary.confirmedCount ?? 0) : 0;
+  const totalOrdersCount = summary ? (summary.totalTransactions ?? summary.totalOrders ?? 0) : 0;
 
   return (
     <AppLayout activePath="/historico">
@@ -108,7 +119,7 @@ export default function HistoricoPage() {
               Meu Histórico de Compras na Cantina
             </h1>
             <p style={{ color: 'var(--text-sub)', fontSize: '0.95rem', marginTop: '0.35rem', maxWidth: '680px', lineHeight: 1.6 }}>
-              Acompanhe seu consumo pessoal, valide seus pagamentos Pix e tenha controle total dos seus gastos nos intervalos da faculdade.
+              Acompanhe seu consumo pessoal, valide seus pagamentos Pix com conferência automática via IA OCR e tenha controle total dos seus gastos nos intervalos da faculdade.
             </p>
           </div>
 
@@ -149,7 +160,7 @@ export default function HistoricoPage() {
             <div className="canteen-statement-metric-card" style={{ borderRadius: '16px', padding: '1.5rem' }}>
               <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>Total Consumido</span>
               <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--accent-blue)', marginTop: '0.35rem' }}>
-                R$ {summary.totalSpent.toFixed(2).replace('.', ',')}
+                R$ {Number(summary.totalSpent || 0).toFixed(2).replace('.', ',')}
               </div>
               <span style={{ fontSize: '0.75rem', color: 'var(--accent-emerald)', fontWeight: 600 }}>Extrato consolidado</span>
             </div>
@@ -157,23 +168,30 @@ export default function HistoricoPage() {
             <div className="canteen-statement-metric-card" style={{ borderRadius: '16px', padding: '1.5rem' }}>
               <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>Compras Confirmadas</span>
               <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--accent-emerald)', marginTop: '0.35rem' }}>
-                {summary.confirmedCount}
+                {paidOrdersCount}
               </div>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Pagamentos via Pix conferidos</span>
             </div>
 
+<<<<<<< Updated upstream
             <div className="canteen-statement-metric-card" style={{ borderRadius: '16px', padding: '1.5rem' }}>
               <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>Pendentes de Confirmação</span>
               <div style={{ fontSize: '1.85rem', fontWeight: 800, color: summary.pendingCount > 0 ? 'var(--accent-amber)' : 'var(--text-muted)', marginTop: '0.35rem' }}>
                 {summary.pendingCount}
+=======
+            <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '1.5rem', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>Pendentes / Em Análise</span>
+              <div style={{ fontSize: '1.85rem', fontWeight: 800, color: (summary.pendingCount + (summary.inAnalysisCount || 0)) > 0 ? 'var(--accent-amber)' : 'var(--text-muted)', marginTop: '0.35rem' }}>
+                {(summary.pendingCount || 0) + (summary.inAnalysisCount || 0)}
+>>>>>>> Stashed changes
               </div>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Aguardando validação CA</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Aguardando Pix ou validação CA</span>
             </div>
 
             <div className="canteen-statement-metric-card" style={{ borderRadius: '16px', padding: '1.5rem' }}>
               <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>Total de Pedidos</span>
               <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '0.35rem' }}>
-                {summary.totalOrders}
+                {totalOrdersCount}
               </div>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Registros na cantina discente</span>
             </div>
@@ -192,9 +210,9 @@ export default function HistoricoPage() {
               <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                 {[
                   { id: 'TODOS', label: 'Todos os Status' },
-                  { id: 'CONFIRMADO', label: 'Confirmados' },
+                  { id: 'PAGO', label: 'Confirmados (Pago)' },
                   { id: 'PENDENTE', label: 'Pendentes' },
-                  { id: 'REVISAO_CA', label: 'Em Revisão' },
+                  { id: 'EM_ANALISE', label: 'Em Revisão CA' },
                 ].map((s) => {
                   const isSelected = filterStatus === s.id;
                   return (
@@ -250,6 +268,7 @@ export default function HistoricoPage() {
                 {transactions.map((tx) => {
                   const statusBadge = getStatusBadge(tx.status);
                   const dateStr = new Date(tx.created_at).toLocaleString('pt-BR');
+                  const e2eCode = tx.pix_end_to_end_id || tx.e2e_id;
 
                   return (
                     <div key={tx.id} className="canteen-statement-tx-row" style={{ padding: '1.25rem',
@@ -303,10 +322,11 @@ export default function HistoricoPage() {
                         </div>
                       )}
 
-                      {/* Identificador E2E do Banco se houver */}
-                      {tx.e2e_id && (
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-                          E2E BACEN: {tx.e2e_id}
+                      {/* Notas da análise IA OCR ou Identificador E2E do Banco */}
+                      {(e2eCode || tx.notes) && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          {e2eCode && <span style={{ fontFamily: 'monospace' }}>E2E BACEN: {e2eCode}</span>}
+                          {tx.notes && <span>📋 {tx.notes}</span>}
                         </div>
                       )}
                     </div>

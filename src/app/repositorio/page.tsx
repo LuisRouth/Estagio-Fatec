@@ -14,9 +14,33 @@ interface AcademicMaterial {
   file_url: string;
   github_url: string | null;
   tags: string | null;
-  downloads_count: number;
+  download_count?: number;
+  downloads_count?: number;
   author_name?: string;
   created_at: string;
+}
+
+interface RAGSource {
+  id: string;
+  title: string;
+  subject: string;
+  course: 'IA' | 'ESG';
+  semester: number;
+  materialType: string;
+  fileUrl: string;
+  githubUrl?: string | null;
+  authorName?: string;
+  relevanceScore: number;
+  excerpt: string;
+}
+
+interface RAGResponseData {
+  question: string;
+  answer: string;
+  sources: RAGSource[];
+  confidence: number;
+  mode: string;
+  latencyMs: number;
 }
 
 export default function RepositorioPage() {
@@ -28,6 +52,12 @@ export default function RepositorioPage() {
   const [selectedSemester, setSelectedSemester] = useState<number | 'TODOS'>('TODOS');
   const [selectedType, setSelectedType] = useState<string>('TODOS');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Estados do Motor de IA RAG (Assistente Acadêmico Baseado nos PDFs do Repositório)
+  const [ragQuestion, setRagQuestion] = useState('');
+  const [ragLoading, setRagLoading] = useState(false);
+  const [ragResult, setRagResult] = useState<RAGResponseData | null>(null);
+  const [ragError, setRagError] = useState('');
 
   // Modal de Upload / Submissão
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -70,14 +100,48 @@ export default function RepositorioPage() {
     }
   };
 
+  const handleAskRAG = async (customQuestion?: string) => {
+    const q = (customQuestion ?? ragQuestion).trim();
+    if (!q) return;
+    if (customQuestion) setRagQuestion(customQuestion);
+
+    setRagLoading(true);
+    setRagError('');
+    try {
+      const res = await fetch('/api/ai/rag', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: q,
+          course: selectedCourse,
+          semester: selectedSemester === 'TODOS' ? null : Number(selectedSemester),
+          topK: 3,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Não foi possível consultar o motor RAG.');
+      }
+      setRagResult(data.data);
+    } catch (err: any) {
+      setRagError(err.message || 'Erro na consulta ao motor de IA RAG.');
+    } finally {
+      setRagLoading(false);
+    }
+  };
+
   const handleDownload = async (id: string, fileUrl: string) => {
     try {
       await fetch(`/api/materials/${id}/download`, { method: 'POST' });
-      // Abre o arquivo ou simula download
       window.open(fileUrl, '_blank');
-      // Atualiza contador local
       setMaterials((prev) =>
-        prev.map((m) => (m.id === id ? { ...m, downloads_count: (m.downloads_count || 0) + 1 } : m))
+        prev.map((m) => {
+          if (m.id === id) {
+            const currentCount = m.download_count ?? m.downloads_count ?? 0;
+            return { ...m, download_count: currentCount + 1, downloads_count: currentCount + 1 };
+          }
+          return m;
+        })
       );
     } catch {
       window.open(fileUrl, '_blank');
@@ -194,6 +258,152 @@ export default function RepositorioPage() {
           >
             📤 Enviar Novo Material / TCC
           </button>
+        </div>
+
+        {/* Motor de IA RAG — Tira-Dúvidas Baseado nos PDFs e Arquivos do Repositório */}
+        <div
+          style={{
+            background: 'linear-gradient(135deg, rgba(240, 249, 255, 0.95) 0%, rgba(236, 253, 245, 0.95) 100%)',
+            borderRadius: '18px',
+            padding: '1.75rem',
+            border: '1px solid rgba(2, 132, 199, 0.25)',
+            boxShadow: 'var(--shadow-sm)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
+                <span className="badge badge-blue">🤖 Motor de IA RAG (Google Gemini)</span>
+                <span className="badge badge-emerald">Leitura de PDFs & Notebooks</span>
+              </div>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                Assistente Acadêmico Inteligente — Tire Dúvidas sobre o Acervo
+              </h2>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-sub)', marginTop: '0.2rem' }}>
+                Pergunte sobre conteúdos das disciplinas do 1º ao 4º semestre. O motor RAG busca nos PDFs, apostilas e TCCs do repositório e cita as fontes utilizadas.
+              </p>
+            </div>
+          </div>
+
+          {/* Sugestões Rápidas para Alunos dos Semestres Iniciais */}
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {[
+              'O que aprendemos em Python no 1º semestre de IA?',
+              'O que significa a sigla ESG e os ODS da ONU no 1º semestre?',
+              'Quais são os 3 escopos de pegada de carbono nos relatórios ESG?',
+              'Como funciona Machine Learning Supervisionado e validação cruzada?',
+            ].map((sample, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => handleAskRAG(sample)}
+                style={{
+                  fontSize: '0.76rem',
+                  padding: '0.4rem 0.75rem',
+                  borderRadius: '999px',
+                  border: '1px solid var(--border-light)',
+                  backgroundColor: '#ffffff',
+                  color: 'var(--text-sub)',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                💡 {sample}
+              </button>
+            ))}
+          </div>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleAskRAG();
+            }}
+            style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}
+          >
+            <input
+              type="text"
+              value={ragQuestion}
+              onChange={(e) => setRagQuestion(e.target.value)}
+              placeholder="Digite sua dúvida acadêmica (ex.: Como calcular pegada de carbono ou configurar Python no 1º semestre?)"
+              className="form-input"
+              style={{ flex: '1 1 280px', backgroundColor: '#ffffff', padding: '0.75rem 1rem', borderRadius: '10px' }}
+            />
+            <button
+              type="submit"
+              disabled={ragLoading || !ragQuestion.trim()}
+              className="btn btn-primary"
+              style={{ padding: '0.75rem 1.4rem', fontWeight: 700, whiteSpace: 'nowrap' }}
+            >
+              {ragLoading ? 'Consultando PDFs...' : 'Perguntar à IA RAG'}
+            </button>
+          </form>
+
+          {ragError && (
+            <div className="alert-box alert-error" style={{ marginTop: '0.25rem' }}>
+              <span>⚠️</span>
+              <div>{ragError}</div>
+            </div>
+          )}
+
+          {ragResult && (
+            <div
+              style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '14px',
+                padding: '1.25rem',
+                border: '1px solid var(--border-light)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.85rem',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent-blue)' }}>
+                  📚 Resposta Fundamentada nos Arquivos do Repositório ({ragResult.sources.length} fontes citadas)
+                </span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  Modo: {ragResult.mode} • {ragResult.latencyMs}ms
+                </span>
+              </div>
+
+              <div style={{ fontSize: '0.9rem', color: 'var(--text-main)', lineHeight: 1.65, whiteSpace: 'pre-line' }}>
+                {ragResult.answer}
+              </div>
+
+              {ragResult.sources.length > 0 && (
+                <div style={{ borderTop: '1px dashed var(--border-light)', paddingTop: '0.75rem' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>
+                    Fontes e PDFs Consultados pelo RAG:
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0.65rem' }}>
+                    {ragResult.sources.map((src) => (
+                      <div
+                        key={src.id}
+                        style={{
+                          padding: '0.65rem 0.85rem',
+                          borderRadius: '10px',
+                          backgroundColor: 'var(--bg-muted)',
+                          border: '1px solid var(--border-light)',
+                          fontSize: '0.78rem',
+                        }}
+                      >
+                        <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{src.title}</div>
+                        <div style={{ color: 'var(--accent-emerald)', fontWeight: 600, marginTop: '0.15rem' }}>
+                          {src.subject} • {src.course} ({src.semester}º Sem)
+                        </div>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', marginTop: '0.2rem', fontFamily: 'monospace' }}>
+                          Arquivo: {src.fileUrl}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Barra de Filtros Multifatoriais (Curso, Semestre, Tipo e Busca) */}
@@ -346,6 +556,7 @@ export default function RepositorioPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.5rem' }}>
             {filteredMaterials.map((mat) => {
               const typeBadge = getTypeBadge(mat.material_type);
+              const dlCount = mat.download_count ?? mat.downloads_count ?? 0;
 
               return (
                 <div
@@ -412,7 +623,7 @@ export default function RepositorioPage() {
                   {/* Rodapé com Download e GitHub */}
                   <div style={{ marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '0.775rem', color: 'var(--text-muted)' }}>
-                      📥 {mat.downloads_count || 0} downloads
+                      📥 {dlCount} downloads
                     </span>
 
                     <div style={{ display: 'flex', gap: '0.5rem' }}>

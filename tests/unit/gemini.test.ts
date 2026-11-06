@@ -1,5 +1,5 @@
 // ====================================================================
-// TESTES UNITÁRIOS DO MÓDULO GOOGLE GEMINI SDK & OCR PIX (VITEST)
+// TESTES UNITÁRIOS DO MÓDULO GOOGLE GEMINI SDK, VISÃO OCR PIX & MOTOR RAG
 // Responsável: Guilherme (DevOps, IA & QA)
 // ====================================================================
 
@@ -8,10 +8,13 @@ import {
   getGeminiConfig,
   testGeminiConnectivity,
   validatePixReceiptWithGemini,
+  analyzePixReceiptPipeline,
   summarizeAcademicMaterial,
+  queryAcademicRAG,
+  buildAcademicKnowledgeCorpus,
 } from '@/lib/gemini';
 
-describe('Módulo de Inteligência Artificial — Google Gemini SDK (src/lib/gemini.ts)', () => {
+describe('Módulo de Inteligência Artificial — Google Gemini SDK, OCR Visão & RAG (src/lib/gemini.ts)', () => {
   it('deve carregar a configuração padrão do modelo Gemini', () => {
     const config = getGeminiConfig();
     expect(config.model).toMatch(/^gemini-/);
@@ -32,6 +35,24 @@ describe('Módulo de Inteligência Artificial — Google Gemini SDK (src/lib/gem
     expect(result.isValidReceipt).toBe(true);
     expect(result.amountMatches).toBe(true);
     expect(result.status).toBe('APROVADO_IA');
+  });
+
+  it('deve processar comprovante multimodal em Base64 no pipeline de Visão Computacional', async () => {
+    const simulatedImagePayload = Buffer.from(
+      'COMPROVANTE DE PAGAMENTO PIX - Recebedor: FATEC RIO CLARO CA - Valor: R$ 8,90 - ID: E00038166202611062000abc12345678',
+      'utf8'
+    ).toString('base64');
+
+    const visionResult = await analyzePixReceiptPipeline({
+      imageBase64: `data:image/png;base64,${simulatedImagePayload}`,
+      expectedAmount: 8.9,
+    });
+
+    expect(visionResult.imageAnalyzed).toBe(true);
+    expect(visionResult.ocrMethod).toBe('GEMINI_VISION_MULTIMODAL');
+    expect(visionResult.extractedAmount).toBe(8.9);
+    expect(visionResult.amountMatches).toBe(true);
+    expect(visionResult.status).toBe('APROVADO_IA');
   });
 
   it('deve sinalizar DIVERGENTE quando o valor do comprovante difere do total da compra', async () => {
@@ -62,5 +83,27 @@ describe('Módulo de Inteligência Artificial — Google Gemini SDK (src/lib/gem
       'ESG'
     );
     expect(esgSummary.summary).toContain('ESG');
+  });
+
+  it('deve responder dúvidas acadêmicas via motor RAG com citação dos PDFs do repositório', async () => {
+    const corpus = buildAcademicKnowledgeCorpus();
+    expect(corpus.length).toBeGreaterThanOrEqual(5);
+
+    const ragIA = await queryAcademicRAG({
+      question: 'O que aprendemos em Python no 1º semestre de IA?',
+      course: 'IA',
+      semester: 1,
+    });
+    expect(ragIA.sources.length).toBeGreaterThan(0);
+    expect(ragIA.sources[0].course).toBe('IA');
+    expect(ragIA.answer.toLowerCase()).toContain('python');
+
+    const ragESG = await queryAcademicRAG({
+      question: 'Como funciona o cálculo de pegada de carbono e relatórios de sustentabilidade ESG?',
+      course: 'ESG',
+    });
+    expect(ragESG.sources.length).toBeGreaterThan(0);
+    expect(ragESG.sources[0].course).toBe('ESG');
+    expect(ragESG.answer.toLowerCase()).toContain('carbono');
   });
 });

@@ -105,8 +105,11 @@ export default function CantinaPage() {
   const [checkoutError, setCheckoutError] = useState('');
   const [copiedKey, setCopiedKey] = useState(false);
 
-  // Estados de Envio de Comprovante Pix
+  // Estados de Envio de Comprovante Pix (OCR & Visão Computacional)
   const [proofText, setProofText] = useState('');
+  const [proofImageBase64, setProofImageBase64] = useState<string | null>(null);
+  const [proofImageName, setProofImageName] = useState<string>('');
+  const [ocrFeedback, setOcrFeedback] = useState<{ status: string; notes: string } | null>(null);
   const [isSubmittingProof, setIsSubmittingProof] = useState(false);
   const [proofSubmitted, setProofSubmitted] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -330,10 +333,23 @@ export default function CantinaPage() {
     setTimeout(() => setCopiedKey(false), 2500);
   };
 
-  // Enviar comprovante Pix
+  // Enviar comprovante Pix (Texto E2E e/ou Imagem para Pipeline de Visão Computacional & OCR Gemini)
+  const handleProofFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setProofImageName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setProofImageBase64(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSendProof = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!checkoutData?.orderId || !proofText.trim()) return;
+    if (!checkoutData?.orderId || (!proofText.trim() && !proofImageBase64)) return;
 
     setIsSubmittingProof(true);
     try {
@@ -342,18 +358,29 @@ export default function CantinaPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           receiptText: proofText,
+          receiptImageBase64: proofImageBase64,
+          proof_image_url: proofImageBase64 || proofText,
           e2eId: proofText.length > 20 ? proofText.slice(0, 32) : undefined,
         }),
       });
 
+      const data = await res.json();
       if (res.ok) {
         setProofSubmitted(true);
+        if (data.ocr) {
+          setOcrFeedback({
+            status: data.ocr.status,
+            notes: data.ocr.analysisNotes || data.message,
+          });
+        }
         // Compra concluída com comprovante: esvazia o carrinho e o localStorage
         setCart([]);
         try {
           localStorage.removeItem('fatec_canteen_cart');
         } catch {}
         fetchProducts();
+      } else {
+        showToast(data.error || 'Erro ao validar comprovante Pix.', 'error');
       }
     } catch (err) {
       console.error('Falha ao enviar comprovante:', err);
@@ -1357,18 +1384,52 @@ export default function CantinaPage() {
                   <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: '1.25rem' }}>
                     {proofSubmitted ? (
                       <div className="alert-box alert-success" style={{ textAlign: 'center', display: 'block' }}>
-                        <div style={{ fontWeight: 700, marginBottom: '0.25rem' }}>✓ Comprovante Enviado com Sucesso!</div>
+                        <div style={{ fontWeight: 700, marginBottom: '0.25rem' }}>
+                          {ocrFeedback?.status === 'APROVADO_IA'
+                            ? '✓ Comprovante Aprovado Automaticamente via IA OCR!'
+                            : '✓ Comprovante Enviado para Conferência!'}
+                        </div>
                         <p style={{ fontSize: '0.825rem' }}>
-                          Sua transação foi registrada no sistema. Você pode acompanhar o status no seu painel de Histórico.
+                          {ocrFeedback?.notes || 'Sua transação foi registrada no sistema. Você pode acompanhar o status no seu painel de Histórico.'}
                         </p>
                       </div>
                     ) : (
                       <form onSubmit={handleSendProof}>
                         <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.4rem', display: 'block' }}>
-                          Já pagou? Cole o comprovante ou código de autenticação bancária (opcional):
+                          Já pagou? Envie o print/foto ou cole o texto/E2E para conferência automática (OCR IA):
                         </label>
+                        <div style={{ marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <label
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.4rem',
+                              padding: '0.45rem 0.85rem',
+                              borderRadius: '8px',
+                              border: '1px dashed var(--accent-blue)',
+                              backgroundColor: 'var(--bg-muted)',
+                              color: 'var(--accent-blue)',
+                              fontSize: '0.78rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            📷 Anexar Print/Foto do Comprovante (Visão IA)
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleProofFileChange}
+                              style={{ display: 'none' }}
+                            />
+                          </label>
+                          {proofImageName && (
+                            <span style={{ fontSize: '0.75rem', color: 'var(--accent-emerald)', fontWeight: 600 }}>
+                              ✓ {proofImageName}
+                            </span>
+                          )}
+                        </div>
                         <textarea
-                          placeholder="Cole o código E2E do comprovante ou o texto copiado do app do seu banco..."
+                          placeholder="Ou cole o código E2E do comprovante / texto copiado do app do seu banco..."
                           value={proofText}
                           onChange={(e) => setProofText(e.target.value)}
                           className="form-input"
@@ -1377,11 +1438,11 @@ export default function CantinaPage() {
                         <div style={{ display: 'flex', gap: '0.75rem' }}>
                           <button
                             type="submit"
-                            disabled={isSubmittingProof || !proofText.trim()}
+                            disabled={isSubmittingProof || (!proofText.trim() && !proofImageBase64)}
                             className="btn btn-emerald"
                             style={{ flex: 1, padding: '0.7rem' }}
                           >
-                            {isSubmittingProof ? 'Enviando...' : 'Confirmar Envio do Comprovante'}
+                            {isSubmittingProof ? 'Validando via OCR IA...' : 'Confirmar e Validar Comprovante (OCR)'}
                           </button>
                           <Link href="/historico" className="btn btn-secondary" style={{ padding: '0.7rem 1rem' }}>
                             Ver Extrato
