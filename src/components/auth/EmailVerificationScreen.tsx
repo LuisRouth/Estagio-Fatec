@@ -32,6 +32,62 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
   const [verifying, setVerifying] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [otpInput, setOtpInput] = useState('');
+  const [otpError, setOtpError] = useState('');
+  const [devCodeHint, setDevCodeHint] = useState<string | null>(null);
+
+  // Solicita disparo do código de verificação ao montar a tela
+  useEffect(() => {
+    async function triggerCode() {
+      try {
+        const res = await fetch('/api/auth/send-verification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, purpose: 'ACCOUNT_ACTIVATION' }),
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.data?.devVerificationCode) {
+            setDevCodeHint(json.data.devVerificationCode);
+          }
+        }
+      } catch {}
+    }
+    if (email) triggerCode();
+  }, [email]);
+
+  const handleVerifyOtpReal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setOtpError('');
+    if (!otpInput || otpInput.trim().length < 6) {
+      setOtpError('Digite o código de 6 dígitos enviado por e-mail.');
+      return;
+    }
+
+    setVerifying(true);
+    try {
+      const res = await fetch('/api/auth/verify-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code: otpInput.trim() }),
+      });
+
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setConfirmed(true);
+        setTimeout(() => {
+          if (onConfirmed) onConfirmed();
+          else router.push('/login');
+        }, 1500);
+      } else {
+        setOtpError(json.error || 'Código incorreto ou expirado.');
+      }
+    } catch {
+      setOtpError('Falha ao validar código com o servidor.');
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   // Contador regressivo para reenvio de e-mail (60 segundos)
   useEffect(() => {
@@ -358,6 +414,67 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
               </div>
             )}
 
+            {/* Formulário de Digitação do Código OTP de 6 dígitos */}
+            <form
+              onSubmit={handleVerifyOtpReal}
+              style={{
+                marginBottom: '1.25rem',
+                padding: '1.25rem',
+                backgroundColor: '#ffffff',
+                borderRadius: '16px',
+                border: '1px solid var(--border-light)',
+                boxShadow: 'var(--shadow-sm)',
+              }}
+            >
+              <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
+                🔑 Digite o Código de Validação de 6 Dígitos
+              </div>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.85rem' }}>
+                Enviado para seu e-mail institucional para confirmar a existência da conta:
+              </p>
+
+              {devCodeHint && (
+                <div style={{ padding: '0.4rem 0.6rem', backgroundColor: '#fef3c7', borderRadius: '6px', fontSize: '0.75rem', color: '#92400e', marginBottom: '0.85rem', fontWeight: 600 }}>
+                  Código gerado no banco: <b>{devCodeHint}</b>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginBottom: '0.5rem' }}>
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={otpInput}
+                  onChange={(e) => setOtpInput(e.target.value)}
+                  placeholder="000000"
+                  style={{
+                    width: '180px',
+                    padding: '0.65rem 1rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-light)',
+                    fontSize: '1.25rem',
+                    fontWeight: 800,
+                    letterSpacing: '0.25em',
+                    textAlign: 'center',
+                    outline: 'none',
+                  }}
+                />
+                <button
+                  type="submit"
+                  disabled={verifying}
+                  className="btn btn-primary"
+                  style={{ padding: '0.65rem 1.25rem', fontWeight: 700, fontSize: '0.875rem' }}
+                >
+                  {verifying ? 'Validando...' : 'Validar Código'}
+                </button>
+              </div>
+
+              {otpError && (
+                <div style={{ color: '#e11d48', fontSize: '0.775rem', fontWeight: 600, marginTop: '0.35rem' }}>
+                  {otpError}
+                </div>
+              )}
+            </form>
+
             {/* Ações: Botão de Simulação (Frontend) + Reenvio + Voltar */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {/* Botão de Simulação da Confirmação (Atende o pedido do usuário para teste visual imediato) */}
@@ -365,17 +482,16 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
                 type="button"
                 onClick={handleSimulateVerification}
                 disabled={verifying}
-                className="btn btn-primary"
+                className="btn btn-secondary"
                 style={{
                   width: '100%',
-                  padding: '0.8rem 1.25rem',
-                  fontSize: '0.95rem',
-                  fontWeight: 700,
+                  padding: '0.75rem 1.25rem',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
                   borderRadius: '10px',
-                  boxShadow: '0 4px 12px rgba(2, 132, 199, 0.25)',
                 }}
               >
-                {verifying ? 'Validando token de e-mail...' : '✓ Simular Confirmação do E-mail (Testar Frontend)'}
+                {verifying ? 'Validando token de e-mail...' : '✓ Validar com 1 Clique (Link Direto)'}
               </button>
 
               <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>

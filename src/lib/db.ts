@@ -24,6 +24,10 @@ import {
   CanteenFinancialAnalytics,
   ProductSalesRankingItem,
   AuditAnalyticsReport,
+  UserPreferences,
+  UserSecurityAudit,
+  EmailVerificationRecord,
+  UserNotificationItem,
 } from './types';
 import bcrypt from 'bcryptjs';
 
@@ -885,8 +889,130 @@ export const db = {
       if (isMock || !pool) {
         return mockUsers.map(({ password_hash: _, ...safe }) => safe);
       }
-      const res = await pool.query('SELECT id, name, email, ra, role, course, semester, is_active, created_at, updated_at FROM users');
+      const res = await pool.query('SELECT id, name, email, recovery_email, is_email_verified, ra, role, course, semester, is_active, created_at, updated_at FROM users');
       return res.rows;
+    },
+
+    updateProfile: async (
+      userId: string,
+      updates: { name?: string; course?: CourseType; semester?: number; primaryEmail?: string; recoveryEmail?: string | null },
+      changedBy?: string,
+      clientInfo?: { ip?: string; userAgent?: string }
+    ): Promise<SafeUser | null> => {
+      const user = await db.users.findById(userId);
+      if (!user) return null;
+
+      const auditEntries: Array<{ field: string; oldVal: string; newVal: string }> = [];
+
+      if (updates.name && updates.name !== user.name) {
+        auditEntries.push({ field: 'name', oldVal: user.name, newVal: updates.name });
+      }
+      if (updates.course && updates.course !== user.course) {
+        auditEntries.push({ field: 'course', oldVal: user.course, newVal: updates.course });
+      }
+      if (updates.semester && updates.semester !== user.semester) {
+        auditEntries.push({ field: 'semester', oldVal: String(user.semester), newVal: String(updates.semester) });
+      }
+      if (updates.primaryEmail && updates.primaryEmail.toLowerCase().trim() !== user.email.toLowerCase().trim()) {
+        const clean = updates.primaryEmail.toLowerCase().trim();
+        if (!clean.endsWith('@aluno.cps.sp.gov.br') && !clean.endsWith('@fatec.sp.gov.br')) {
+          throw new Error('E-mail institucional obrigatório (@aluno.cps.sp.gov.br ou @fatec.sp.gov.br)');
+        }
+        auditEntries.push({ field: 'email', oldVal: user.email, newVal: clean });
+      }
+      if (updates.recoveryEmail !== undefined && updates.recoveryEmail !== user.recovery_email) {
+        auditEntries.push({
+          field: 'recovery_email',
+          oldVal: user.recovery_email || '(vazio)',
+          newVal: updates.recoveryEmail || '(removido)',
+        });
+      }
+
+      const now = new Date().toISOString();
+      const updatedUser: User = {
+        ...user,
+        name: updates.name || user.name,
+        course: updates.course || user.course,
+        semester: updates.semester || user.semester,
+        email: updates.primaryEmail ? updates.primaryEmail.toLowerCase().trim() : user.email,
+        recovery_email: updates.recoveryEmail !== undefined ? updates.recoveryEmail : user.recovery_email,
+        updated_at: now,
+      };
+
+      if (isMock || !pool) {
+        const idx = mockUsers.findIndex((u) => u.id === userId);
+        if (idx !== -1) mockUsers[idx] = updatedUser;
+      } else {
+        await pool.query(
+          `UPDATE users 
+           SET name = $1, course = $2, semester = $3, email = $4, recovery_email = $5, updated_at = NOW() 
+           WHERE id = $6`,
+          [updatedUser.name, updatedUser.course, updatedUser.semester, updatedUser.email, updatedUser.recovery_email, userId]
+        );
+      }
+
+      // Registrar auditoria para cada campo alterado
+      for (const entry of auditEntries) {
+        await db.securityAudit.log({
+          userId,
+          changedBy: changedBy || userId,
+          action: entry.field === 'email' ? 'PRIMARY_EMAIL_CHANGE' : entry.field === 'recovery_email' ? 'RECOVERY_EMAIL_CHANGE' : 'PROFILE_UPDATE',
+          fieldName: entry.field,
+          oldValueMasked: entry.oldVal,
+          newValueMasked: entry.newVal,
+          ipAddress: clientInfo?.ip,
+          userAgent: clientInfo?.userAgent,
+        });
+      }
+
+      const { password_hash: _, ...safe } = updatedUser;
+      return safe;
+    },
+
+    changePassword: async (
+      userId: string,
+      newPasswordHash: string,
+      changedBy?: string,
+      clientInfo?: { ip?: string; userAgent?: string }
+    ): Promise<boolean> => {
+      const user = await db.users.findById(userId);
+      if (!user) return false;
+
+      if (isMock || !pool) {
+        const idx = mockUsers.findIndex((u) => u.id === userId);
+        if (idx !== -1) {
+          mockUsers[idx].password_hash = newPasswordHash;
+          mockUsers[idx].updated_at = new Date().toISOString();
+        }
+      } else {
+        await pool.query('UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2', [newPasswordHash, userId]);
+      }
+
+      await db.securityAudit.log({
+        userId,
+        changedBy: changedBy || userId,
+        action: 'PASSWORD_CHANGE',
+        fieldName: 'password_hash',
+        oldValueMasked: '********',
+        newValueMasked: '******** (atualizada com sucesso)',
+        ipAddress: clientInfo?.ip,
+        userAgent: clientInfo?.userAgent,
+      });
+
+      return true;
+    },
+
+    markEmailVerified: async (userId: string): Promise<boolean> => {
+      if (isMock || !pool) {
+        const idx = mockUsers.findIndex((u) => u.id === userId);
+        if (idx !== -1) {
+          mockUsers[idx].is_email_verified = true;
+          mockUsers[idx].email_verified_at = new Date().toISOString();
+        }
+        return true;
+      }
+      await pool.query('UPDATE users SET is_email_verified = TRUE, email_verified_at = NOW(), updated_at = NOW() WHERE id = $1', [userId]);
+      return true;
     },
   },
 
@@ -2193,6 +2319,305 @@ export const db = {
       });
 
       return [header.join(','), ...rows].join('\r\n');
+    },
+  },
+
+  // ------------------------------------------------------------------
+  // 6. PREFERÊNCIAS DE ACESSIBILIDADE & INTERFACE (PERSISTÊNCIA POR USUÁRIO)
+  // ------------------------------------------------------------------
+  preferences: {
+    get: async (userId: string): Promise<UserPreferences> => {
+      const defaultPrefs: UserPreferences = {
+        userId,
+        highContrast: false,
+        fontSize: 'normal',
+        reduceMotion: false,
+        feedFilter: 'my_course',
+      };
+
+      if (isMock || !pool) {
+        return defaultPrefs;
+      }
+
+      const res = await pool.query('SELECT * FROM user_preferences WHERE user_id = $1 LIMIT 1', [userId]);
+      if (res.rows.length === 0) {
+        return defaultPrefs;
+      }
+      const row = res.rows[0];
+      return {
+        userId: row.user_id,
+        highContrast: Boolean(row.high_contrast),
+        fontSize: row.font_size || 'normal',
+        reduceMotion: Boolean(row.reduce_motion),
+        feedFilter: row.feed_filter || 'my_course',
+        updatedAt: row.updated_at,
+      };
+    },
+
+    upsert: async (userId: string, prefs: Partial<UserPreferences>): Promise<UserPreferences> => {
+      const current = await db.preferences.get(userId);
+      const merged: UserPreferences = {
+        userId,
+        highContrast: prefs.highContrast !== undefined ? prefs.highContrast : current.highContrast,
+        fontSize: prefs.fontSize || current.fontSize,
+        reduceMotion: prefs.reduceMotion !== undefined ? prefs.reduceMotion : current.reduceMotion,
+        feedFilter: prefs.feedFilter || current.feedFilter,
+      };
+
+      if (isMock || !pool) {
+        return merged;
+      }
+
+      await pool.query(
+        `INSERT INTO user_preferences (user_id, high_contrast, font_size, reduce_motion, feed_filter, updated_at)
+         VALUES ($1, $2, $3, $4, $5, NOW())
+         ON CONFLICT (user_id) 
+         DO UPDATE SET 
+           high_contrast = EXCLUDED.high_contrast,
+           font_size = EXCLUDED.font_size,
+           reduce_motion = EXCLUDED.reduce_motion,
+           feed_filter = EXCLUDED.feed_filter,
+           updated_at = NOW()`,
+        [userId, merged.highContrast, merged.fontSize, merged.reduceMotion, merged.feedFilter]
+      );
+
+      return merged;
+    },
+  },
+
+  // ------------------------------------------------------------------
+  // 7. VERIFICAÇÃO DE E-MAILS (CÓDIGO OTP & LINK DE VALIDAÇÃO)
+  // ------------------------------------------------------------------
+  verifications: {
+    create: async (
+      userId: string,
+      email: string,
+      purpose: 'ACCOUNT_ACTIVATION' | 'EMAIL_CHANGE' = 'ACCOUNT_ACTIVATION'
+    ): Promise<EmailVerificationRecord> => {
+      // Gera código de 6 dígitos numéricos aleatório
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const token = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '') : `token-${Date.now()}`;
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 minutos
+      const now = new Date().toISOString();
+
+      const record: EmailVerificationRecord = {
+        id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `verif-${Date.now()}`,
+        userId,
+        email: email.toLowerCase().trim(),
+        verificationCode,
+        token,
+        purpose,
+        expiresAt,
+        createdAt: now,
+      };
+
+      if (isMock || !pool) {
+        return record;
+      }
+
+      const res = await pool.query(
+        `INSERT INTO email_verifications (user_id, email, verification_code, token, purpose, expires_at)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+        [userId, record.email, verificationCode, token, purpose, expiresAt]
+      );
+      const row = res.rows[0];
+      return {
+        id: row.id,
+        userId: row.user_id,
+        email: row.email,
+        verificationCode: row.verification_code,
+        token: row.token,
+        purpose: row.purpose,
+        expiresAt: row.expires_at,
+        verifiedAt: row.verified_at,
+        createdAt: row.created_at,
+      };
+    },
+
+    verify: async (email: string, code: string): Promise<{ valid: boolean; userId?: string; error?: string }> => {
+      const cleanEmail = email.toLowerCase().trim();
+      const cleanCode = code.trim();
+
+      if (isMock || !pool) {
+        return { valid: true, userId: 'mock-user' };
+      }
+
+      const res = await pool.query(
+        `SELECT * FROM email_verifications 
+         WHERE LOWER(email) = $1 AND verification_code = $2 AND verified_at IS NULL AND expires_at > NOW()
+         ORDER BY created_at DESC LIMIT 1`,
+        [cleanEmail, cleanCode]
+      );
+
+      if (res.rows.length === 0) {
+        return { valid: false, error: 'Código inválido ou expirado. Solicite um novo envio.' };
+      }
+
+      const verif = res.rows[0];
+      await pool.query('UPDATE email_verifications SET verified_at = NOW() WHERE id = $1', [verif.id]);
+      await pool.query('UPDATE users SET is_email_verified = TRUE, email_verified_at = NOW(), updated_at = NOW() WHERE id = $1', [verif.user_id]);
+
+      // Registrar auditoria
+      await db.securityAudit.log({
+        userId: verif.user_id,
+        changedBy: verif.user_id,
+        action: 'PRIMARY_EMAIL_CHANGE',
+        fieldName: 'is_email_verified',
+        oldValueMasked: 'Pendente',
+        newValueMasked: 'Verificado com sucesso via OTP',
+      });
+
+      return { valid: true, userId: verif.user_id };
+    },
+  },
+
+  // ------------------------------------------------------------------
+  // 8. TRILHA DE AUDITORIA DE SEGURANÇA E ALTERAÇÕES DE PERFIL
+  // ------------------------------------------------------------------
+  securityAudit: {
+    log: async (entry: {
+      userId: string;
+      changedBy?: string | null;
+      action: 'PASSWORD_CHANGE' | 'PRIMARY_EMAIL_CHANGE' | 'RECOVERY_EMAIL_CHANGE' | 'PROFILE_UPDATE';
+      fieldName: string;
+      oldValueMasked?: string | null;
+      newValueMasked?: string | null;
+      ipAddress?: string | null;
+      userAgent?: string | null;
+    }): Promise<void> => {
+      if (isMock || !pool) {
+        return;
+      }
+      try {
+        await pool.query(
+          `INSERT INTO user_security_audit (user_id, changed_by, action, field_name, old_value_masked, new_value_masked, ip_address, user_agent)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [
+            entry.userId,
+            entry.changedBy || entry.userId,
+            entry.action,
+            entry.fieldName,
+            entry.oldValueMasked || null,
+            entry.newValueMasked || null,
+            entry.ipAddress || null,
+            entry.userAgent || null,
+          ]
+        );
+      } catch (err) {
+        console.error('Falha ao gravar user_security_audit:', err);
+      }
+    },
+
+    listByUser: async (userId: string, limit = 20): Promise<UserSecurityAudit[]> => {
+      if (isMock || !pool) {
+        return [];
+      }
+      const res = await pool.query(
+        `SELECT a.*, u.name as changed_by_name 
+         FROM user_security_audit a
+         LEFT JOIN users u ON u.id = a.changed_by
+         WHERE a.user_id = $1 
+         ORDER BY a.created_at DESC 
+         LIMIT $2`,
+        [userId, limit]
+      );
+      return res.rows.map((r: any) => ({
+        id: r.id,
+        userId: r.user_id,
+        changedBy: r.changed_by,
+        changedByName: r.changed_by_name || 'Próprio Usuário',
+        action: r.action,
+        fieldName: r.field_name,
+        oldValueMasked: r.old_value_masked,
+        newValueMasked: r.new_value_masked,
+        ipAddress: r.ip_address,
+        userAgent: r.user_agent,
+        createdAt: r.created_at,
+      }));
+    },
+  },
+
+  // ------------------------------------------------------------------
+  // 9. COMUNICADOS E NOTIFICAÇÕES SEGMENTADAS (CURSO E SEMESTRE)
+  // ------------------------------------------------------------------
+  notifications: {
+    getFeedForUser: async (
+      userId: string,
+      course: CourseType,
+      semester: number
+    ): Promise<UserNotificationItem[]> => {
+      if (isMock || !pool) {
+        // Mock fallback
+        return mockAnnouncements
+          .filter((a) => {
+            const courseMatch = !a.target_course || a.target_course === course;
+            return courseMatch;
+          })
+          .map((a) => ({
+            id: `notif-${a.id}`,
+            userId,
+            announcementId: a.id,
+            title: a.title,
+            content: a.content,
+            priority: a.priority,
+            targetCourse: a.target_course,
+            targetSemester: null,
+            isRead: false,
+            createdAt: a.created_at,
+          }));
+      }
+
+      // Query segmentada inteligente:
+      // 1. Comunicados gerais (target_course IS NULL e target_semester IS NULL)
+      // 2. Comunicados para todo o curso (target_course = $2 e target_semester IS NULL)
+      // 3. Comunicados específicos para a turma daquele curso e semestre (target_course = $2 e target_semester = $3)
+      const res = await pool.query(
+        `SELECT 
+           a.id as announcement_id,
+           a.title,
+           a.content,
+           a.priority,
+           a.target_course,
+           a.target_semester,
+           a.created_at,
+           COALESCE(un.is_read, FALSE) as is_read,
+           un.read_at,
+           COALESCE(un.id::text, a.id::text) as id
+         FROM announcements a
+         LEFT JOIN user_notifications un ON un.announcement_id = a.id AND un.user_id = $1
+         WHERE 
+           (a.target_course IS NULL AND a.target_semester IS NULL)
+           OR (a.target_course = $2 AND a.target_semester IS NULL)
+           OR (a.target_course = $2 AND a.target_semester = $3)
+         ORDER BY a.is_pinned DESC, a.created_at DESC`,
+        [userId, course, semester]
+      );
+
+      return res.rows.map((r: any) => ({
+        id: r.id,
+        userId,
+        announcementId: r.announcement_id,
+        title: r.title,
+        content: r.content,
+        priority: r.priority,
+        targetCourse: r.target_course,
+        targetSemester: r.target_semester,
+        isRead: Boolean(r.is_read),
+        readAt: r.read_at,
+        createdAt: r.created_at,
+      }));
+    },
+
+    markAsRead: async (userId: string, announcementId: string): Promise<void> => {
+      if (isMock || !pool) return;
+
+      await pool.query(
+        `INSERT INTO user_notifications (user_id, announcement_id, is_read, read_at, created_at)
+         VALUES ($1, $2, TRUE, NOW(), NOW())
+         ON CONFLICT (user_id, announcement_id)
+         DO UPDATE SET is_read = TRUE, read_at = NOW()`,
+        [userId, announcementId]
+      );
     },
   },
 };

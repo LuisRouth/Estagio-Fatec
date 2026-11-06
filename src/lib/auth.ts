@@ -95,6 +95,22 @@ export async function getCurrentSession(): Promise<JWTPayload | null> {
 }
 
 /**
+ * Retorna o usuário autenticado na sessão ativa com id compatível
+ */
+export async function getSessionUser() {
+  const session = await getCurrentSession();
+  if (!session) return null;
+  return {
+    id: session.sub,
+    name: session.name,
+    email: session.email,
+    role: session.role,
+    course: session.course,
+    semester: session.semester,
+  };
+}
+
+/**
  * Sanitiza o usuário removendo o hash de senha antes do retorno à API
  */
 export function sanitizeUser(user: User): SafeUser {

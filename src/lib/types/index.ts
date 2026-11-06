@@ -15,12 +15,15 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  recovery_email?: string | null;
   ra?: string | null;
   password_hash: string;
   role: UserRole;
   course: CourseType;
   semester: number;
   is_active: boolean;
+  is_email_verified?: boolean;
+  email_verified_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -248,4 +251,57 @@ export interface PixReceiptOCRResult {
   paymentDate?: string | null;
   status: 'APROVADO_IA' | 'DIVERGENTE' | 'REQUER_REVISAO_CA';
   analysisNotes: string;
+}
+
+// ====================================================================
+// PERFIL, SEGURANÇA, ACESSIBILIDADE E NOTIFICAÇÕES SEGMENTADAS
+// ====================================================================
+
+export interface UserPreferences {
+  userId: string;
+  highContrast: boolean;
+  fontSize: 'normal' | 'comfort' | 'large';
+  reduceMotion: boolean;
+  feedFilter: 'my_course' | 'all';
+  updatedAt?: string;
+}
+
+export interface UserSecurityAudit {
+  id: string;
+  userId: string;
+  changedBy?: string | null;
+  changedByName?: string | null;
+  action: 'PASSWORD_CHANGE' | 'PRIMARY_EMAIL_CHANGE' | 'RECOVERY_EMAIL_CHANGE' | 'PROFILE_UPDATE';
+  fieldName: string;
+  oldValueMasked?: string | null;
+  newValueMasked?: string | null;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  createdAt: string;
+}
+
+export interface EmailVerificationRecord {
+  id: string;
+  userId: string;
+  email: string;
+  verificationCode: string;
+  token: string;
+  purpose: 'ACCOUNT_ACTIVATION' | 'EMAIL_CHANGE';
+  expiresAt: string;
+  verifiedAt?: string | null;
+  createdAt: string;
+}
+
+export interface UserNotificationItem {
+  id: string;
+  userId: string;
+  announcementId: string;
+  title: string;
+  content: string;
+  priority: AnnouncementPriority;
+  targetCourse?: CourseType | null;
+  targetSemester?: number | null;
+  isRead: boolean;
+  readAt?: string | null;
+  createdAt: string;
 }

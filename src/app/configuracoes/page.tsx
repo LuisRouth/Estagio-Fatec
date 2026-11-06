@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
+import { UserSecurityAudit } from '@/lib/types';
 
 interface StudentConfig {
   name: string;
@@ -10,6 +11,7 @@ interface StudentConfig {
   semester: number;
   primaryEmail: string;
   recoveryEmail: string;
+  isEmailVerified: boolean;
   highContrast: boolean;
   fontSize: 'normal' | 'comfort' | 'large';
   reduceMotion: boolean;
@@ -17,12 +19,13 @@ interface StudentConfig {
 }
 
 const DEFAULT_CONFIG: StudentConfig = {
-  name: 'Luis Otavio',
-  ra: '2840002',
+  name: 'Estudante FATEC',
+  ra: '20241001001',
   course: 'IA',
   semester: 4,
-  primaryEmail: 'luis.dev@aluno.cps.sp.gov.br',
-  recoveryEmail: 'luis.pessoal@gmail.com',
+  primaryEmail: 'estudante@aluno.cps.sp.gov.br',
+  recoveryEmail: '',
+  isEmailVerified: false,
   highContrast: false,
   fontSize: 'normal',
   reduceMotion: false,
@@ -30,98 +33,305 @@ const DEFAULT_CONFIG: StudentConfig = {
 };
 
 export default function ConfiguracoesPage() {
-  const [activeTab, setActiveTab] = useState<'perfil' | 'seguranca' | 'acessibilidade'>('perfil');
+  const [activeTab, setActiveTab] = useState<'perfil' | 'seguranca' | 'acessibilidade' | 'historico'>('perfil');
   const [config, setConfig] = useState<StudentConfig>(DEFAULT_CONFIG);
+  const [loading, setLoading] = useState(true);
 
+  // Estados de Senha
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+
+  // Estados de Verificação de E-mail
+  const [otpCode, setOtpCode] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState('');
+  const [otpDevHint, setOtpDevHint] = useState<string | null>(null);
+
+  // Estados de Auditoria de Segurança
+  const [securityLogs, setSecurityLogs] = useState<UserSecurityAudit[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
-  // Carrega configurações persistidas e sincroniza eventos de contraste
-  useEffect(() => {
-    try {
-      const contrast = localStorage.getItem('fatec_high_contrast') === 'true';
-      const saved = localStorage.getItem('fatec_student_config');
-      if (saved) {
-        setConfig((prev) => ({ ...prev, ...JSON.parse(saved), highContrast: contrast }));
-      } else {
-        setConfig((prev) => ({ ...prev, highContrast: contrast }));
-      }
-    } catch {}
-
-    const handleContrastChange = () => {
-      try {
-        const saved = localStorage.getItem('fatec_high_contrast') === 'true';
-        setConfig((prev) => ({ ...prev, highContrast: saved }));
-      } catch {}
-    };
-    window.addEventListener('fatec_contrast_changed', handleContrastChange);
-    return () => {
-      window.removeEventListener('fatec_contrast_changed', handleContrastChange);
-    };
-  }, []);
-
-  const showToast = (msg: string) => {
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToastMessage(msg);
+    setToastType(type);
     setTimeout(() => {
       setToastMessage(null);
-    }, 3500);
+    }, 4000);
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
-    e.preventDefault();
-    localStorage.setItem('fatec_student_config', JSON.stringify(config));
-    showToast('✓ Dados acadêmicos atualizados com sucesso no dispositivo!');
-  };
-
-  const handleSaveSecurity = (e: React.FormEvent) => {
-    e.preventDefault();
-    setPasswordError('');
-
-    if (newPassword || confirmPassword) {
-      if (newPassword.length < 6) {
-        setPasswordError('A nova senha deve possuir pelo menos 6 caracteres.');
-        return;
-      }
-      if (newPassword !== confirmPassword) {
-        setPasswordError('A confirmação não coincide com a nova senha digitada.');
-        return;
+  // Carrega configurações do Banco de Dados / Sessão
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setLoading(true);
+        const res = await fetch('/api/user/profile');
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && json.data) {
+            const u = json.data.user;
+            const p = json.data.preferences || {};
+            const loadedConfig: StudentConfig = {
+              name: u.name || DEFAULT_CONFIG.name,
+              ra: u.ra || DEFAULT_CONFIG.ra,
+              course: u.course || DEFAULT_CONFIG.course,
+              semester: u.semester || DEFAULT_CONFIG.semester,
+              primaryEmail: u.email || DEFAULT_CONFIG.primaryEmail,
+              recoveryEmail: u.recoveryEmail || '',
+              isEmailVerified: Boolean(u.isEmailVerified),
+              highContrast: p.highContrast ?? false,
+              fontSize: p.fontSize || 'normal',
+              reduceMotion: p.reduceMotion ?? false,
+              feedFilter: p.feedFilter || 'my_course',
+            };
+            setConfig(loadedConfig);
+            applyAccessibilityDOM(loadedConfig.highContrast, loadedConfig.fontSize);
+          }
+        } else {
+          // Fallback para cache local caso sessão esteja mock
+          const saved = localStorage.getItem('fatec_student_config');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            setConfig((prev) => ({ ...prev, ...parsed }));
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao carregar dados do usuário:', err);
+      } finally {
+        setLoading(false);
       }
     }
 
-    localStorage.setItem('fatec_student_config', JSON.stringify(config));
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
-    showToast('✓ E-mails e credenciais de segurança atualizados com sucesso!');
+    loadData();
+    loadSecurityAudit();
+  }, []);
+
+  const loadSecurityAudit = async () => {
+    try {
+      const res = await fetch('/api/user/security-audit');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          setSecurityLogs(json.data);
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao buscar auditoria de segurança:', err);
+    }
+  };
+
+  const applyAccessibilityDOM = (contrast: boolean, size: string) => {
+    if (typeof document === 'undefined') return;
+    if (contrast) {
+      document.documentElement.classList.add('dark-high-contrast');
+      document.body.classList.add('dark-high-contrast');
+      document.documentElement.style.backgroundColor = '#0b1120';
+    } else {
+      document.documentElement.classList.remove('dark-high-contrast');
+      document.body.classList.remove('dark-high-contrast');
+      document.documentElement.style.backgroundColor = '#f8fafc';
+    }
+
+    localStorage.setItem('fatec_high_contrast', String(contrast));
+    window.dispatchEvent(new Event('fatec_contrast_changed'));
+  };
+
+  // 1. Salvar Dados Acadêmicos (Perfil)
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/user/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: config.name,
+          course: config.course,
+          semester: Number(config.semester),
+        }),
+      });
+
+      const json = await res.json();
+      if (res.ok && json.success) {
+        showToast('✓ Dados acadêmicos atualizados no banco de dados e auditados!');
+        loadSecurityAudit();
+      } else {
+        showToast(json.error || 'Erro ao salvar dados acadêmicos.', 'error');
+      }
+    } catch (err) {
+      localStorage.setItem('fatec_student_config', JSON.stringify(config));
+      showToast('✓ Dados acadêmicos atualizados localmente no dispositivo!');
+    }
+  };
+
+  // 2. Salvar E-mails (Institucional & Recuperação)
+  const handleSaveEmails = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanPrimary = config.primaryEmail.toLowerCase().trim();
+    const isDomainValid =
+      cleanPrimary.endsWith('@aluno.cps.sp.gov.br') || cleanPrimary.endsWith('@fatec.sp.gov.br');
+
+    if (!isDomainValid) {
+      showToast('O e-mail institucional principal DEVE ter extensão @aluno.cps.sp.gov.br ou @fatec.sp.gov.br.', 'error');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/user/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          primaryEmail: cleanPrimary,
+          recoveryEmail: config.recoveryEmail ? config.recoveryEmail.trim() : null,
+        }),
+      });
+
+      const json = await res.json();
+      if (res.ok && json.success) {
+        showToast('✓ E-mails atualizados no banco e registrados na trilha de auditoria!');
+        loadSecurityAudit();
+      } else {
+        showToast(json.error || 'Erro ao salvar e-mails.', 'error');
+      }
+    } catch {
+      localStorage.setItem('fatec_student_config', JSON.stringify(config));
+      showToast('✓ E-mails atualizados no dispositivo!');
+    }
+  };
+
+  // 3. Enviar Código de Verificação OTP para o E-mail
+  const handleSendVerificationCode = async () => {
+    setOtpLoading(true);
+    setOtpError('');
+    setOtpDevHint(null);
+
+    try {
+      const res = await fetch('/api/auth/send-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: config.primaryEmail, purpose: 'EMAIL_CHANGE' }),
+      });
+
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setOtpSent(true);
+        if (json.data?.devVerificationCode) {
+          setOtpDevHint(json.data.devVerificationCode);
+        }
+        showToast(`✓ Código de verificação despachado para ${config.primaryEmail}`);
+      } else {
+        setOtpError(json.error || 'Não foi possível despachar o código.');
+      }
+    } catch (err: any) {
+      setOtpError('Falha de rede ao solicitar código.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  // 4. Validar Código OTP
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpCode || otpCode.length < 6) {
+      setOtpError('Digite o código numérico de 6 dígitos.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/auth/verify-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: config.primaryEmail, code: otpCode.trim() }),
+      });
+
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setConfig((prev) => ({ ...prev, isEmailVerified: true }));
+        setOtpSent(false);
+        setOtpCode('');
+        setOtpDevHint(null);
+        showToast('✓ E-mail institucional validado com sucesso!');
+        loadSecurityAudit();
+      } else {
+        setOtpError(json.error || 'Código inválido ou expirado.');
+      }
+    } catch {
+      setOtpError('Erro ao validar código.');
+    }
+  };
+
+  // 5. Alteração de Senha Segura
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError('Preencha todos os campos de senha.');
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setPasswordError('A nova senha deve possuir pelo menos 8 caracteres.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('A confirmação não coincide com a nova senha digitada.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/user/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword, confirmPassword }),
+      });
+
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setPasswordSuccess('✓ Senha alterada com sucesso! Histórico registrado.');
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        loadSecurityAudit();
+      } else {
+        setPasswordError(json.error || 'Falha ao redefinir senha.');
+      }
+    } catch {
+      setPasswordError('Erro de conexão com o servidor de autenticação.');
+    }
+  };
+
+  // 6. Salvar Preferências de Acessibilidade & Interface no Banco
+  const handleSaveAccessibility = async (updates: Partial<StudentConfig>) => {
+    const nextConfig = { ...config, ...updates };
+    setConfig(nextConfig);
+    applyAccessibilityDOM(nextConfig.highContrast, nextConfig.fontSize);
+
+    try {
+      await fetch('/api/user/preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          highContrast: nextConfig.highContrast,
+          fontSize: nextConfig.fontSize,
+          reduceMotion: nextConfig.reduceMotion,
+          feedFilter: nextConfig.feedFilter,
+        }),
+      });
+      showToast('✓ Preferências salvas no banco de dados da sua conta!');
+    } catch {
+      localStorage.setItem('fatec_student_config', JSON.stringify(nextConfig));
+      showToast('✓ Preferências salvas no navegador!');
+    }
   };
 
   const isDark = config.highContrast;
 
-  const handleSaveAccessibility = (newConfig?: StudentConfig) => {
-    const cfg = newConfig || config;
-    try {
-      localStorage.setItem('fatec_student_config', JSON.stringify(cfg));
-      localStorage.setItem('fatec_high_contrast', String(cfg.highContrast));
-      if (typeof document !== 'undefined') {
-        if (cfg.highContrast) {
-          document.documentElement.classList.add('dark-high-contrast');
-          document.body.classList.add('dark-high-contrast');
-          document.documentElement.style.backgroundColor = '#0b1120';
-        } else {
-          document.documentElement.classList.remove('dark-high-contrast');
-          document.body.classList.remove('dark-high-contrast');
-          document.documentElement.style.backgroundColor = '#f8fafc';
-        }
-      }
-      setTimeout(() => { window.dispatchEvent(new Event('fatec_contrast_changed')); }, 0);
-    } catch {}
-    showToast('✓ Preferências de acessibilidade e interface salvas!');
-  };
-
-  // Cálculo visual de força de senha
   const getPasswordStrength = () => {
     if (!newPassword) return null;
     if (newPassword.length < 6) return { label: 'Fraca', color: '#e11d48', width: '33%' };
@@ -133,7 +343,7 @@ export default function ConfiguracoesPage() {
 
   return (
     <AppLayout activePath="/configuracoes">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', maxWidth: '960px', margin: '0 auto', width: '100%' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', maxWidth: '980px', margin: '0 auto', width: '100%' }}>
         
         {/* Cabeçalho da Página */}
         <div
@@ -154,12 +364,21 @@ export default function ConfiguracoesPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem' }}>
               <span className="badge badge-blue">Área do Discente</span>
               <span className="badge badge-emerald">FATEC Rio Claro</span>
+              {config.isEmailVerified ? (
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '20px', backgroundColor: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0' }}>
+                  ✓ E-mail Institucional Verificado
+                </span>
+              ) : (
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '20px', backgroundColor: '#fffbeb', color: '#d97706', border: '1px solid #fde68a' }}>
+                  ⏳ Verificação Pendente
+                </span>
+              )}
             </div>
             <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: isDark ? '#f8fafc' : 'var(--text-main)', letterSpacing: '-0.02em' }}>
-              Perfil & Configurações
+              Perfil & Configurações da Conta
             </h1>
             <p style={{ color: isDark ? '#94a3b8' : 'var(--text-sub)', fontSize: '0.925rem', marginTop: '0.25rem' }}>
-              Gerencie sua jornada acadêmica, credenciais de e-mail e preferências de acessibilidade do portal.
+              Gerencie sua identidade acadêmica, e-mails de segurança, preferências persistidas de interface e trilha de auditoria.
             </p>
           </div>
 
@@ -176,8 +395,8 @@ export default function ConfiguracoesPage() {
           >
             <div
               style={{
-                width: '38px',
-                height: '38px',
+                width: '40px',
+                height: '40px',
                 borderRadius: '50%',
                 backgroundColor: isDark ? 'rgba(2, 132, 199, 0.25)' : 'var(--accent-blue-light)',
                 color: isDark ? '#38bdf8' : 'var(--accent-blue)',
@@ -185,25 +404,25 @@ export default function ConfiguracoesPage() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontWeight: 800,
-                fontSize: '1rem',
+                fontSize: '1.1rem',
               }}
             >
               {config.name.charAt(0)}
             </div>
             <div>
-              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: isDark ? '#f8fafc' : 'var(--text-main)' }}>{config.name}</div>
+              <div style={{ fontSize: '0.875rem', fontWeight: 700, color: isDark ? '#f8fafc' : 'var(--text-main)' }}>{config.name}</div>
               <div style={{ fontSize: '0.75rem', color: isDark ? '#94a3b8' : 'var(--text-muted)' }}>RA: {config.ra} • {config.course} ({config.semester}º Sem)</div>
             </div>
           </div>
         </div>
 
-        {/* Toast Notificação de Sucesso */}
+        {/* Toast Notificação */}
         {toastMessage && (
           <div
             style={{
-              backgroundColor: '#ecfdf5',
-              border: '1px solid #a7f3d0',
-              color: '#065f46',
+              backgroundColor: toastType === 'success' ? '#ecfdf5' : '#fff1f2',
+              border: `1px solid ${toastType === 'success' ? '#a7f3d0' : '#fecdd3'}`,
+              color: toastType === 'success' ? '#065f46' : '#9f1239',
               borderRadius: '10px',
               padding: '0.85rem 1.25rem',
               fontSize: '0.875rem',
@@ -212,13 +431,12 @@ export default function ConfiguracoesPage() {
               alignItems: 'center',
               justifyContent: 'space-between',
               boxShadow: 'var(--shadow-sm)',
-              animation: 'fadeIn 0.2s ease',
             }}
           >
             <span>{toastMessage}</span>
             <button
               onClick={() => setToastMessage(null)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#065f46', fontWeight: 700 }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontWeight: 700 }}
             >
               ✕
             </button>
@@ -230,91 +448,44 @@ export default function ConfiguracoesPage() {
           style={{
             display: 'flex',
             gap: '0.5rem',
-            borderBottom: '2px solid var(--border-light)',
+            borderBottom: isDark ? '2px solid #2b3a4f' : '2px solid var(--border-light)',
             paddingBottom: '0.25rem',
             flexWrap: 'wrap',
           }}
         >
-          <button
-            type="button"
-            onClick={() => setActiveTab('perfil')}
-            style={{
-              padding: '0.75rem 1.25rem',
-              borderRadius: '8px 8px 0 0',
-              fontWeight: 700,
-              fontSize: '0.925rem',
-              border: 'none',
-              cursor: 'pointer',
-              backgroundColor: activeTab === 'perfil' ? (isDark ? '#243044' : '#ffffff') : 'transparent',
-              color: activeTab === 'perfil' ? (isDark ? '#38bdf8' : 'var(--accent-blue)') : (isDark ? '#94a3b8' : 'var(--text-muted)'),
-              borderBottom: activeTab === 'perfil' ? `3px solid ${isDark ? '#38bdf8' : 'var(--accent-blue)'}` : '3px solid transparent',
-              transition: 'all 0.15s ease',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-            }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-            Perfil Acadêmico & Semestre
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('seguranca')}
-            style={{
-              padding: '0.75rem 1.25rem',
-              borderRadius: '8px 8px 0 0',
-              fontWeight: 700,
-              fontSize: '0.925rem',
-              border: 'none',
-              cursor: 'pointer',
-              backgroundColor: activeTab === 'seguranca' ? (isDark ? '#243044' : '#ffffff') : 'transparent',
-              color: activeTab === 'seguranca' ? (isDark ? '#38bdf8' : 'var(--accent-blue)') : (isDark ? '#94a3b8' : 'var(--text-muted)'),
-              borderBottom: activeTab === 'seguranca' ? `3px solid ${isDark ? '#38bdf8' : 'var(--accent-blue)'}` : '3px solid transparent',
-              transition: 'all 0.15s ease',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-            }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </svg>
-            E-mails & Segurança
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('acessibilidade')}
-            style={{
-              padding: '0.75rem 1.25rem',
-              borderRadius: '8px 8px 0 0',
-              fontWeight: 700,
-              fontSize: '0.925rem',
-              border: 'none',
-              cursor: 'pointer',
-              backgroundColor: activeTab === 'acessibilidade' ? (isDark ? '#243044' : '#ffffff') : 'transparent',
-              color: activeTab === 'acessibilidade' ? (isDark ? '#38bdf8' : 'var(--accent-blue)') : (isDark ? '#94a3b8' : 'var(--text-muted)'),
-              borderBottom: activeTab === 'acessibilidade' ? `3px solid ${isDark ? '#38bdf8' : 'var(--accent-blue)'}` : '3px solid transparent',
-              transition: 'all 0.15s ease',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-            }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-            </svg>
-            Acessibilidade & Interface
-          </button>
+          {[
+            { id: 'perfil', label: 'Perfil Acadêmico', icon: '👤' },
+            { id: 'seguranca', label: 'E-mails & Segurança', icon: '🔒' },
+            { id: 'acessibilidade', label: 'Acessibilidade & Interface', icon: '⚙️' },
+            { id: 'historico', label: 'Histórico & Auditoria', icon: '📜' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id as any)}
+              style={{
+                padding: '0.75rem 1.25rem',
+                borderRadius: '8px 8px 0 0',
+                fontWeight: 700,
+                fontSize: '0.925rem',
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: activeTab === tab.id ? (isDark ? '#243044' : '#ffffff') : 'transparent',
+                color: activeTab === tab.id ? (isDark ? '#38bdf8' : 'var(--accent-blue)') : (isDark ? '#94a3b8' : 'var(--text-muted)'),
+                borderBottom: activeTab === tab.id ? `3px solid ${isDark ? '#38bdf8' : 'var(--accent-blue)'}` : '3px solid transparent',
+                transition: 'all 0.15s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+              }}
+            >
+              <span>{tab.icon}</span>
+              {tab.label}
+            </button>
+          ))}
         </div>
 
-        {/* CONTEÚDO TAB 1: PERFIL ACADÊMICO */}
+        {/* TAB 1: PERFIL ACADÊMICO */}
         {activeTab === 'perfil' && (
           <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <div style={{ backgroundColor: isDark ? '#151e2e' : '#ffffff', borderRadius: '16px', padding: '2rem', border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
@@ -322,7 +493,7 @@ export default function ConfiguracoesPage() {
                 Dados do Estudante
               </h2>
               <p style={{ color: isDark ? '#94a3b8' : 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-                Identificação pessoal e parâmetros acadêmicos utilizados para personalizar a sua grade e comunicados.
+                Identificação pessoal e parâmetros acadêmicos utilizados para personalizar seus comunicados e grade curricular.
               </p>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
@@ -393,14 +564,14 @@ export default function ConfiguracoesPage() {
                       outline: 'none',
                     }}
                   >
-                    <option value="IA" style={{ backgroundColor: isDark ? '#101726' : '#ffffff', color: isDark ? '#f8fafc' : 'var(--text-main)' }}>Inteligência Artificial (Matutino)</option>
-                    <option value="ESG" style={{ backgroundColor: isDark ? '#101726' : '#ffffff', color: isDark ? '#f8fafc' : 'var(--text-main)' }}>Gestão ESG (Noturno)</option>
+                    <option value="IA">Inteligência Artificial (Matutino)</option>
+                    <option value="ESG">Gestão ESG (Noturno)</option>
                   </select>
                 </div>
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: isDark ? '#f8fafc' : 'var(--text-main)', marginBottom: '0.4rem' }}>
-                    Semestre Atual do Curso
+                    Semestre Atual de Matrícula
                   </label>
                   <select
                     value={config.semester}
@@ -412,35 +583,14 @@ export default function ConfiguracoesPage() {
                       border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)',
                       fontSize: '0.925rem',
                       backgroundColor: isDark ? '#101726' : '#ffffff',
+                      color: isDark ? '#f8fafc' : 'var(--text-main)',
                       outline: 'none',
-                      fontWeight: 600,
-                      color: isDark ? '#38bdf8' : 'var(--accent-blue)',
                     }}
                   >
-                    <option value={1} style={{ backgroundColor: isDark ? '#101726' : '#ffffff', color: isDark ? '#f8fafc' : 'var(--text-main)' }}>1º Semestre (Ingressante)</option>
-                    <option value={2} style={{ backgroundColor: isDark ? '#101726' : '#ffffff', color: isDark ? '#f8fafc' : 'var(--text-main)' }}>2º Semestre</option>
-                    <option value={3} style={{ backgroundColor: isDark ? '#101726' : '#ffffff', color: isDark ? '#f8fafc' : 'var(--text-main)' }}>3º Semestre</option>
-                    <option value={4} style={{ backgroundColor: isDark ? '#101726' : '#ffffff', color: isDark ? '#f8fafc' : 'var(--text-main)' }}>4º Semestre (Concluinte)</option>
+                    {[1, 2, 3, 4, 5, 6].map((s) => (
+                      <option key={s} value={s}>{s}º Semestre</option>
+                    ))}
                   </select>
-                </div>
-              </div>
-
-              {/* Box Explicativo de UX sobre o Semestre */}
-              <div
-                style={{
-                  marginTop: '1.5rem',
-                  padding: '1rem',
-                  backgroundColor: isDark ? '#16263d' : 'var(--accent-blue-light)',
-                  borderRadius: '10px',
-                  border: isDark ? '1px solid rgba(2, 132, 199, 0.4)' : '1px solid rgba(2, 132, 199, 0.2)',
-                  display: 'flex',
-                  gap: '0.75rem',
-                  alignItems: 'flex-start',
-                }}
-              >
-                <div style={{ fontSize: '1.25rem', lineHeight: 1 }}>💡</div>
-                <div style={{ fontSize: '0.825rem', color: isDark ? '#7dd3fc' : '#0369a1', lineHeight: 1.5 }}>
-                  <strong style={{ color: isDark ? '#bae6fd' : '#0369a1' }}>Por que o semestre pode ser alterado aqui?</strong> O sistema não avança automaticamente seu semestre pelo tempo corrido do relógio. Ao ser aprovado no período letivo, selecione seu novo semestre para que a grade didática e os prazos de estágio supervisionado do mural sejam atualizados imediatamente!
                 </div>
               </div>
             </div>
@@ -453,22 +603,51 @@ export default function ConfiguracoesPage() {
           </form>
         )}
 
-        {/* CONTEÚDO TAB 2: E-MAILS & SEGURANÇA */}
+        {/* TAB 2: E-MAILS & SEGURANÇA */}
         {activeTab === 'seguranca' && (
-          <form onSubmit={handleSaveSecurity} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <div style={{ backgroundColor: isDark ? '#151e2e' : '#ffffff', borderRadius: '16px', padding: '2rem', border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            
+            {/* Bloco de E-mails */}
+            <form onSubmit={handleSaveEmails} style={{ backgroundColor: isDark ? '#151e2e' : '#ffffff', borderRadius: '16px', padding: '2rem', border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
               <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: isDark ? '#f8fafc' : 'var(--text-main)', marginBottom: '0.4rem' }}>
                 Gerenciamento de E-mails Institucional & Segurança
               </h2>
               <p style={{ color: isDark ? '#94a3b8' : 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-                Mantenha seu e-mail institucional oficial atualizado e configure um endereço pessoal para recuperação de emergência.
+                Configure seu endereço oficial da FATEC/CPS e seu e-mail de recuperação pessoal.
               </p>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                
+                {/* E-mail Institucional */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: isDark ? '#f8fafc' : 'var(--text-main)', marginBottom: '0.4rem' }}>
-                    E-mail Institucional Principal
-                  </label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 600, color: isDark ? '#f8fafc' : 'var(--text-main)' }}>
+                      E-mail Institucional Principal (Obrigatório)
+                    </label>
+                    {config.isEmailVerified ? (
+                      <span style={{ fontSize: '0.725rem', fontWeight: 700, color: '#059669', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                        ✓ Verificado
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleSendVerificationCode}
+                        disabled={otpLoading}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--accent-blue)',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          textDecoration: 'underline',
+                        }}
+                      >
+                        {otpLoading ? 'Despachando...' : 'Enviar Código de Validação'}
+                      </button>
+                    )}
+                  </div>
+
                   <input
                     type="email"
                     value={config.primaryEmail}
@@ -487,19 +666,75 @@ export default function ConfiguracoesPage() {
                     }}
                   />
                   <div style={{ fontSize: '0.75rem', color: isDark ? '#94a3b8' : 'var(--text-muted)', marginTop: '0.35rem' }}>
-                    Permite sufixos oficiais: @aluno.cps.sp.gov.br ou @fatec.sp.gov.br
+                    Extensão restrita obrigatória: <b>@aluno.cps.sp.gov.br</b> ou <b>@fatec.sp.gov.br</b>
                   </div>
+
+                  {/* Painel de Validação de Código OTP */}
+                  {otpSent && (
+                    <div
+                      style={{
+                        marginTop: '1rem',
+                        padding: '1rem',
+                        borderRadius: '10px',
+                        backgroundColor: isDark ? '#1c283d' : '#f0f9ff',
+                        border: isDark ? '1px solid #0369a1' : '1px solid #bae6fd',
+                      }}
+                    >
+                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: isDark ? '#38bdf8' : '#0369a1', marginBottom: '0.5rem' }}>
+                        ✉️ Código de Verificação Enviado (Validade: 15 min)
+                      </div>
+                      <p style={{ fontSize: '0.8rem', color: isDark ? '#94a3b8' : '#0c4a6e', marginBottom: '0.75rem' }}>
+                        Digite o código de 6 dígitos enviado para validar a existência da conta:
+                      </p>
+
+                      {otpDevHint && (
+                        <div style={{ padding: '0.4rem 0.6rem', backgroundColor: '#fef3c7', borderRadius: '6px', fontSize: '0.75rem', color: '#92400e', marginBottom: '0.75rem', fontWeight: 600 }}>
+                          Código gerado no banco: <b>{otpDevHint}</b>
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <input
+                          type="text"
+                          maxLength={6}
+                          value={otpCode}
+                          onChange={(e) => setOtpCode(e.target.value)}
+                          placeholder="Ex: 849201"
+                          style={{
+                            width: '140px',
+                            padding: '0.5rem 0.75rem',
+                            borderRadius: '6px',
+                            border: '1px solid var(--border-light)',
+                            fontSize: '1rem',
+                            fontWeight: 700,
+                            letterSpacing: '0.15em',
+                            textAlign: 'center',
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleVerifyOtp}
+                          className="btn btn-primary"
+                          style={{ padding: '0.5rem 1rem', fontSize: '0.825rem' }}
+                        >
+                          Confirmar Código
+                        </button>
+                      </div>
+                      {otpError && <div style={{ color: '#e11d48', fontSize: '0.75rem', marginTop: '0.4rem', fontWeight: 600 }}>{otpError}</div>}
+                    </div>
+                  )}
                 </div>
 
+                {/* E-mail de Recuperação */}
                 <div>
                   <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: isDark ? '#f8fafc' : 'var(--text-main)', marginBottom: '0.4rem' }}>
-                    E-mail de Segurança / Recuperação (Pessoal)
+                    E-mail de Segurança & Recuperação (Extensão Livre)
                   </label>
                   <input
                     type="email"
                     value={config.recoveryEmail}
                     onChange={(e) => setConfig({ ...config, recoveryEmail: e.target.value })}
-                    placeholder="exemplo.pessoal@gmail.com"
+                    placeholder="exemplo.pessoal@gmail.com, outlook.com, etc."
                     style={{
                       width: '100%',
                       padding: '0.75rem 1rem',
@@ -512,119 +747,137 @@ export default function ConfiguracoesPage() {
                     }}
                   />
                   <div style={{ fontSize: '0.75rem', color: isDark ? '#94a3b8' : 'var(--text-muted)', marginTop: '0.35rem' }}>
-                    Utilizado caso você perca o acesso provisório ao seu e-mail do CPS.
+                    Pode ter extensão diversa (@gmail, @outlook, @yahoo) para resgate de conta de emergência.
                   </div>
                 </div>
               </div>
 
-              <div style={{ borderTop: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)', paddingTop: '1.5rem' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: isDark ? '#f8fafc' : 'var(--text-main)', marginBottom: '0.4rem' }}>
-                  Alteração de Senha de Acesso
-                </h3>
-                <p style={{ color: isDark ? '#94a3b8' : 'var(--text-muted)', fontSize: '0.825rem', marginBottom: '1.25rem' }}>
-                  Preencha os campos abaixo apenas se desejar redefinir sua credencial.
-                </p>
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <button type="submit" className="btn btn-primary" style={{ padding: '0.75rem 1.75rem' }}>
+                  Salvar E-mails no Banco
+                </button>
+              </div>
+            </form>
 
-                {passwordError && (
-                  <div style={{ padding: '0.65rem 1rem', backgroundColor: '#fff1f2', border: '1px solid #fecdd3', color: '#be123c', borderRadius: '8px', fontSize: '0.825rem', marginBottom: '1rem', fontWeight: 600 }}>
-                    ⚠ {passwordError}
-                  </div>
-                )}
+            {/* Bloco de Alteração de Senha */}
+            <form onSubmit={handleChangePassword} style={{ backgroundColor: isDark ? '#151e2e' : '#ffffff', borderRadius: '16px', padding: '2rem', border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: isDark ? '#f8fafc' : 'var(--text-main)', marginBottom: '0.4rem' }}>
+                Alteração de Senha de Acesso (Auditada)
+              </h2>
+              <p style={{ color: isDark ? '#94a3b8' : 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '1.25rem' }}>
+                Toda alteração de senha é criptografada com Bcrypt e registrada no banco de dados com autor, data, hora e IP.
+              </p>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: isDark ? '#f8fafc' : 'var(--text-main)', marginBottom: '0.35rem' }}>
-                      Senha Atual
-                    </label>
-                    <input
-                      type="password"
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      placeholder="••••••••"
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem 1rem',
-                        borderRadius: '8px',
-                        border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)',
-                        backgroundColor: isDark ? '#101726' : '#ffffff',
-                        color: isDark ? '#f8fafc' : 'var(--text-main)',
-                        fontSize: '0.925rem',
-                      }}
-                    />
-                  </div>
+              {passwordError && (
+                <div style={{ padding: '0.65rem 1rem', backgroundColor: '#fff1f2', border: '1px solid #fecdd3', color: '#be123c', borderRadius: '8px', fontSize: '0.825rem', marginBottom: '1rem', fontWeight: 600 }}>
+                  ⚠ {passwordError}
+                </div>
+              )}
 
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: isDark ? '#f8fafc' : 'var(--text-main)', marginBottom: '0.35rem' }}>
-                      Nova Senha
-                    </label>
-                    <input
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Mínimo 6 caracteres"
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem 1rem',
-                        borderRadius: '8px',
-                        border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)',
-                        backgroundColor: isDark ? '#101726' : '#ffffff',
-                        color: isDark ? '#f8fafc' : 'var(--text-main)',
-                        fontSize: '0.925rem',
-                      }}
-                    />
-                    {strength && (
-                      <div style={{ marginTop: '0.4rem' }}>
-                        <div style={{ height: '4px', width: '100%', backgroundColor: isDark ? '#2b3a4f' : 'var(--border-light)', borderRadius: '2px', overflow: 'hidden' }}>
-                          <div style={{ height: '100%', width: strength.width, backgroundColor: strength.color, transition: 'all 0.3s ease' }} />
-                        </div>
-                        <span style={{ fontSize: '0.725rem', color: strength.color, fontWeight: 700, marginTop: '0.2rem', display: 'block' }}>
-                          Força da Senha: {strength.label}
-                        </span>
+              {passwordSuccess && (
+                <div style={{ padding: '0.65rem 1rem', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0', color: '#065f46', borderRadius: '8px', fontSize: '0.825rem', marginBottom: '1rem', fontWeight: 600 }}>
+                  {passwordSuccess}
+                </div>
+              )}
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: isDark ? '#f8fafc' : 'var(--text-main)', marginBottom: '0.35rem' }}>
+                    Senha Atual
+                  </label>
+                  <input
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="••••••••"
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem 1rem',
+                      borderRadius: '8px',
+                      border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)',
+                      backgroundColor: isDark ? '#101726' : '#ffffff',
+                      color: isDark ? '#f8fafc' : 'var(--text-main)',
+                      fontSize: '0.925rem',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: isDark ? '#f8fafc' : 'var(--text-main)', marginBottom: '0.35rem' }}>
+                    Nova Senha Forte
+                  </label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Mínimo 8 caracteres"
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem 1rem',
+                      borderRadius: '8px',
+                      border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)',
+                      backgroundColor: isDark ? '#101726' : '#ffffff',
+                      color: isDark ? '#f8fafc' : 'var(--text-main)',
+                      fontSize: '0.925rem',
+                    }}
+                  />
+                  {strength && (
+                    <div style={{ marginTop: '0.4rem' }}>
+                      <div style={{ height: '4px', width: '100%', backgroundColor: isDark ? '#2b3a4f' : 'var(--border-light)', borderRadius: '2px', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: strength.width, backgroundColor: strength.color, transition: 'all 0.3s ease' }} />
                       </div>
-                    )}
-                  </div>
+                      <span style={{ fontSize: '0.725rem', color: strength.color, fontWeight: 700, marginTop: '0.2rem', display: 'block' }}>
+                        Força: {strength.label}
+                      </span>
+                    </div>
+                  )}
+                </div>
 
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: isDark ? '#f8fafc' : 'var(--text-main)', marginBottom: '0.35rem' }}>
-                      Confirmar Nova Senha
-                    </label>
-                    <input
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Repita a nova senha"
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem 1rem',
-                        borderRadius: '8px',
-                        border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)',
-                        backgroundColor: isDark ? '#101726' : '#ffffff',
-                        color: isDark ? '#f8fafc' : 'var(--text-main)',
-                        fontSize: '0.925rem',
-                      }}
-                    />
-                  </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: isDark ? '#f8fafc' : 'var(--text-main)', marginBottom: '0.35rem' }}>
+                    Confirmar Nova Senha
+                  </label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Repita a nova senha"
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem 1rem',
+                      borderRadius: '8px',
+                      border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)',
+                      backgroundColor: isDark ? '#101726' : '#ffffff',
+                      color: isDark ? '#f8fafc' : 'var(--text-main)',
+                      fontSize: '0.925rem',
+                    }}
+                  />
                 </div>
               </div>
-            </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button type="submit" className="btn btn-primary" style={{ padding: '0.75rem 1.75rem' }}>
-                Salvar E-mails & Credenciais
-              </button>
-            </div>
-          </form>
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <button type="submit" className="btn btn-primary" style={{ padding: '0.75rem 1.75rem' }}>
+                  Atualizar Senha & Registrar Auditoria
+                </button>
+              </div>
+            </form>
+          </div>
         )}
 
-        {/* CONTEÚDO TAB 3: ACESSIBILIDADE & INTERFACE */}
+        {/* TAB 3: ACESSIBILIDADE & INTERFACE (PERSISTÊNCIA NO BANCO) */}
         {activeTab === 'acessibilidade' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <div style={{ backgroundColor: isDark ? '#151e2e' : '#ffffff', borderRadius: '16px', padding: '2rem', border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: isDark ? '#f8fafc' : 'var(--text-main)', marginBottom: '0.4rem' }}>
-                Diretrizes de Acessibilidade & Interface (e-MAG / WCAG)
-              </h2>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: isDark ? '#f8fafc' : 'var(--text-main)' }}>
+                  Diretrizes de Acessibilidade & Interface (e-MAG / WCAG)
+                </h2>
+                <span style={{ fontSize: '0.75rem', color: '#059669', backgroundColor: '#ecfdf5', padding: '0.2rem 0.6rem', borderRadius: '20px', fontWeight: 700, border: '1px solid #a7f3d0' }}>
+                  ☁️ Sincronizado com seu Login no Banco de Dados
+                </span>
+              </div>
               <p style={{ color: isDark ? '#94a3b8' : 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '1.75rem' }}>
-                Recursos para tornar a navegação mais inclusiva e adaptável às suas necessidades de visão e conforto.
+                Ao alterar as opções abaixo, suas escolhas são gravadas no seu usuário e lembradas automaticamente em qualquer navegador.
               </p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -641,12 +894,7 @@ export default function ConfiguracoesPage() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => {
-                      const next = !config.highContrast;
-                      const updated = { ...config, highContrast: next };
-                      setConfig(updated);
-                      handleSaveAccessibility(updated);
-                    }}
+                    onClick={() => handleSaveAccessibility({ highContrast: !config.highContrast })}
                     style={{
                       padding: '0.5rem 1.25rem',
                       borderRadius: '20px',
@@ -681,28 +929,17 @@ export default function ConfiguracoesPage() {
                         <button
                           key={size}
                           type="button"
-                          onClick={() => {
-                            const updated = { ...config, fontSize: size };
-                            setConfig(updated);
-                            handleSaveAccessibility(updated);
-                          }}
+                          onClick={() => handleSaveAccessibility({ fontSize: size })}
                           style={{
                             padding: '0.45rem 0.95rem',
                             borderRadius: '8px',
                             border: '1px solid',
-                            borderColor: isSelected
-                              ? 'var(--accent-blue)'
-                              : (isDark ? '#3b4a63' : 'var(--border-light)'),
-                            backgroundColor: isSelected
-                              ? 'var(--accent-blue)'
-                              : (isDark ? '#243044' : '#ffffff'),
-                            color: isSelected
-                              ? '#ffffff'
-                              : (isDark ? '#e2e8f0' : 'var(--text-main)'),
+                            borderColor: isSelected ? 'var(--accent-blue)' : (isDark ? '#3b4a63' : 'var(--border-light)'),
+                            backgroundColor: isSelected ? 'var(--accent-blue)' : (isDark ? '#243044' : '#ffffff'),
+                            color: isSelected ? '#ffffff' : (isDark ? '#e2e8f0' : 'var(--text-main)'),
                             fontWeight: isSelected ? 700 : 500,
                             fontSize: '0.825rem',
                             cursor: 'pointer',
-                            transition: 'all 0.15s ease',
                           }}
                         >
                           {size === 'normal' ? 'Padrão (100%)' : size === 'comfort' ? 'Confortável (115%)' : 'Ampliado (130%)'}
@@ -719,16 +956,12 @@ export default function ConfiguracoesPage() {
                       Reduzir Animações da Interface
                     </div>
                     <div style={{ fontSize: '0.825rem', color: isDark ? '#94a3b8' : 'var(--text-muted)', marginTop: '0.2rem' }}>
-                      Ideal para quem tem sensibilidade a movimentos contínuos ou prefere transições estáticas.
+                      Desativa transições dinâmicas para menor sobrecarga visual.
                     </div>
                   </div>
                   <button
                     type="button"
-                    onClick={() => {
-                      const updated = { ...config, reduceMotion: !config.reduceMotion };
-                      setConfig(updated);
-                      handleSaveAccessibility(updated);
-                    }}
+                    onClick={() => handleSaveAccessibility({ reduceMotion: !config.reduceMotion })}
                     style={{
                       padding: '0.5rem 1.25rem',
                       borderRadius: '20px',
@@ -739,7 +972,6 @@ export default function ConfiguracoesPage() {
                       fontWeight: 700,
                       fontSize: '0.825rem',
                       cursor: 'pointer',
-                      transition: 'all 0.2s ease',
                     }}
                   >
                     {config.reduceMotion ? '✓ Reduzidas' : 'Normais'}
@@ -750,74 +982,144 @@ export default function ConfiguracoesPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: '0.95rem', color: isDark ? '#f8fafc' : 'var(--text-main)' }}>
-                      Visualização Padrão do Mural
+                      Filtro Padrão do Feed de Avisos
                     </div>
                     <div style={{ fontSize: '0.825rem', color: isDark ? '#94a3b8' : 'var(--text-muted)', marginTop: '0.2rem' }}>
-                      Escolha quais comunicados aparecem pré-selecionados ao abrir o Mural de Avisos.
+                      Priorizar comunicados direcionados ao seu curso ({config.course}) e semestre ({config.semester}º).
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '0.4rem' }}>
                     <button
                       type="button"
-                      onClick={() => {
-                        const updated = { ...config, feedFilter: 'my_course' as const };
-                        setConfig(updated);
-                        handleSaveAccessibility(updated);
-                      }}
+                      onClick={() => handleSaveAccessibility({ feedFilter: 'my_course' })}
                       style={{
                         padding: '0.45rem 0.95rem',
                         borderRadius: '8px',
                         border: '1px solid',
-                        borderColor: config.feedFilter === 'my_course'
-                          ? 'var(--accent-blue)'
-                          : (isDark ? '#3b4a63' : 'var(--border-light)'),
-                        backgroundColor: config.feedFilter === 'my_course'
-                          ? 'var(--accent-blue)'
-                          : (isDark ? '#243044' : '#ffffff'),
-                        color: config.feedFilter === 'my_course'
-                          ? '#ffffff'
-                          : (isDark ? '#e2e8f0' : 'var(--text-main)'),
+                        borderColor: config.feedFilter === 'my_course' ? 'var(--accent-blue)' : (isDark ? '#3b4a63' : 'var(--border-light)'),
+                        backgroundColor: config.feedFilter === 'my_course' ? 'var(--accent-blue)' : (isDark ? '#243044' : '#ffffff'),
+                        color: config.feedFilter === 'my_course' ? '#ffffff' : (isDark ? '#e2e8f0' : 'var(--text-main)'),
                         fontWeight: config.feedFilter === 'my_course' ? 700 : 500,
                         fontSize: '0.825rem',
                         cursor: 'pointer',
-                        transition: 'all 0.15s ease',
                       }}
                     >
-                      Apenas Meu Curso
+                      Apenas Meu Curso/Semestre
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
-                        const updated = { ...config, feedFilter: 'all' as const };
-                        setConfig(updated);
-                        handleSaveAccessibility(updated);
-                      }}
+                      onClick={() => handleSaveAccessibility({ feedFilter: 'all' })}
                       style={{
                         padding: '0.45rem 0.95rem',
                         borderRadius: '8px',
                         border: '1px solid',
-                        borderColor: config.feedFilter === 'all'
-                          ? 'var(--accent-blue)'
-                          : (isDark ? '#3b4a63' : 'var(--border-light)'),
-                        backgroundColor: config.feedFilter === 'all'
-                          ? 'var(--accent-blue)'
-                          : (isDark ? '#243044' : '#ffffff'),
-                        color: config.feedFilter === 'all'
-                          ? '#ffffff'
-                          : (isDark ? '#e2e8f0' : 'var(--text-main)'),
+                        borderColor: config.feedFilter === 'all' ? 'var(--accent-blue)' : (isDark ? '#3b4a63' : 'var(--border-light)'),
+                        backgroundColor: config.feedFilter === 'all' ? 'var(--accent-blue)' : (isDark ? '#243044' : '#ffffff'),
+                        color: config.feedFilter === 'all' ? '#ffffff' : (isDark ? '#e2e8f0' : 'var(--text-main)'),
                         fontWeight: config.feedFilter === 'all' ? 700 : 500,
                         fontSize: '0.825rem',
                         cursor: 'pointer',
-                        transition: 'all 0.15s ease',
                       }}
                     >
-                      Mural Integrado (IA + ESG)
+                      Todos os Comunicados
                     </button>
                   </div>
                 </div>
 
               </div>
             </div>
+          </div>
+        )}
+
+        {/* TAB 4: HISTÓRICO & AUDITORIA DE SEGURANÇA */}
+        {activeTab === 'historico' && (
+          <div style={{ backgroundColor: isDark ? '#151e2e' : '#ffffff', borderRadius: '16px', padding: '2rem', border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: isDark ? '#f8fafc' : 'var(--text-main)', marginBottom: '0.25rem' }}>
+                  Trilha de Auditoria & Histórico de Alterações
+                </h2>
+                <p style={{ color: isDark ? '#94a3b8' : 'var(--text-muted)', fontSize: '0.875rem' }}>
+                  Registro imutável no PostgreSQL com data, hora, campo alterado e autor responsável.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={loadSecurityAudit}
+                style={{
+                  padding: '0.4rem 0.9rem',
+                  borderRadius: '8px',
+                  border: isDark ? '1px solid #3b4a63' : '1px solid var(--border-light)',
+                  backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
+                  color: isDark ? '#f8fafc' : 'var(--text-main)',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                🔄 Atualizar Logs
+              </button>
+            </div>
+
+            {securityLogs.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '3rem 1rem', color: isDark ? '#94a3b8' : 'var(--text-muted)' }}>
+                Nenhuma alteração de segurança registrada até o momento.
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                  <thead>
+                    <tr style={{ borderBottom: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)', textAlign: 'left', color: isDark ? '#94a3b8' : 'var(--text-muted)' }}>
+                      <th style={{ padding: '0.75rem' }}>Data & Hora</th>
+                      <th style={{ padding: '0.75rem' }}>Tipo de Evento</th>
+                      <th style={{ padding: '0.75rem' }}>Campo</th>
+                      <th style={{ padding: '0.75rem' }}>Valor Anterior</th>
+                      <th style={{ padding: '0.75rem' }}>Novo Valor</th>
+                      <th style={{ padding: '0.75rem' }}>Autor</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {securityLogs.map((log) => (
+                      <tr key={log.id} style={{ borderBottom: isDark ? '1px solid #1f293d' : '1px solid #f1f5f9', color: isDark ? '#f8fafc' : 'var(--text-main)' }}>
+                        <td style={{ padding: '0.75rem', whiteSpace: 'nowrap', fontSize: '0.8rem', color: isDark ? '#94a3b8' : 'var(--text-muted)' }}>
+                          {new Date(log.createdAt).toLocaleString('pt-BR')}
+                        </td>
+                        <td style={{ padding: '0.75rem' }}>
+                          <span
+                            style={{
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              padding: '0.2rem 0.5rem',
+                              borderRadius: '4px',
+                              backgroundColor:
+                                log.action === 'PASSWORD_CHANGE'
+                                  ? '#fee2e2'
+                                  : log.action === 'PRIMARY_EMAIL_CHANGE'
+                                  ? '#e0e7ff'
+                                  : '#f0fdf4',
+                              color:
+                                log.action === 'PASSWORD_CHANGE'
+                                  ? '#991b1b'
+                                  : log.action === 'PRIMARY_EMAIL_CHANGE'
+                                  ? '#3730a3'
+                                  : '#166534',
+                            }}
+                          >
+                            {log.action}
+                          </span>
+                        </td>
+                        <td style={{ padding: '0.75rem', fontWeight: 600 }}>{log.fieldName}</td>
+                        <td style={{ padding: '0.75rem', color: isDark ? '#94a3b8' : 'var(--text-muted)' }}>{log.oldValueMasked || '—'}</td>
+                        <td style={{ padding: '0.75rem', color: '#059669', fontWeight: 600 }}>{log.newValueMasked || '—'}</td>
+                        <td style={{ padding: '0.75rem', fontSize: '0.8rem', color: isDark ? '#94a3b8' : 'var(--text-muted)' }}>
+                          {log.changedByName || 'Próprio Usuário'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
