@@ -10,8 +10,9 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ;
 -- 2. Tabela de Verificação de E-mails com Código OTP e Link Token
 CREATE TABLE IF NOT EXISTS email_verifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   email VARCHAR(180) NOT NULL,
+  recovery_email VARCHAR(180),
   verification_code VARCHAR(6) NOT NULL,
   token VARCHAR(64) NOT NULL,
   purpose VARCHAR(40) NOT NULL DEFAULT 'ACCOUNT_ACTIVATION', -- 'ACCOUNT_ACTIVATION', 'EMAIL_CHANGE'
@@ -22,6 +23,9 @@ CREATE TABLE IF NOT EXISTS email_verifications (
 
 CREATE INDEX IF NOT EXISTS idx_email_verif_lookup 
 ON email_verifications (email, verification_code, expires_at);
+
+CREATE INDEX IF NOT EXISTS idx_email_verif_recov 
+ON email_verifications (recovery_email, verification_code);
 
 -- 3. Tabela de Trilha de Auditoria de Segurança e Alterações de Perfil
 CREATE TABLE IF NOT EXISTS user_security_audit (

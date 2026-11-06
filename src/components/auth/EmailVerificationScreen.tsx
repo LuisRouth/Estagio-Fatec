@@ -9,20 +9,24 @@ import { EcoTechBackground } from '@/components/layout/EcoTechBackground';
 interface EmailVerificationScreenProps {
   nome: string;
   email: string;
+  recoveryEmail?: string;
   ra?: string;
   curso?: 'IA' | 'ESG';
   semestre?: number;
   onBackToRegister?: () => void;
+  onConfirmCode?: (code: string) => Promise<{ success: boolean; error?: string }>;
   onConfirmed?: () => void;
 }
 
 export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = ({
   nome = 'Estudante',
   email = 'aluno@aluno.cps.sp.gov.br',
+  recoveryEmail,
   ra,
   curso = 'IA',
   semestre = 1,
   onBackToRegister,
+  onConfirmCode,
   onConfirmed,
 }) => {
   const router = useRouter();
@@ -42,12 +46,12 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
         await fetch('/api/auth/send-verification', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, purpose: 'ACCOUNT_ACTIVATION' }),
+          body: JSON.stringify({ email, recoveryEmail, purpose: 'ACCOUNT_ACTIVATION' }),
         });
       } catch {}
     }
     if (email) triggerCode();
-  }, [email]);
+  }, [email, recoveryEmail]);
 
   const handleVerifyOtpReal = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,21 +63,34 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
 
     setVerifying(true);
     try {
-      const res = await fetch('/api/auth/verify-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code: otpInput.trim() }),
-      });
-
-      const json = await res.json();
-      if (res.ok && json.success) {
-        setConfirmed(true);
-        setTimeout(() => {
-          if (onConfirmed) onConfirmed();
-          else router.push('/login');
-        }, 1500);
+      if (onConfirmCode) {
+        const result = await onConfirmCode(otpInput.trim());
+        if (result.success) {
+          setConfirmed(true);
+          setTimeout(() => {
+            if (onConfirmed) onConfirmed();
+            else router.push('/login');
+          }, 1500);
+        } else {
+          setOtpError(result.error || 'Código incorreto ou expirado.');
+        }
       } else {
-        setOtpError(json.error || 'Código incorreto ou expirado.');
+        const res = await fetch('/api/auth/verify-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: recoveryEmail || email, code: otpInput.trim() }),
+        });
+
+        const json = await res.json();
+        if (res.ok && json.success) {
+          setConfirmed(true);
+          setTimeout(() => {
+            if (onConfirmed) onConfirmed();
+            else router.push('/login');
+          }, 1500);
+        } else {
+          setOtpError(json.error || 'Código incorreto ou expirado.');
+        }
       }
     } catch {
       setOtpError('Falha ao validar código com o servidor.');
@@ -96,72 +113,26 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
     if (!canResend) return;
     setCanResend(false);
     setCooldown(60);
+    const target = recoveryEmail || email;
     try {
       await fetch('/api/auth/send-verification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, purpose: 'ACCOUNT_ACTIVATION' }),
+        body: JSON.stringify({ email, recoveryEmail, purpose: 'ACCOUNT_ACTIVATION' }),
       });
-      setToastMsg(`✓ Um novo código de confirmação foi despachado para ${email}`);
+      setToastMsg(`✓ Um novo código de confirmação foi despachado para ${target}`);
     } catch {
-      setToastMsg(`✓ Solicitação de reenvio despachada para ${email}`);
+      setToastMsg(`✓ Solicitação de reenvio despachada para ${target}`);
     }
     setTimeout(() => setToastMsg(null), 4500);
   };
 
   const handleCopyEmail = () => {
     try {
-      navigator.clipboard.writeText(email);
+      navigator.clipboard.writeText(recoveryEmail || email);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {}
-  };
-
-  // Simulação de confirmação do e-mail (Frontend Interativo)
-  const handleSimulateVerification = () => {
-    setVerifying(true);
-
-    setTimeout(() => {
-      setVerifying(false);
-      setConfirmed(true);
-
-      // Salva a sessão ativa autenticada para ir direto ao início sem precisar logar de novo
-      const userSession = {
-        name: nome,
-        role: 'Discente',
-        course: curso,
-        email: email,
-        ra: ra || '2840000',
-        semester: semestre,
-      };
-
-      try {
-        sessionStorage.setItem('fatec_auth_user', JSON.stringify(userSession));
-        localStorage.setItem(
-          'fatec_student_config',
-          JSON.stringify({
-            name: nome,
-            ra: ra || '2840000',
-            course: curso,
-            semester: semestre,
-            primaryEmail: email,
-            recoveryEmail: '',
-            highContrast: localStorage.getItem('fatec_high_contrast') === 'true',
-            fontSize: 'normal',
-            reduceMotion: false,
-            feedFilter: 'my_course',
-          })
-        );
-      } catch {}
-
-      setTimeout(() => {
-        if (onConfirmed) {
-          onConfirmed();
-        } else {
-          router.push('/');
-        }
-      }, 1400);
-    }, 1200);
   };
 
   return (
@@ -329,9 +300,8 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
               Enviamos um link de confirmação institucional para ativar sua matrícula e credenciais de acesso discente:
             </p>
 
-            {/* Bloco de Destaque do E-mail */}
+            {/* Bloco de Destaque dos E-mails */}
             <div
-              className="email-highlight-box"
               style={{
                 margin: '1.25rem 0',
                 padding: '0.85rem 1rem',
@@ -339,45 +309,55 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
                 borderRadius: '12px',
                 border: '1px solid rgba(2, 132, 199, 0.25)',
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '0.75rem',
+                flexDirection: 'column',
+                gap: '0.6rem',
+                textAlign: 'left',
               }}
             >
-              <div style={{ textAlign: 'left', minWidth: 0 }}>
-                <div
-                  className="email-highlight-title"
-                  style={{ fontSize: '0.725rem', color: '#0369a1', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}
-                >
-                  E-mail Institucional do Aluno
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                <div>
+                  <div style={{ fontSize: '0.7rem', color: '#0369a1', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    E-mail Institucional (Conta Principal)
+                  </div>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0f172a' }}>
+                    {email}
+                  </div>
                 </div>
-                <div
-                  className="email-highlight-address"
-                  style={{ fontSize: '0.925rem', fontWeight: 700, color: '#0369a1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
-                >
-                  {email}
-                </div>
+                <span style={{ fontSize: '0.725rem', backgroundColor: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
+                  Oficial CPS
+                </span>
               </div>
 
-              <button
-                type="button"
-                onClick={handleCopyEmail}
-                className="copy-btn"
-                style={{
-                  padding: '0.4rem 0.65rem',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  borderRadius: '6px',
-                  border: '1px solid rgba(2, 132, 199, 0.3)',
-                  backgroundColor: '#ffffff',
-                  color: 'var(--accent-blue)',
-                  cursor: 'pointer',
-                  flexShrink: 0,
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                {copied ? '✓ Copiado' : 'Copiar'}
-              </button>
+              {recoveryEmail && (
+                <div style={{ paddingTop: '0.5rem', borderTop: '1px dashed rgba(2, 132, 199, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                  <div>
+                    <div style={{ fontSize: '0.7rem', color: '#059669', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      ✉️ E-mail de Recuperação (Código Enviado Aqui)
+                    </div>
+                    <div style={{ fontSize: '0.925rem', fontWeight: 800, color: '#047857' }}>
+                      {recoveryEmail}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCopyEmail}
+                    className="copy-btn"
+                    style={{
+                      padding: '0.35rem 0.6rem',
+                      fontSize: '0.725rem',
+                      fontWeight: 600,
+                      borderRadius: '6px',
+                      border: '1px solid rgba(5, 150, 105, 0.3)',
+                      backgroundColor: '#ffffff',
+                      color: '#059669',
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {copied ? '✓ Copiado' : 'Copiar'}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Caixa Informativa sobre Caixa de Entrada e Spam */}
@@ -395,7 +375,7 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
                 marginBottom: '1.75rem',
               }}
             >
-              💡 <strong>Dica:</strong> Acesse sua caixa de entrada no Webmail do CPS. Caso a mensagem não apareça em até 2 minutos, verifique sua pasta de <strong>Spam</strong> ou <strong>Lixo Eletrônico</strong>.
+              💡 <strong>Dica:</strong> O código de 6 dígitos foi enviado para <strong>{recoveryEmail || email}</strong>. Caso não o localize em 2 minutos, verifique a pasta de <strong>Spam</strong> ou <strong>Lixo Eletrônico</strong>.
             </div>
 
             {/* Toast de Notificação */}
@@ -432,7 +412,7 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
                 🔑 Digite o Código de Validação de 6 Dígitos
               </div>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.85rem' }}>
-                Enviado para seu e-mail institucional para confirmar a existência da conta:
+                Enviado para seu e-mail de recuperação ({recoveryEmail || email}) para confirmar a criação da conta:
               </p>
 
               <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginBottom: '0.5rem' }}>
@@ -460,7 +440,7 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
                   className="btn btn-primary"
                   style={{ padding: '0.65rem 1.25rem', fontWeight: 700, fontSize: '0.875rem' }}
                 >
-                  {verifying ? 'Validando...' : 'Validar Código'}
+                  {verifying ? 'Validando...' : 'Validar e Concluir Cadastro'}
                 </button>
               </div>
 
@@ -471,25 +451,8 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
               )}
             </form>
 
-            {/* Ações: Botão de Simulação (Frontend) + Reenvio + Voltar */}
+            {/* Ações: Reenvio + Voltar */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {/* Botão de Simulação da Confirmação (Atende o pedido do usuário para teste visual imediato) */}
-              <button
-                type="button"
-                onClick={handleSimulateVerification}
-                disabled={verifying}
-                className="btn btn-secondary"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1.25rem',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  borderRadius: '10px',
-                }}
-              >
-                {verifying ? 'Validando token de e-mail...' : '✓ Validar com 1 Clique (Link Direto)'}
-              </button>
-
               <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
                 <button
                   type="button"

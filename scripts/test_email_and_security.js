@@ -33,12 +33,29 @@ function checkNoLeaks(dir) {
 checkNoLeaks(path.join(__dirname, '..', 'src'));
 console.log('  [PASS] Zero vazamentos de código de verificação no código-fonte e nas telas (src/)');
 
-// 3. Verificar que os inputs de senha possuem botão de alternar visibilidade (showSenha / showPassword)
+// 3. Verificar que botão de simulação/bypass foi 100% expurgado de EmailVerificationScreen.tsx
+const verifScreenPath = path.join(__dirname, '..', 'src', 'components', 'auth', 'EmailVerificationScreen.tsx');
+const verifScreenSource = fs.readFileSync(verifScreenPath, 'utf8');
+assert(!verifScreenSource.includes('handleSimulateVerification'), 'handleSimulateVerification deve ser removido');
+assert(!verifScreenSource.includes('Validar com 1 Clique'), 'Botão de bypass com 1 clique deve ser removido');
+assert(verifScreenSource.includes('recoveryEmail'), 'Tela de verificação deve suportar e-mail de recuperação');
+console.log('  [PASS] Botão de bypass/simulação removido com sucesso; verificação estrita mantida');
+
+// 4. Verificar que a API /api/auth/register exige recoveryEmail e verificationCode
+const registerApiPath = path.join(__dirname, '..', 'src', 'app', 'api', 'auth', 'register', 'route.ts');
+const registerApiSource = fs.readFileSync(registerApiPath, 'utf8');
+assert(registerApiSource.includes('recoveryEmail'), 'API de registro deve exigir recoveryEmail');
+assert(registerApiSource.includes('verificationCode'), 'API de registro deve exigir verificationCode');
+assert(registerApiSource.includes('db.verifications.verify'), 'API de registro deve validar o código no banco antes de criar usuário');
+console.log('  [PASS] API de registro protege a criação da conta exigindo e-mail de recuperação e código OTP correto');
+
+// 5. Verificar que os inputs de senha possuem botão de alternar visibilidade (showSenha / showPassword)
 const cadastroPath = path.join(__dirname, '..', 'src', 'app', 'cadastro', 'page.tsx');
 const cadastroSource = fs.readFileSync(cadastroPath, 'utf8');
 assert(cadastroSource.includes('showSenha'), 'Cadastro deve conter estado showSenha');
 assert(cadastroSource.includes('showConfirmSenha'), 'Cadastro deve conter estado showConfirmSenha');
-console.log('  [PASS] Tela de Cadastro possui alternância de visibilidade para Senha e Confirmar Senha');
+assert(cadastroSource.includes('recoveryEmail'), 'Cadastro deve conter estado recoveryEmail');
+console.log('  [PASS] Tela de Cadastro possui e-mail de recuperação obrigatório e alternância de visibilidade de senha');
 
 const configPath = path.join(__dirname, '..', 'src', 'app', 'configuracoes', 'page.tsx');
 const configSource = fs.readFileSync(configPath, 'utf8');
@@ -48,6 +65,5 @@ assert(configSource.includes('showConfirmPassword'), 'Configurações deve conte
 console.log('  [PASS] Tela de Configurações possui alternância de visibilidade para Senha Atual, Nova Senha e Confirmação');
 
 console.log('====================================================');
-console.log(' TODOS OS 4 GRUPOS DE TESTES DE SEGURANÇA FORAM APROVADOS!');
+console.log(' TODOS OS 6 GRUPOS DE TESTES DE SEGURANÇA FORAM APROVADOS!');
 console.log('====================================================');
-

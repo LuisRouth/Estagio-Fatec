@@ -3,6 +3,7 @@ import nodemailer from 'nodemailer';
 export interface SendVerificationEmailParams {
   to: string;
   code: string;
+  institutionalEmail?: string;
   verificationUrl?: string;
 }
 
@@ -47,6 +48,7 @@ function getTransporter() {
 export async function sendVerificationEmail({
   to,
   code,
+  institutionalEmail,
   verificationUrl,
 }: SendVerificationEmailParams): Promise<EmailSendResult> {
   const from = process.env.SMTP_FROM || `"Portal FATEC Rio Claro" <${process.env.SMTP_USER || 'noreply@fatec.sp.gov.br'}>`;
@@ -97,7 +99,7 @@ export async function sendVerificationEmail({
     <div class="content">
       <div class="greeting">Olá, Aluno(a) FATEC!</div>
       <p class="text">
-        Recebemos uma solicitação de validação para o e-mail institucional <strong>${to}</strong> no Portal de Empregabilidade e Estágios da FATEC Rio Claro.
+        Recebemos uma solicitação de ativação de conta ${institutionalEmail ? `para o e-mail institucional <strong>${institutionalEmail}</strong>` : ''} no Portal de Empregabilidade e Estágios da FATEC Rio Claro.
       </p>
       
       <div class="code-box">

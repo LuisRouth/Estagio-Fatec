@@ -878,9 +878,22 @@ export const db = {
       }
 
       const res = await pool.query(
-        `INSERT INTO users (id, name, email, ra, password_hash, role, course, semester, is_active)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-        [id, data.name, data.email, data.ra, data.password_hash, data.role, data.course, data.semester, data.is_active]
+        `INSERT INTO users (id, name, email, recovery_email, is_email_verified, email_verified_at, ra, password_hash, role, course, semester, is_active)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+        [
+          id,
+          data.name,
+          data.email,
+          data.recovery_email || null,
+          data.is_email_verified ?? false,
+          data.is_email_verified ? new Date() : null,
+          data.ra,
+          data.password_hash,
+          data.role,
+          data.course,
+          data.semester,
+          data.is_active,
+        ]
       );
       return res.rows[0];
     },
@@ -2441,9 +2454,10 @@ export const db = {
   // ------------------------------------------------------------------
   verifications: {
     create: async (
-      userId: string,
+      userId: string | null | undefined,
       email: string,
-      purpose: 'ACCOUNT_ACTIVATION' | 'EMAIL_CHANGE' = 'ACCOUNT_ACTIVATION'
+      purpose: 'ACCOUNT_ACTIVATION' | 'EMAIL_CHANGE' = 'ACCOUNT_ACTIVATION',
+      recoveryEmail?: string | null
     ): Promise<EmailVerificationRecord> => {
       // Gera código de 6 dígitos numéricos aleatório
       const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -2453,8 +2467,9 @@ export const db = {
 
       const record: EmailVerificationRecord = {
         id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `verif-${Date.now()}`,
-        userId,
+        userId: userId || undefined,
         email: email.toLowerCase().trim(),
+        recoveryEmail: recoveryEmail ? recoveryEmail.toLowerCase().trim() : undefined,
         verificationCode,
         token,
         purpose,
@@ -2467,15 +2482,16 @@ export const db = {
       }
 
       const res = await pool.query(
-        `INSERT INTO email_verifications (user_id, email, verification_code, token, purpose, expires_at)
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-        [userId, record.email, verificationCode, token, purpose, expiresAt]
+        `INSERT INTO email_verifications (user_id, email, recovery_email, verification_code, token, purpose, expires_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+        [userId || null, record.email, record.recoveryEmail || null, verificationCode, token, purpose, expiresAt]
       );
       const row = res.rows[0];
       return {
         id: row.id,
         userId: row.user_id,
         email: row.email,
+        recoveryEmail: row.recovery_email,
         verificationCode: row.verification_code,
         token: row.token,
         purpose: row.purpose,
@@ -2485,8 +2501,8 @@ export const db = {
       };
     },
 
-    verify: async (email: string, code: string): Promise<{ valid: boolean; userId?: string; error?: string }> => {
-      const cleanEmail = email.toLowerCase().trim();
+    verify: async (emailOrRecovery: string, code: string): Promise<{ valid: boolean; userId?: string; error?: string }> => {
+      const cleanEmail = emailOrRecovery.toLowerCase().trim();
       const cleanCode = code.trim();
 
       if (isMock || !pool) {
@@ -2495,7 +2511,10 @@ export const db = {
 
       const res = await pool.query(
         `SELECT * FROM email_verifications 
-         WHERE LOWER(email) = $1 AND verification_code = $2 AND verified_at IS NULL AND expires_at > NOW()
+         WHERE (LOWER(email) = $1 OR LOWER(recovery_email) = $1)
+           AND verification_code = $2 
+           AND verified_at IS NULL 
+           AND expires_at > NOW()
          ORDER BY created_at DESC LIMIT 1`,
         [cleanEmail, cleanCode]
       );
@@ -2506,17 +2525,19 @@ export const db = {
 
       const verif = res.rows[0];
       await pool.query('UPDATE email_verifications SET verified_at = NOW() WHERE id = $1', [verif.id]);
-      await pool.query('UPDATE users SET is_email_verified = TRUE, email_verified_at = NOW(), updated_at = NOW() WHERE id = $1', [verif.user_id]);
+      if (verif.user_id) {
+        await pool.query('UPDATE users SET is_email_verified = TRUE, email_verified_at = NOW(), updated_at = NOW() WHERE id = $1', [verif.user_id]);
 
-      // Registrar auditoria
-      await db.securityAudit.log({
-        userId: verif.user_id,
-        changedBy: verif.user_id,
-        action: 'PRIMARY_EMAIL_CHANGE',
-        fieldName: 'is_email_verified',
-        oldValueMasked: 'Pendente',
-        newValueMasked: 'Verificado com sucesso via OTP',
-      });
+        // Registrar auditoria
+        await db.securityAudit.log({
+          userId: verif.user_id,
+          changedBy: verif.user_id,
+          action: 'PRIMARY_EMAIL_CHANGE',
+          fieldName: 'is_email_verified',
+          oldValueMasked: 'Pendente',
+          newValueMasked: 'Verificado com sucesso via OTP',
+        });
+      }
 
       return { valid: true, userId: verif.user_id };
     },

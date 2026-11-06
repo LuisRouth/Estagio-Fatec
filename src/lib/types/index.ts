@@ -350,8 +350,9 @@ export interface UserSecurityAudit {
 
 export interface EmailVerificationRecord {
   id: string;
-  userId: string;
+  userId?: string | null;
   email: string;
+  recoveryEmail?: string | null;
   verificationCode: string;
   token: string;
   purpose: 'ACCOUNT_ACTIVATION' | 'EMAIL_CHANGE';

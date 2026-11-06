@@ -12,6 +12,7 @@ export default function CadastroPage() {
   const [step, setStep] = useState<'formulario' | 'verificacao'>('formulario');
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
+  const [recoveryEmail, setRecoveryEmail] = useState('');
   const [ra, setRa] = useState('');
   const [senha, setSenha] = useState('');
   const [confirmSenha, setConfirmSenha] = useState('');
@@ -31,6 +32,7 @@ export default function CadastroPage() {
         const parsed = JSON.parse(draft);
         if (parsed.nome) setNome(parsed.nome);
         if (parsed.email) setEmail(parsed.email);
+        if (parsed.recoveryEmail) setRecoveryEmail(parsed.recoveryEmail);
         if (parsed.ra) setRa(parsed.ra);
         if (parsed.senha) setSenha(parsed.senha);
         if (parsed.confirmSenha) setConfirmSenha(parsed.confirmSenha);
@@ -76,72 +78,94 @@ export default function CadastroPage() {
     }
 
     if (!isEmailValid) {
-      setErrorMsg('O cadastro discente requer e-mail institucional oficial (@aluno.cps.sp.gov.br).');
+      setErrorMsg('O e-mail principal deve ser institucional obrigatório (@aluno.cps.sp.gov.br ou @fatec.sp.gov.br).');
+      return;
+    }
+
+    const cleanRecovery = recoveryEmail.trim().toLowerCase();
+    if (!cleanRecovery || !/\S+@\S+\.\S+/.test(cleanRecovery)) {
+      setErrorMsg('O e-mail de recuperação/segurança é obrigatório para envio do código de confirmação.');
       return;
     }
 
     setLoading(true);
 
     try {
-      const res = await fetch('/api/auth/register', {
+      // 1. Despacha o código de confirmação de 6 dígitos diretamente para o e-mail de recuperação
+      const res = await fetch('/api/auth/send-verification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: nome.trim(),
-          email: email.trim().toLowerCase(),
-          ra: ra.trim() || undefined,
-          password: senha,
-          course: curso,
-          semester: Number(semestre),
+          email: cleanEmail,
+          recoveryEmail: cleanRecovery,
+          purpose: 'ACCOUNT_ACTIVATION',
         }),
       });
 
       const data = await res.json();
 
-      if (!res.ok) {
-        if (data.error?.includes('já se encontra cadastrado') || data.error?.includes('inválid')) {
-          throw new Error(data.error);
-        }
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Não foi possível despachar o código de confirmação.');
       }
 
       // Salva rascunho dos dados preenchidos no sessionStorage para que "Voltar e Corrigir" mantenha 100% dos dados
       try {
         sessionStorage.setItem(
           'fatec_cadastro_draft',
-          JSON.stringify({ nome, email, ra, curso, semestre, senha, confirmSenha })
+          JSON.stringify({ nome, email, recoveryEmail: cleanRecovery, ra, curso, semestre, senha, confirmSenha })
         );
       } catch {}
 
       setStep('verificacao');
     } catch (err: any) {
-      if (err.message?.includes('já se encontra cadastrado') || err.message?.includes('inválid')) {
-        setErrorMsg(err.message);
-      } else {
-        // Se a persistência remota/banco estiver inacessível durante o desenvolvimento frontend,
-        // permite avançar com os dados preservados para testar e validar a experiência de confirmação
-        try {
-          sessionStorage.setItem(
-            'fatec_cadastro_draft',
-            JSON.stringify({ nome, email, ra, curso, semestre, senha, confirmSenha })
-          );
-        } catch {}
-        setStep('verificacao');
-      }
+      setErrorMsg(err.message || 'Erro ao processar envio do código de confirmação.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Se o cadastro foi enviado, exibe a Tela de Verificação de E-mail com animação institucional
+  // Se o cadastro foi enviado, exibe a Tela de Verificação com validação estrita do código de 6 dígitos
   if (step === 'verificacao') {
     return (
       <EmailVerificationScreen
         nome={nome || 'Estudante'}
         email={cleanEmail || 'aluno@aluno.cps.sp.gov.br'}
+        recoveryEmail={recoveryEmail.trim().toLowerCase()}
         ra={ra}
         curso={curso}
         semestre={semestre}
         onBackToRegister={() => setStep('formulario')}
+        onConfirmCode={async (code: string) => {
+          // A conta só é criada se o código recebido no e-mail de recuperação estiver correto
+          const res = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: nome.trim(),
+              email: cleanEmail,
+              recoveryEmail: recoveryEmail.trim().toLowerCase(),
+              ra: ra.trim() || undefined,
+              password: senha,
+              course: curso,
+              semester: Number(semestre),
+              verificationCode: code.trim(),
+            }),
+          });
+
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            return {
+              success: false,
+              error: data.error || 'Código incorreto ou falha ao criar conta.',
+            };
+          }
+
+          try {
+            sessionStorage.removeItem('fatec_cadastro_draft');
+          } catch {}
+
+          return { success: true };
+        }}
       />
     );
   }
@@ -273,6 +297,32 @@ export default function CadastroPage() {
                 onChange={(e) => setRa(e.target.value)}
               />
             </div>
+          </div>
+
+          {/* E-mail de Recuperação Obrigatório (Receberá o Código OTP de 6 dígitos) */}
+          <div className="form-group">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label className="form-label" htmlFor="recoveryEmail">
+                E-mail de Segurança & Recuperação (Obrigatório)
+              </label>
+              {recoveryEmail && /\S+@\S+\.\S+/.test(recoveryEmail) && (
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-emerald)' }}>
+                  ✓ Válido
+                </span>
+              )}
+            </div>
+            <input
+              id="recoveryEmail"
+              type="email"
+              className="form-input"
+              placeholder="ex: seu.email.pessoal@gmail.com"
+              value={recoveryEmail}
+              onChange={(e) => setRecoveryEmail(e.target.value)}
+              required
+            />
+            <small style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem', display: 'block', lineHeight: 1.4 }}>
+              ✉️ Aceita qualquer domínio pessoal (ex: <strong>@gmail.com</strong>, <strong>@outlook.com</strong>, etc.). O <strong>código de 6 dígitos</strong> para confirmação e ativação da conta será enviado para este endereço.
+            </small>
           </div>
 
           {/* Seleção do Curso */}
@@ -463,7 +513,7 @@ export default function CadastroPage() {
             disabled={loading}
             style={{ width: '100%', marginTop: '0.75rem', padding: '0.75rem', fontSize: '0.95rem' }}
           >
-            {loading ? 'Criando conta discente...' : 'Finalizar Cadastro Discente'}
+            {loading ? 'Despachando código de verificação...' : 'Receber Código de Ativação por E-mail'}
           </button>
         </form>
 

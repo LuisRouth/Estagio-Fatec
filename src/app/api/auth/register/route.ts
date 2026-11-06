@@ -25,10 +25,15 @@ const RegisterSchema = z.object({
         message: 'O cadastro requer e-mail discente oficial padrão (@aluno.cps.sp.gov.br) ou institucional (@fatec.sp.gov.br).',
       }
     ),
+  recoveryEmail: z
+    .string()
+    .email('Formato de e-mail de recuperação/pessoal inválido')
+    .max(180),
   ra: z.string().min(5).max(20).optional(),
   password: z.string().min(8),
   course: z.enum(['IA', 'ESG']),
   semester: z.number().int().min(1).max(4),
+  verificationCode: z.string().length(6, 'O código de confirmação deve ter exatamente 6 dígitos numéricos.'),
 });
 
 export async function POST(req: NextRequest) {
@@ -57,12 +62,12 @@ export async function POST(req: NextRequest) {
       });
 
       return NextResponse.json<ApiResponse>(
-        { success: false, error: 'Dados cadastrais inválidos', errors: fieldErrors },
+        { success: false, error: 'Dados cadastrais inválidos ou incompletos', errors: fieldErrors },
         { status: 400, headers: SECURITY_HEADERS }
       );
     }
 
-    const { name, email, ra, password, course, semester } = parseResult.data;
+    const { name, email, recoveryEmail, ra, password, course, semester, verificationCode } = parseResult.data;
 
     // Validação estrita de força da senha
     const strength = validatePasswordStrength(password);
@@ -74,10 +79,27 @@ export async function POST(req: NextRequest) {
     }
 
     const cleanEmail = email.toLowerCase().trim();
+    const cleanRecoveryEmail = recoveryEmail.toLowerCase().trim();
     const cleanRa = ra ? sanitizeInput(ra) : null;
     const cleanName = sanitizeInput(name);
 
-    // Verificar se o e-mail já existe
+    // 1. Validar se o código de 6 dígitos enviado ao e-mail de recuperação é verídico e vigente
+    const verifCheck = await db.verifications.verify(cleanRecoveryEmail, verificationCode);
+    if (!verifCheck.valid) {
+      // Fallback: verifica pelo institucional caso registrado sob o institucional
+      const verifCheckInst = await db.verifications.verify(cleanEmail, verificationCode);
+      if (!verifCheckInst.valid) {
+        return NextResponse.json<ApiResponse>(
+          {
+            success: false,
+            error: 'Código de verificação incorreto ou expirado. Verifique a mensagem recebida no seu e-mail de recuperação.',
+          },
+          { status: 400, headers: SECURITY_HEADERS }
+        );
+      }
+    }
+
+    // 2. Verificar se o e-mail institucional já existe
     const existingEmail = await db.users.findByEmail(cleanEmail);
     if (existingEmail) {
       return NextResponse.json<ApiResponse>(
@@ -86,7 +108,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Verificar se o RA já existe
+    // 3. Verificar se o RA já existe
     if (cleanRa) {
       const existingRa = await db.users.findByRa(cleanRa);
       if (existingRa) {
@@ -97,13 +119,16 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Criptografar senha com Bcrypt
+    // 4. Criptografar senha com Bcrypt
     const password_hash = await hashPassword(password);
 
-    // Criar usuário com papel padrão ALUNO
+    // 5. Criar usuário com papel padrão ALUNO e e-mail já confirmado
     const newUser = await db.users.create({
       name: cleanName,
       email: cleanEmail,
+      recovery_email: cleanRecoveryEmail,
+      is_email_verified: true,
+      email_verified_at: new Date().toISOString(),
       ra: cleanRa,
       password_hash,
       role: 'ALUNO',
@@ -112,7 +137,7 @@ export async function POST(req: NextRequest) {
       is_active: true,
     });
 
-    // Registrar evento de auditoria
+    // 6. Registrar evento de auditoria
     await db.audit.log({
       user_id: newUser.id,
       action: 'USER_REGISTERED',
@@ -120,13 +145,13 @@ export async function POST(req: NextRequest) {
       entity_id: newUser.id,
       ip_address: req.headers.get('x-forwarded-for') || '127.0.0.1',
       user_agent: req.headers.get('user-agent'),
-      payload: { email: cleanEmail, course, semester },
+      payload: { email: cleanEmail, recoveryEmail: cleanRecoveryEmail, course, semester },
     });
 
     return NextResponse.json<ApiResponse<SafeUser>>(
       {
         success: true,
-        message: 'Cadastro realizado com sucesso! Você já pode efetuar login.',
+        message: 'Conta criada e e-mail validado com sucesso! Você já pode efetuar login.',
         data: sanitizeUser(newUser),
       },
       { status: 201, headers: SECURITY_HEADERS }
