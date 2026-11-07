@@ -255,7 +255,7 @@ async function runFullQAPipeline() {
   // ------------------------------------------------------------------
   // SUÍTE 7: SPRINT 3 - BACKEND ANALYTICS, SEGURANÇA E RELATÓRIOS 200H
   // ------------------------------------------------------------------
-  console.log('\n📈 [SUÍTE 7/7] Validando Módulos Analíticos, Otimizações de Banco e Relatórios de Estágio...');
+  console.log('\n📈 [SUÍTE 7/8] Validando Módulos Analíticos, Otimizações de Banco e Relatórios de Estágio...');
   const sprint3Analytics = [
     'src/app/api/ca/analytics/financial/route.ts',
     'src/app/api/ca/analytics/products/route.ts',
@@ -282,6 +282,25 @@ async function runFullQAPipeline() {
     'Sprint3-Docs',
     'Relatórios de Estágio Supervisionado (Sprints 1, 2 e 3 - 200h totais) homologados'
   );
+
+  // ------------------------------------------------------------------
+  // SUÍTE 8: GESTÃO ADMINISTRATIVA DE USUÁRIOS & CONTAS DISCENTES
+  // ------------------------------------------------------------------
+  console.log('\n👥 [SUÍTE 8/8] Validando Módulo de Gestão Administrativa de Usuários & Contas...');
+  const adminPagePath = path.join(rootDir, 'src', 'app', 'admin', 'usuarios', 'page.tsx');
+  const adminApiUsers = path.join(rootDir, 'src', 'app', 'api', 'admin', 'users', 'route.ts');
+  const adminApiUserId = path.join(rootDir, 'src', 'app', 'api', 'admin', 'users', '[id]', 'route.ts');
+  const adminApiReset = path.join(rootDir, 'src', 'app', 'api', 'admin', 'users', '[id]', 'reset-password', 'route.ts');
+
+  assert(fs.existsSync(adminPagePath), 'Admin-UI', 'Tela web de Gestão de Usuários (/admin/usuarios) implementada');
+  assert(fs.existsSync(adminApiUsers), 'Admin-API', 'Endpoint administrativo /api/admin/users implementado');
+  assert(fs.existsSync(adminApiUserId), 'Admin-API', 'Endpoint de atualização/exclusão /api/admin/users/[id] implementado');
+  assert(fs.existsSync(adminApiReset), 'Admin-API', 'Endpoint de redefinição de senha /api/admin/users/[id]/reset-password implementado');
+
+  const dbCode = fs.readFileSync(path.join(rootDir, 'src', 'lib', 'db.ts'), 'utf8');
+  assert(dbCode.includes('deleteUser:'), 'Admin-DB', 'Método seguro de exclusão permanente (deleteUser) ativo na camada db');
+  assert(dbCode.includes('updateRole:'), 'Admin-DB', 'Método de alteração de cargo (updateRole) ativo na camada db');
+  assert(dbCode.includes('updateStatus:'), 'Admin-DB', 'Método de ativação/inativação (updateStatus) ativo na camada db');
 
   console.log('\n===================================================================');
   console.log(`📊 RESUMO DA ESTEIRA DE QA: ${totalPassed} testes aprovados | ${totalFailed} falhas`);

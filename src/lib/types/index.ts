@@ -339,7 +339,16 @@ export interface UserSecurityAudit {
   userId: string;
   changedBy?: string | null;
   changedByName?: string | null;
-  action: 'PASSWORD_CHANGE' | 'PRIMARY_EMAIL_CHANGE' | 'RECOVERY_EMAIL_CHANGE' | 'PROFILE_UPDATE';
+  action:
+    | 'PASSWORD_CHANGE'
+    | 'PRIMARY_EMAIL_CHANGE'
+    | 'RECOVERY_EMAIL_CHANGE'
+    | 'PROFILE_UPDATE'
+    | 'ROLE_CHANGE'
+    | 'USER_ACTIVATED'
+    | 'USER_DEACTIVATED'
+    | 'ADMIN_USER_UPDATE'
+    | 'USER_DELETED';
   fieldName: string;
   oldValueMasked?: string | null;
   newValueMasked?: string | null;

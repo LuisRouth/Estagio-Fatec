@@ -10,6 +10,7 @@ import path from 'path';
 import { Pool } from 'pg';
 import {
   User,
+  UserRole,
   CanteenProduct,
   CanteenTransaction,
   CanteenTransactionItem,
@@ -902,7 +903,7 @@ export const db = {
       if (isMock || !pool) {
         return mockUsers.map(({ password_hash: _, ...safe }) => safe);
       }
-      const res = await pool.query('SELECT id, name, email, recovery_email, is_email_verified, ra, role, course, semester, is_active, created_at, updated_at FROM users');
+      const res = await pool.query('SELECT id, name, email, recovery_email, is_email_verified, email_verified_at, ra, role, course, semester, is_active, created_at, updated_at FROM users ORDER BY created_at DESC');
       return res.rows;
     },
 
@@ -1026,6 +1027,227 @@ export const db = {
       }
       await pool.query('UPDATE users SET is_email_verified = TRUE, email_verified_at = NOW(), updated_at = NOW() WHERE id = $1', [userId]);
       return true;
+    },
+
+    updateRole: async (
+      userId: string,
+      newRole: UserRole,
+      changedBy?: string,
+      clientInfo?: { ip?: string; userAgent?: string }
+    ): Promise<SafeUser | null> => {
+      const user = await db.users.findById(userId);
+      if (!user) return null;
+
+      if (user.role === 'ADMIN' && newRole !== 'ADMIN') {
+        const allUsers = await db.users.listAll();
+        const activeAdmins = allUsers.filter((u) => u.role === 'ADMIN' && u.is_active && u.id !== userId);
+        if (activeAdmins.length === 0) {
+          throw new Error('Não é possível remover a permissão do único administrador ativo do sistema.');
+        }
+      }
+
+      const now = new Date().toISOString();
+      if (isMock || !pool) {
+        const idx = mockUsers.findIndex((u) => u.id === userId);
+        if (idx !== -1) {
+          mockUsers[idx].role = newRole;
+          mockUsers[idx].updated_at = now;
+        }
+      } else {
+        await pool.query('UPDATE users SET role = $1, updated_at = NOW() WHERE id = $2', [newRole, userId]);
+      }
+
+      await db.securityAudit.log({
+        userId,
+        changedBy: changedBy || 'ADMIN',
+        action: 'ROLE_CHANGE',
+        fieldName: 'role',
+        oldValueMasked: user.role,
+        newValueMasked: newRole,
+        ipAddress: clientInfo?.ip,
+        userAgent: clientInfo?.userAgent,
+      });
+
+      const updated = await db.users.findById(userId);
+      if (!updated) return null;
+      const { password_hash: _, ...safe } = updated;
+      return safe;
+    },
+
+    updateStatus: async (
+      userId: string,
+      isActive: boolean,
+      changedBy?: string,
+      clientInfo?: { ip?: string; userAgent?: string }
+    ): Promise<SafeUser | null> => {
+      const user = await db.users.findById(userId);
+      if (!user) return null;
+
+      if (user.role === 'ADMIN' && !isActive) {
+        const allUsers = await db.users.listAll();
+        const activeAdmins = allUsers.filter((u) => u.role === 'ADMIN' && u.is_active && u.id !== userId);
+        if (activeAdmins.length === 0) {
+          throw new Error('Não é possível desativar o único administrador ativo do sistema.');
+        }
+      }
+
+      const now = new Date().toISOString();
+      if (isMock || !pool) {
+        const idx = mockUsers.findIndex((u) => u.id === userId);
+        if (idx !== -1) {
+          mockUsers[idx].is_active = isActive;
+          mockUsers[idx].updated_at = now;
+        }
+      } else {
+        await pool.query('UPDATE users SET is_active = $1, updated_at = NOW() WHERE id = $2', [isActive, userId]);
+      }
+
+      await db.securityAudit.log({
+        userId,
+        changedBy: changedBy || 'ADMIN',
+        action: isActive ? 'USER_ACTIVATED' : 'USER_DEACTIVATED',
+        fieldName: 'is_active',
+        oldValueMasked: String(user.is_active),
+        newValueMasked: String(isActive),
+        ipAddress: clientInfo?.ip,
+        userAgent: clientInfo?.userAgent,
+      });
+
+      const updated = await db.users.findById(userId);
+      if (!updated) return null;
+      const { password_hash: _, ...safe } = updated;
+      return safe;
+    },
+
+    adminUpdate: async (
+      userId: string,
+      updates: {
+        name?: string;
+        email?: string;
+        recovery_email?: string | null;
+        ra?: string | null;
+        role?: UserRole;
+        course?: CourseType;
+        semester?: number;
+        is_active?: boolean;
+        is_email_verified?: boolean;
+      },
+      changedBy?: string,
+      clientInfo?: { ip?: string; userAgent?: string }
+    ): Promise<SafeUser | null> => {
+      const user = await db.users.findById(userId);
+      if (!user) return null;
+
+      const now = new Date().toISOString();
+      const newName = updates.name !== undefined ? updates.name : user.name;
+      const newEmail = updates.email !== undefined ? updates.email.toLowerCase().trim() : user.email;
+      const newRecoveryEmail = updates.recovery_email !== undefined ? (updates.recovery_email ? updates.recovery_email.toLowerCase().trim() : null) : user.recovery_email;
+      const newRa = updates.ra !== undefined ? updates.ra : user.ra;
+      const newRole = updates.role !== undefined ? updates.role : user.role;
+      const newCourse = updates.course !== undefined ? updates.course : user.course;
+      const newSemester = updates.semester !== undefined ? updates.semester : user.semester;
+      const newIsActive = updates.is_active !== undefined ? updates.is_active : user.is_active;
+      const newIsVerified = updates.is_email_verified !== undefined ? updates.is_email_verified : (user.is_email_verified ?? false);
+
+      if (user.role === 'ADMIN' && (newRole !== 'ADMIN' || !newIsActive)) {
+        const allUsers = await db.users.listAll();
+        const activeAdmins = allUsers.filter((u) => u.role === 'ADMIN' && u.is_active && u.id !== userId);
+        if (activeAdmins.length === 0) {
+          throw new Error('Não é possível desativar ou rebaixar o único administrador ativo do sistema.');
+        }
+      }
+
+      if (isMock || !pool) {
+        const idx = mockUsers.findIndex((u) => u.id === userId);
+        if (idx !== -1) {
+          mockUsers[idx] = {
+            ...mockUsers[idx],
+            name: newName,
+            email: newEmail,
+            recovery_email: newRecoveryEmail,
+            ra: newRa,
+            role: newRole,
+            course: newCourse,
+            semester: newSemester,
+            is_active: newIsActive,
+            is_email_verified: newIsVerified,
+            updated_at: now,
+          };
+        }
+      } else {
+        await pool.query(
+          `UPDATE users 
+           SET name = $1, email = $2, recovery_email = $3, ra = $4, role = $5, course = $6, semester = $7, is_active = $8, is_email_verified = $9, updated_at = NOW()
+           WHERE id = $10`,
+          [newName, newEmail, newRecoveryEmail, newRa, newRole, newCourse, newSemester, newIsActive, newIsVerified, userId]
+        );
+      }
+
+      await db.securityAudit.log({
+        userId,
+        changedBy: changedBy || 'ADMIN',
+        action: 'ADMIN_USER_UPDATE',
+        fieldName: 'user_details',
+        oldValueMasked: `${user.name} (${user.email}) - ${user.role}`,
+        newValueMasked: `${newName} (${newEmail}) - ${newRole}`,
+        ipAddress: clientInfo?.ip,
+        userAgent: clientInfo?.userAgent,
+      });
+
+      const updated = await db.users.findById(userId);
+      if (!updated) return null;
+      const { password_hash: _, ...safe } = updated;
+      return safe;
+    },
+
+    deleteUser: async (
+      userId: string,
+      changedBy?: string,
+      clientInfo?: { ip?: string; userAgent?: string }
+    ): Promise<{ success: boolean; error?: string }> => {
+      const user = await db.users.findById(userId);
+      if (!user) {
+        return { success: false, error: 'Usuário não encontrado.' };
+      }
+
+      if (user.role === 'ADMIN') {
+        const allUsers = await db.users.listAll();
+        const activeAdmins = allUsers.filter((u) => u.role === 'ADMIN' && u.is_active && u.id !== userId);
+        if (activeAdmins.length === 0) {
+          return { success: false, error: 'Não é possível excluir o único administrador ativo do sistema.' };
+        }
+      }
+
+      if (isMock || !pool) {
+        const idx = mockUsers.findIndex((u) => u.id === userId);
+        if (idx !== -1) {
+          mockUsers.splice(idx, 1);
+        }
+      } else {
+        // Exclui/desvincula registros filhos de forma segura
+        await pool.query('DELETE FROM email_verifications WHERE user_id = $1 OR LOWER(email) = LOWER($2) OR LOWER(recovery_email) = LOWER($2)', [userId, user.email]);
+        await pool.query('DELETE FROM user_preferences WHERE user_id = $1', [userId]);
+        await pool.query('DELETE FROM canteen_transaction_items WHERE transaction_id IN (SELECT id FROM canteen_transactions WHERE user_id = $1)', [userId]);
+        await pool.query('DELETE FROM canteen_transactions WHERE user_id = $1', [userId]);
+        await pool.query('DELETE FROM academic_materials WHERE author_id = $1', [userId]);
+        await pool.query('DELETE FROM announcements WHERE author_id = $1', [userId]);
+        await pool.query('DELETE FROM canteen_suggestions WHERE user_id = $1', [userId]);
+        await pool.query('UPDATE audit_logs SET user_id = NULL WHERE user_id = $1', [userId]);
+        await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+      }
+
+      await db.securityAudit.log({
+        userId,
+        changedBy: changedBy || 'ADMIN',
+        action: 'USER_DELETED',
+        fieldName: 'user_account',
+        oldValueMasked: `${user.name} (${user.email})`,
+        newValueMasked: '(CONTA EXCLUIDA PERMANENTEMENTE)',
+        ipAddress: clientInfo?.ip,
+        userAgent: clientInfo?.userAgent,
+      });
+
+      return { success: true };
     },
   },
 
@@ -2550,7 +2772,7 @@ export const db = {
     log: async (entry: {
       userId: string;
       changedBy?: string | null;
-      action: 'PASSWORD_CHANGE' | 'PRIMARY_EMAIL_CHANGE' | 'RECOVERY_EMAIL_CHANGE' | 'PROFILE_UPDATE';
+      action: UserSecurityAudit['action'];
       fieldName: string;
       oldValueMasked?: string | null;
       newValueMasked?: string | null;

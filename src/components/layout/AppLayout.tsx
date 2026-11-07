@@ -241,6 +241,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     { label: 'Repositório Acadêmico', href: '/repositorio' },
     { label: 'Vitrine de Projetos', href: '/vitrine' },
     { label: 'Extrato de Consumo', href: '/historico' },
+    ...(currentUser?.role === 'ADMIN'
+      ? [{ label: 'Gestão de Usuários', href: '/admin/usuarios' }]
+      : []),
   ];
 
   return (
@@ -499,6 +502,34 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                       </svg>
                       <span>Perfil & Configurações</span>
                     </Link>
+
+                    {currentUser?.role === 'ADMIN' && (
+                      <Link
+                        href="/admin/usuarios"
+                        prefetch={true}
+                        onClick={() => setUserMenuOpen(false)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.65rem',
+                          padding: '0.6rem 0.75rem',
+                          borderRadius: '8px',
+                          color: activePath === '/admin/usuarios'
+                            ? (highContrast ? '#38bdf8' : 'var(--accent-blue-hover)')
+                            : '#b91c1c',
+                          fontSize: '0.85rem',
+                          fontWeight: 700,
+                          backgroundColor: activePath === '/admin/usuarios'
+                            ? (highContrast ? '#243044' : 'var(--accent-blue-light)')
+                            : '#fef2f2',
+                          border: '1px solid #fecaca',
+                          transition: 'background-color 0.15s ease',
+                        }}
+                      >
+                        <span style={{ fontSize: '1rem' }}>👥</span>
+                        <span>Gestão de Usuários (ADM)</span>
+                      </Link>
+                    )}
 
                     <button
                       type="button"
