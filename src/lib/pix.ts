@@ -26,30 +26,28 @@ export function normalizePixKey(key: string): string {
     return trimmed.toLowerCase();
   }
 
-  const digits = trimmed.replace(/\D/g, '');
-
-  // 3. CPF (11 dígitos): sem pontuação
-  if (digits.length === 11 && (trimmed.includes('.') || trimmed.includes('-'))) {
-    return digits;
+  // 3. Telefone explícito com '+' ou parênteses de DDD: (19) 99999-9999 ou +5519...
+  if (trimmed.startsWith('+') || trimmed.includes('(') || trimmed.includes(')')) {
+    const digits = trimmed.replace(/\D/g, '');
+    if (digits.startsWith('55')) {
+      return `+${digits}`;
+    }
+    return `+55${digits}`;
   }
+
+  const digits = trimmed.replace(/\D/g, '');
 
   // 4. CNPJ (14 dígitos): sem pontuação
   if (digits.length === 14) {
     return digits;
   }
 
-  // 5. Telefone Celular: BACEN exige prefixo internacional +55 (ex: +5519999998888)
-  if (trimmed.startsWith('+')) {
-    return `+${digits}`;
-  }
-  if (digits.length === 11 && digits[2] === '9') {
-    return `+55${digits}`;
-  }
-  if (digits.length === 10) {
-    return `+55${digits}`;
+  // 5. CPF (11 dígitos): sem pontuação (nunca confundir com telefone)
+  if (digits.length === 11) {
+    return digits;
   }
 
-  return digits || trimmed;
+  return trimmed;
 }
 
 /**
@@ -163,7 +161,10 @@ export function generatePixPayload(params: PixPayloadParams): PixPayloadResult {
 
   // Tag 62: Additional Data Field Template
   // Subtag 05: Reference Label / txid identificador único
-  const additionalData = formatTLV('05', txid);
+  // No padrão do Banco Central (BACEN) para QR Code Estático (Tag 01 = '11'), o txid DEVE ser '***'
+  // Quando preenchido com outro identificador, bancos como Nubank/Itaú/Bradesco tentam consultar uma API de PSP inexistente e rejeitam o código.
+  const pixTxid = '***';
+  const additionalData = formatTLV('05', pixTxid);
   payloadWithoutCrc += formatTLV('62', additionalData);
 
   // Tag 63: CRC16 (Header '6304' para inclusão no cálculo do CRC)
