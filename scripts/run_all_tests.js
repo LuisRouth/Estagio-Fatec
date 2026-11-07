@@ -286,7 +286,7 @@ async function runFullQAPipeline() {
   // ------------------------------------------------------------------
   // SUÍTE 8: GESTÃO ADMINISTRATIVA DE USUÁRIOS & CONTAS DISCENTES
   // ------------------------------------------------------------------
-  console.log('\n👥 [SUÍTE 8/8] Validando Módulo de Gestão Administrativa de Usuários & Contas...');
+  console.log('\n👥 [SUÍTE 8/9] Validando Módulo de Gestão Administrativa de Usuários & Contas...');
   const adminPagePath = path.join(rootDir, 'src', 'app', 'admin', 'usuarios', 'page.tsx');
   const adminApiUsers = path.join(rootDir, 'src', 'app', 'api', 'admin', 'users', 'route.ts');
   const adminApiUserId = path.join(rootDir, 'src', 'app', 'api', 'admin', 'users', '[id]', 'route.ts');
@@ -301,6 +301,24 @@ async function runFullQAPipeline() {
   assert(dbCode.includes('deleteUser:'), 'Admin-DB', 'Método seguro de exclusão permanente (deleteUser) ativo na camada db');
   assert(dbCode.includes('updateRole:'), 'Admin-DB', 'Método de alteração de cargo (updateRole) ativo na camada db');
   assert(dbCode.includes('updateStatus:'), 'Admin-DB', 'Método de ativação/inativação (updateStatus) ativo na camada db');
+
+  // ------------------------------------------------------------------
+  // SUÍTE 9: FLUXO DE CONFERÊNCIA DE CAIXA, ALERTAS & BAIXA PIX CANTINA
+  // ------------------------------------------------------------------
+  console.log('\n🏪 [SUÍTE 9/9] Validando Fluxo de Caixa, Alertas e Baixa Pix na Cantina...');
+  const emailCode = fs.readFileSync(path.join(rootDir, 'src', 'lib', 'email.ts'), 'utf8');
+  assert(emailCode.includes('sendCanteenOrderAlertToConferente'), 'Canteen-Cashier', 'Disparo de alerta ao conferente implementado no serviço de e-mail');
+  assert(emailCode.includes('sendCanteenPaymentConfirmationToStudent'), 'Canteen-Cashier', 'Disparo de confirmação de retirada para o aluno implementado');
+
+  const checkoutCode = fs.readFileSync(path.join(rootDir, 'src', 'app', 'api', 'canteen', 'checkout', 'route.ts'), 'utf8');
+  assert(checkoutCode.includes('sendCanteenOrderAlertToConferente'), 'Canteen-Cashier', 'Checkout integrado ao disparo de notificação para o conferente');
+
+  const cantinaAdminCode = fs.readFileSync(path.join(rootDir, 'src', 'app', 'cantina', 'admin', 'page.tsx'), 'utf8');
+  assert(cantinaAdminCode.includes("activeTab === 'orders'"), 'Canteen-Cashier', 'Painel administrativo da cantina possui aba de Conferência de Pedidos & Caixa');
+  assert(cantinaAdminCode.includes('handleConfirmPayment'), 'Canteen-Cashier', 'Ação de confirmação e baixa de pagamento Pix presente no painel');
+
+  const cantinaUserCode = fs.readFileSync(path.join(rootDir, 'src', 'app', 'cantina', 'page.tsx'), 'utf8');
+  assert(cantinaUserCode.includes('isPaymentConfirmedByCashier'), 'Canteen-Cashier', 'Polling em tempo real e tela de confirmação de pagamento ativos na loja');
 
   console.log('\n===================================================================');
   console.log(`📊 RESUMO DA ESTEIRA DE QA: ${totalPassed} testes aprovados | ${totalFailed} falhas`);

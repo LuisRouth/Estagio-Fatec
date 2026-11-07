@@ -163,3 +163,267 @@ export async function sendVerificationEmail({
   }
 }
 
+export interface CanteenOrderAlertParams {
+  to: string;
+  orderId: string;
+  txid?: string;
+  studentName: string;
+  studentRa?: string | null;
+  studentEmail: string;
+  studentCourse?: string;
+  totalAmount: number;
+  items: Array<{
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    subtotal: number;
+  }>;
+  createdAt?: string;
+  adminUrl?: string;
+}
+
+/**
+ * Dispara e-mail de alerta imediato para o conferente da cantina quando um novo pedido Pix é criado.
+ */
+export async function sendCanteenOrderAlertToConferente(params: CanteenOrderAlertParams): Promise<EmailSendResult> {
+  const { to, orderId, studentName, studentRa, studentEmail, studentCourse, totalAmount, items, adminUrl } = params;
+  const from = process.env.SMTP_FROM || `"Cantina FATEC Rio Claro" <${process.env.SMTP_USER || 'noreply@fatec.sp.gov.br'}>`;
+  const transporter = getTransporter();
+
+  const baseUrl = process.env.NEXTAUTH_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://estagio-fatec.vercel.app');
+  const targetAdminUrl = adminUrl || `${baseUrl}/cantina/admin`;
+
+  const formattedTotal = `R$ ${totalAmount.toFixed(2).replace('.', ',')}`;
+  const subject = `🔔 Novo Pedido Cantina: ${studentName} - ${formattedTotal} (Aguardando Pix)`;
+
+  const itemsRows = items
+    .map(
+      (item) => `
+      <tr style="border-bottom: 1px solid #f1f5f9;">
+        <td style="padding: 10px 12px; font-size: 14px; color: #1e293b;">${item.name}</td>
+        <td style="padding: 10px 12px; font-size: 14px; color: #64748b; text-align: center;">${item.quantity}x</td>
+        <td style="padding: 10px 12px; font-size: 14px; color: #64748b; text-align: right;">R$ ${item.unitPrice.toFixed(2).replace('.', ',')}</td>
+        <td style="padding: 10px 12px; font-size: 14px; font-weight: 700; color: #0f172a; text-align: right;">R$ ${item.subtotal.toFixed(2).replace('.', ',')}</td>
+      </tr>`
+    )
+    .join('');
+
+  const htmlContent = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Novo Pedido Cantina - FATEC Rio Claro</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px; color: #1e293b; }
+    .card { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .header { background: #b91c1c; padding: 22px; text-align: center; color: #ffffff; }
+    .content { padding: 26px 24px; }
+    .badge { display: inline-block; padding: 4px 10px; background: #fef3c7; color: #92400e; font-size: 12px; font-weight: 700; border-radius: 999px; }
+    .table { width: 100%; border-collapse: collapse; margin-top: 14px; margin-bottom: 18px; }
+    .total-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px; text-align: center; margin: 20px 0; }
+    .btn { display: inline-block; background: #16a34a; color: #ffffff !important; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 700; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <h2 style="margin: 0; font-size: 20px;">🛒 Cantina Discente FATEC Rio Claro</h2>
+      <p style="margin: 6px 0 0; font-size: 13px; opacity: 0.95;">Aviso de Novo Pedido Gerado via Pix</p>
+    </div>
+    <div class="content">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <span class="badge">AGUARDANDO CONFERÊNCIA PIX</span>
+        <span style="font-size: 12px; color: #64748b;">ID: #${orderId.slice(-8).toUpperCase()}</span>
+      </div>
+
+      <div style="background: #f8fafc; padding: 14px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; line-height: 1.6;">
+        <strong style="color: #0f172a; font-size: 14px;">Dados do Aluno Comprador:</strong><br>
+        👤 <strong>Nome:</strong> ${studentName}<br>
+        📧 <strong>E-mail:</strong> ${studentEmail}<br>
+        ${studentRa ? `🎓 <strong>RA:</strong> ${studentRa}<br>` : ''}
+        ${studentCourse ? `📚 <strong>Curso:</strong> ${studentCourse}<br>` : ''}
+      </div>
+
+      <table class="table">
+        <thead>
+          <tr style="background: #f1f5f9; text-align: left; font-size: 12px; color: #475569; text-transform: uppercase;">
+            <th style="padding: 8px 12px;">Produto</th>
+            <th style="padding: 8px 12px; text-align: center;">Qtd</th>
+            <th style="padding: 8px 12px; text-align: right;">Unitário</th>
+            <th style="padding: 8px 12px; text-align: right;">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsRows}
+        </tbody>
+      </table>
+
+      <div class="total-box">
+        <span style="font-size: 13px; color: #15803d; font-weight: 600;">VALOR TOTAL A CONFERIR NO EXTRATO BANCÁRIO:</span>
+        <div style="font-size: 28px; font-weight: 800; color: #166534; margin-top: 4px;">${formattedTotal}</div>
+      </div>
+
+      <div style="text-align: center; margin-top: 24px;">
+        <a href="${targetAdminUrl}" class="btn">Abrir Painel & Dar Baixa no Pedido</a>
+      </div>
+      <p style="text-align: center; font-size: 12px; color: #94a3b8; margin-top: 14px;">
+        Após verificar a entrada do Pix no aplicativo do banco, acerte a baixa no painel para liberar a retirada.
+      </p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const textContent = `NOVO PEDIDO CANTINA FATEC - AGUARDANDO PIX\n\nAluno: ${studentName} (${studentEmail})\nValor Total: ${formattedTotal}\nPedido: #${orderId}\n\nAcesse o painel para conferir e dar baixa: ${targetAdminUrl}`;
+
+  if (!transporter) {
+    console.warn(`[EMAIL SENDER] SMTP não configurado. Alerta da cantina para ${to} ignorado.`);
+    return { sent: false, error: 'SMTP não configurado.' };
+  }
+
+  try {
+    const info = await transporter.sendMail({
+      from,
+      to,
+      subject,
+      text: textContent,
+      html: htmlContent,
+    });
+    return { sent: true, messageId: info.messageId };
+  } catch (err: any) {
+    console.error(`[EMAIL SENDER] Erro ao enviar alerta da cantina para ${to}:`, err);
+    return { sent: false, error: err.message };
+  }
+}
+
+export interface CanteenPaymentConfirmationParams {
+  to: string;
+  studentName: string;
+  orderId: string;
+  totalAmount: number;
+  items?: Array<{
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    subtotal: number;
+  }>;
+  validatedBy?: string;
+}
+
+/**
+ * Dispara e-mail para o discente comprador informando que seu pagamento Pix foi confirmado e o pedido liberado.
+ */
+export async function sendCanteenPaymentConfirmationToStudent(params: CanteenPaymentConfirmationParams): Promise<EmailSendResult> {
+  const { to, studentName, orderId, totalAmount, items } = params;
+  const from = process.env.SMTP_FROM || `"Cantina FATEC Rio Claro" <${process.env.SMTP_USER || 'noreply@fatec.sp.gov.br'}>`;
+  const transporter = getTransporter();
+
+  const formattedTotal = `R$ ${totalAmount.toFixed(2).replace('.', ',')}`;
+  const subject = `🎉 Pagamento Confirmado: Pedido #${orderId.slice(-8).toUpperCase()} - Cantina FATEC`;
+
+  const itemsRows = (items || [])
+    .map(
+      (item) => `
+      <tr style="border-bottom: 1px solid #f1f5f9;">
+        <td style="padding: 10px 12px; font-size: 14px; color: #1e293b;">${item.name}</td>
+        <td style="padding: 10px 12px; font-size: 14px; color: #64748b; text-align: center;">${item.quantity}x</td>
+        <td style="padding: 10px 12px; font-size: 14px; font-weight: 700; color: #0f172a; text-align: right;">R$ ${item.subtotal.toFixed(2).replace('.', ',')}</td>
+      </tr>`
+    )
+    .join('');
+
+  const htmlContent = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pagamento Confirmado - Cantina FATEC</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px; color: #1e293b; }
+    .card { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .header { background: #15803d; padding: 24px; text-align: center; color: #ffffff; }
+    .content { padding: 28px 24px; }
+    .success-box { background: #f0fdf4; border: 1px solid #86efac; border-radius: 10px; padding: 18px; text-align: center; margin-bottom: 22px; }
+    .table { width: 100%; border-collapse: collapse; margin-top: 14px; margin-bottom: 18px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <h2 style="margin: 0; font-size: 22px;">✅ Pagamento Confirmado!</h2>
+      <p style="margin: 6px 0 0; font-size: 13px; opacity: 0.95;">Cantina Discente - FATEC Rio Claro</p>
+    </div>
+    <div class="content">
+      <p style="font-size: 15px; color: #334155; margin-top: 0;">
+        Olá, <strong>${studentName}</strong>! Seu pagamento Pix foi conferido e baixado com sucesso.
+      </p>
+
+      <div class="success-box">
+        <span style="font-size: 13px; color: #166534; font-weight: 600;">CÓDIGO DO PEDIDO LIBERADO:</span>
+        <div style="font-size: 26px; font-weight: 800; color: #15803d; letter-spacing: 1px; margin-top: 4px;">
+          #${orderId.slice(-8).toUpperCase()}
+        </div>
+        <div style="font-size: 13px; color: #15803d; margin-top: 6px;">
+          Valor Pago: <strong>${formattedTotal}</strong>
+        </div>
+      </div>
+
+      <div style="background: #f8fafc; border-radius: 8px; padding: 14px; margin-bottom: 18px; border-left: 4px solid #16a34a;">
+        <strong style="color: #0f172a; font-size: 13px;">Como retirar seus produtos:</strong>
+        <p style="margin: 4px 0 0; font-size: 13px; color: #475569;">
+          Dirija-se ao balcão da cantina na FATEC e informe o seu nome ou o código do pedido <strong>#${orderId.slice(-8).toUpperCase()}</strong>.
+        </p>
+      </div>
+
+      ${
+        itemsRows
+          ? `
+      <table class="table">
+        <thead>
+          <tr style="background: #f1f5f9; text-align: left; font-size: 12px; color: #475569; text-transform: uppercase;">
+            <th style="padding: 8px 12px;">Item</th>
+            <th style="padding: 8px 12px; text-align: center;">Qtd</th>
+            <th style="padding: 8px 12px; text-align: right;">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsRows}
+        </tbody>
+      </table>`
+          : ''
+      }
+
+      <div style="text-align: center; margin-top: 24px; font-size: 12px; color: #94a3b8;">
+        Obrigado por apoiar a Cantina Discente da FATEC Rio Claro!<br>
+        Guarde este e-mail como seu comprovante oficial de retirada.
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const textContent = `PAGAMENTO CONFIRMADO - CANTINA FATEC\n\nOlá, ${studentName}!\nSeu pedido #${orderId.slice(-8).toUpperCase()} no valor de ${formattedTotal} foi confirmado e está pronto para retirada no balcão da cantina.\n\nObrigado!`;
+
+  if (!transporter) {
+    console.warn(`[EMAIL SENDER] SMTP não configurado. Confirmação para ${to} pausada.`);
+    return { sent: false, error: 'SMTP não configurado.' };
+  }
+
+  try {
+    const info = await transporter.sendMail({
+      from,
+      to,
+      subject,
+      text: textContent,
+      html: htmlContent,
+    });
+    return { sent: true, messageId: info.messageId };
+  } catch (err: any) {
+    console.error(`[EMAIL SENDER] Erro ao enviar confirmação para ${to}:`, err);
+    return { sent: false, error: err.message };
+  }
+}
+

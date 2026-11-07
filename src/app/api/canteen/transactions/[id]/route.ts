@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { getCurrentSession } from '@/lib/auth';
 import { SECURITY_HEADERS, sanitizeInput } from '@/lib/security';
+import { sendCanteenPaymentConfirmationToStudent } from '@/lib/email';
 
 const updateStatusSchema = z.object({
   status: z.enum(['PENDENTE', 'PAGO', 'CANCELADO', 'EM_ANALISE'] as const),
@@ -102,7 +103,8 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     }
 
     const isOwner = existingTx.user_id === session.sub;
-    const isPrivileged = session.role === 'CA_MEMBRO' || session.role === 'ADMIN';
+    const dbUser = await db.users.findById(session.sub);
+    const isPrivileged = session.role === 'CA_MEMBRO' || session.role === 'ADMIN' || Boolean(dbUser?.can_validate_canteen);
 
     // Aluno comum só pode solicitar análise anexando comprovante (status EM_ANALISE)
     // ou cancelar seu próprio pedido que ainda está PENDENTE ao retornar sem concluir
@@ -111,7 +113,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
       const isOwnerSubmittingAnalysis = isOwner && parsed.data.status === 'EM_ANALISE';
       if (!isOwnerCancellingPending && !isOwnerSubmittingAnalysis) {
         return NextResponse.json(
-          { success: false, error: 'Apenas membros do CA podem alterar status para PAGO ou CANCELADO de pedidos já confirmados.' },
+          { success: false, error: 'Apenas membros do CA, administradores ou conferentes autorizados podem dar baixa em pedidos.' },
           { status: 403, headers: SECURITY_HEADERS }
         );
       }
@@ -123,6 +125,26 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
       notes: parsed.data.notes ? sanitizeInput(parsed.data.notes) : undefined,
       endToEndId: parsed.data.pix_end_to_end_id || undefined,
     });
+
+    // Se o pedido foi aprovado/pago pelo conferente, notifica o aluno comprador por e-mail
+    if (parsed.data.status === 'PAGO' && existingTx.status !== 'PAGO') {
+      const buyerEmail = existingTx.user_email || dbUser?.email;
+      if (buyerEmail) {
+        sendCanteenPaymentConfirmationToStudent({
+          to: buyerEmail,
+          studentName: existingTx.user_name || 'Discente FATEC',
+          orderId: id,
+          totalAmount: Number(existingTx.total_amount),
+          items: existingTx.items?.map((item) => ({
+            name: item.product_name || 'Item da Cantina',
+            quantity: item.quantity,
+            unitPrice: item.unit_price,
+            subtotal: item.subtotal,
+          })),
+          validatedBy: session.name,
+        }).catch((err) => console.error('[CANTEEN CONFIRM] Erro ao enviar e-mail ao aluno:', err));
+      }
+    }
 
     const ip = req.headers.get('x-forwarded-for') || '127.0.0.1';
     await db.audit.log({

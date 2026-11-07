@@ -10,6 +10,7 @@ import { db } from '@/lib/db';
 import { getCurrentSession } from '@/lib/auth';
 import { generatePixPayload, generateTxId } from '@/lib/pix';
 import { SECURITY_HEADERS, sanitizeInput, checkRateLimit } from '@/lib/security';
+import { sendCanteenOrderAlertToConferente } from '@/lib/email';
 
 const checkoutSchema = z.object({
   items: z.array(
@@ -137,6 +138,35 @@ export async function POST(req: NextRequest) {
         items_count: detailedItems.length,
       },
     });
+
+    // 5. Disparo automático de notificação para o conferente da cantina (E-mail e WhatsApp)
+    try {
+      const settings = await db.canteenSettings.getAll();
+      const notifyEmail = settings.notification_email || process.env.CANTEEN_NOTIFY_EMAIL;
+      const buyerUser = await db.users.findById(session.sub);
+
+      if (notifyEmail && settings.auto_notify_email !== 'false') {
+        sendCanteenOrderAlertToConferente({
+          to: notifyEmail,
+          orderId: transaction.id,
+          txid,
+          studentName: session.name,
+          studentRa: buyerUser?.ra || null,
+          studentEmail: session.email,
+          studentCourse: session.course,
+          totalAmount,
+          items: detailedItems.map((item) => ({
+            name: item.productName,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            subtotal: Number((item.quantity * item.unitPrice).toFixed(2)),
+          })),
+          createdAt: transaction.created_at,
+        }).catch((err) => console.error('[CANTEEN NOTIFY] Erro ao enviar e-mail de alerta:', err));
+      }
+    } catch (notifyErr) {
+      console.warn('[CANTEEN NOTIFY] Falha ao processar notificações do pedido:', notifyErr);
+    }
 
     return NextResponse.json(
       {

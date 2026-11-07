@@ -89,7 +89,32 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       }
     }
 
-    // 3. Atualização Completa de Dados pelo Administrador
+    // 3. Ação rápida: Atribuir ou Revogar Privilégio de Conferente/Caixa da Cantina
+    if (body.action === 'toggle_canteen_privilege') {
+      const newPrivilege = Boolean(body.canValidateCanteen);
+      try {
+        const updated = await db.users.adminUpdate(
+          id,
+          { can_validate_canteen: newPrivilege },
+          session.sub
+        );
+        return NextResponse.json<ApiResponse>(
+          {
+            success: true,
+            data: updated,
+            message: `Privilégio de conferente da cantina ${newPrivilege ? 'atribuído' : 'revogado'} com sucesso.`,
+          },
+          { headers: SECURITY_HEADERS }
+        );
+      } catch (err: any) {
+        return NextResponse.json<ApiResponse>(
+          { success: false, error: err.message || 'Erro ao atualizar privilégio da cantina.' },
+          { status: 400, headers: SECURITY_HEADERS }
+        );
+      }
+    }
+
+    // 4. Atualização Completa de Dados pelo Administrador
     const name = body.name ? sanitizeInput(body.name).trim() : undefined;
     const email = body.email ? body.email.toLowerCase().trim() : undefined;
     const recovery_email = body.recoveryEmail !== undefined ? (body.recoveryEmail ? sanitizeInput(body.recoveryEmail).toLowerCase().trim() : null) : undefined;
@@ -99,6 +124,8 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     const semester = body.semester !== undefined ? parseInt(body.semester, 10) : undefined;
     const is_active = body.isActive !== undefined ? Boolean(body.isActive) : undefined;
     const is_email_verified = body.isEmailVerified !== undefined ? Boolean(body.isEmailVerified) : undefined;
+    const can_validate_canteen = body.canValidateCanteen !== undefined ? Boolean(body.canValidateCanteen) : undefined;
+    const phone = body.phone !== undefined ? (body.phone ? sanitizeInput(body.phone).trim() : null) : undefined;
 
     if (email && !email.endsWith('@aluno.cps.sp.gov.br') && !email.endsWith('@fatec.sp.gov.br')) {
       return NextResponse.json<ApiResponse>(
@@ -120,6 +147,8 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
           semester,
           is_active,
           is_email_verified,
+          can_validate_canteen,
+          phone,
         },
         session.sub
       );
