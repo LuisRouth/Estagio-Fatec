@@ -99,7 +99,7 @@ export async function sendVerificationEmail({
     <div class="content">
       <div class="greeting">Olá, Aluno(a) FATEC!</div>
       <p class="text">
-        Recebemos uma solicitação de ativação de conta ${institutionalEmail ? `para o e-mail institucional <strong>${institutionalEmail}</strong>` : ''} no Portal de Empregabilidade e Estágios da FATEC Rio Claro.
+        Recebemos uma solicitação de ativação de conta ${institutionalEmail ? `para o e-mail institucional <strong>${institutionalEmail}</strong>` : ''} no Portal da FATEC Rio Claro.
       </p>
       
       <div class="code-box">
