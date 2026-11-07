@@ -1895,21 +1895,52 @@ export const db = {
           }
         }
 
+        let safeValidatedBy: string | null = null;
+        if (options?.validatedBy) {
+          const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(options.validatedBy);
+          if (isUuid) {
+            try {
+              const userCheck = await client.query('SELECT id FROM users WHERE id = $1 LIMIT 1', [options.validatedBy]);
+              if (userCheck.rows.length > 0) {
+                safeValidatedBy = options.validatedBy;
+              }
+            } catch {
+              safeValidatedBy = null;
+            }
+          }
+        }
+
         const updateRes = await client.query(
           `UPDATE canteen_transactions
            SET status = $1,
-               validated_by = COALESCE($2, validated_by),
+               validated_by = CASE WHEN $2::uuid IS NOT NULL THEN $2::uuid ELSE validated_by END,
                proof_image_url = COALESCE($3, proof_image_url),
                notes = COALESCE($4, notes),
                pix_end_to_end_id = COALESCE($5, pix_end_to_end_id),
                validated_at = CASE WHEN $1 = 'PAGO' THEN CURRENT_TIMESTAMP ELSE validated_at END,
                updated_at = CURRENT_TIMESTAMP
            WHERE id = $6 RETURNING *`,
-          [status, options?.validatedBy || null, options?.proofImageUrl || null, options?.notes || null, options?.endToEndId || null, id]
+          [status, safeValidatedBy, options?.proofImageUrl || null, options?.notes || null, options?.endToEndId || null, id]
         );
 
+        const updatedRow = updateRes.rows[0];
+        try {
+          const itemsRes = await client.query(
+            `SELECT ti.*, p.name as product_name
+             FROM canteen_transaction_items ti
+             JOIN canteen_products p ON p.id = ti.product_id
+             WHERE ti.transaction_id = $1`,
+            [id]
+          );
+          if (updatedRow) {
+            updatedRow.items = itemsRes.rows;
+          }
+        } catch {
+          // Itens opcionais em caso de retorno
+        }
+
         await client.query('COMMIT');
-        return updateRes.rows[0];
+        return updatedRow;
       } catch (err) {
         await client.query('ROLLBACK');
         throw err;

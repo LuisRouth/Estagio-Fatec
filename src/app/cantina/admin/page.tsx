@@ -431,9 +431,9 @@ export default function CantinaAdminPage() {
     const formattedAmount = `R$ ${Number(tx.total_amount).toFixed(2).replace('.', ',')}`;
     setConfirmDialog({
       isOpen: true,
-      title: 'Confirmar Pagamento Pix & Dar Baixa?',
-      message: `Deseja dar baixa e confirmar o pagamento do pedido #${tx.id.slice(-8).toUpperCase()} do discente ${tx.user_name || 'Aluno'} no valor de ${formattedAmount}?\n\nEsta ação:\n1. Muda o status para PAGO\n2. Lança o valor no controle de caixa do Centro Acadêmico\n3. Garante a baixa do estoque\n4. Dispara e-mail automático para o estudante com o código de retirada.`,
-      confirmLabel: '✓ Confirmar e Liberar Retirada',
+      title: 'Confirmar Pagamento Pix & Liberar Retirada',
+      message: `Confirmar recebimento de ${formattedAmount} do discente ${tx.user_name || 'Aluno'} (Pedido #${tx.id.slice(-8).toUpperCase()})? Esta ação libera a retirada e envia a confirmação por e-mail ao aluno.`,
+      confirmLabel: '✓ Confirmar e Liberar',
       cancelLabel: 'Cancelar',
       isDanger: false,
       onConfirm: async () => {
@@ -446,7 +446,10 @@ export default function CantinaAdminPage() {
           });
           const data = await res.json();
           if (res.ok && data.success) {
-            showToast(`✓ Pagamento do pedido #${tx.id.slice(-8).toUpperCase()} confirmado! E-mail enviado ao aluno.`);
+            showToast(`✓ Pagamento do pedido #${tx.id.slice(-8).toUpperCase()} confirmado! E-mail enviado.`);
+            setTransactions((prev) =>
+              prev.map((t) => (t.id === tx.id ? { ...t, status: 'PAGO', validated_at: new Date().toISOString() } : t))
+            );
             fetchOrders();
             fetchProducts();
           } else {

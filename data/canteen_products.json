@@ -201,13 +201,13 @@
     "description": "Garrafa de água mineral natural geladinha",
     "category": "BEBIDA",
     "price": 3,
-    "current_stock": 28,
+    "current_stock": 25,
     "min_stock_alert": 8,
     "image_url": "/images/products/minalba_sem_gas.jpg",
     "barcode": "7896052600019",
     "is_available": true,
     "created_at": "2026-10-27T10:00:00.000Z",
-    "updated_at": "2026-10-27T10:00:00.000Z"
+    "updated_at": "2026-11-07T16:17:43.821Z"
   },
   {
     "id": "b0000000-0000-0000-0000-000000000016",

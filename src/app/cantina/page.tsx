@@ -33,6 +33,7 @@ interface CheckoutResult {
   qrCodeUrl: string;
   pixKey: string;
   merchantName: string;
+  conferenteWhatsapp?: string | null;
 }
 
 export default function CantinaPage() {
@@ -260,6 +261,7 @@ export default function CantinaPage() {
         qrCodeUrl: resData.qrCodeUrl,
         pixKey: resData.pixKey,
         merchantName: resData.merchantName,
+        conferenteWhatsapp: resData.conferenteWhatsapp || null,
       };
 
       setCheckoutData(normalizedData);
@@ -1441,7 +1443,7 @@ export default function CantinaPage() {
                   </div>
 
                   {/* Ações de Retorno ou Conclusão Rápida */}
-                  <div style={{ display: 'flex', gap: '0.65rem', marginBottom: '1.25rem' }}>
+                  <div style={{ display: 'flex', gap: '0.65rem', marginBottom: '0.85rem' }}>
                     <button
                       type="button"
                       onClick={handleCloseCheckoutWithoutFinishing}
@@ -1472,6 +1474,35 @@ export default function CantinaPage() {
                       ✓ Já Paguei no App / Concluir
                     </button>
                   </div>
+
+                  {/* Botão Limpo de WhatsApp para Avisar o Conferente */}
+                  {checkoutData.conferenteWhatsapp && (
+                    <div style={{ marginBottom: '1.25rem' }}>
+                      <a
+                        href={`https://wa.me/55${checkoutData.conferenteWhatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(
+                          `Olá! Realizei o Pix do pedido #${(checkoutData.orderId || checkoutData.txid || '').slice(-8).toUpperCase()} no valor de R$ ${checkoutData.totalAmount.toFixed(2).replace('.', ',')} na Cantina FATEC.`
+                        )}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn btn-secondary"
+                        style={{
+                          width: '100%',
+                          padding: '0.6rem 0.85rem',
+                          fontSize: '0.825rem',
+                          fontWeight: 700,
+                          color: '#059669',
+                          borderColor: '#a7f3d0',
+                          backgroundColor: '#f0fdf4',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.4rem',
+                        }}
+                      >
+                        📲 Avisar Conferente no WhatsApp
+                      </a>
+                    </div>
+                  )}
 
                   {/* Formulário de Envio do Comprovante */}
                   <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: '1.25rem' }}>

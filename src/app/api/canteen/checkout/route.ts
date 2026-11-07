@@ -140,8 +140,9 @@ export async function POST(req: NextRequest) {
     });
 
     // 5. Disparo automático de notificação para o conferente da cantina (E-mail e WhatsApp)
+    let settings: Record<string, string> = {};
     try {
-      const settings = await db.canteenSettings.getAll();
+      settings = await db.canteenSettings.getAll();
       const notifyEmail = settings.notification_email || process.env.CANTEEN_NOTIFY_EMAIL;
       const buyerUser = await db.users.findById(session.sub);
 
@@ -184,6 +185,7 @@ export async function POST(req: NextRequest) {
           items: transaction.items,
           status: transaction.status,
           createdAt: transaction.created_at,
+          conferenteWhatsapp: settings.notification_whatsapp || null,
         },
       },
       { status: 201, headers: SECURITY_HEADERS }

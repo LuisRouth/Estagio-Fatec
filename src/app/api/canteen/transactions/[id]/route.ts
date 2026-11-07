@@ -104,7 +104,18 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 
     const isOwner = existingTx.user_id === session.sub;
     const dbUser = await db.users.findById(session.sub);
-    const isPrivileged = session.role === 'CA_MEMBRO' || session.role === 'ADMIN' || Boolean(dbUser?.can_validate_canteen);
+    const settings = await db.canteenSettings.getAll().catch(() => ({} as Record<string, string>));
+    const isConfiguredConferente = Boolean(
+      settings?.notification_email && session.email &&
+      settings.notification_email.trim().toLowerCase() === session.email.trim().toLowerCase()
+    );
+
+    const isPrivileged =
+      session.role === 'CA_MEMBRO' ||
+      session.role === 'ADMIN' ||
+      Boolean(dbUser?.can_validate_canteen) ||
+      Boolean((session as any).can_validate_canteen) ||
+      isConfiguredConferente;
 
     // Aluno comum só pode solicitar análise anexando comprovante (status EM_ANALISE)
     // ou cancelar seu próprio pedido que ainda está PENDENTE ao retornar sem concluir
@@ -128,38 +139,43 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 
     // Se o pedido foi aprovado/pago pelo conferente, notifica o aluno comprador por e-mail
     if (parsed.data.status === 'PAGO' && existingTx.status !== 'PAGO') {
-      const buyerEmail = existingTx.user_email || dbUser?.email;
+      const buyerUser = await db.users.findById(existingTx.user_id);
+      const buyerEmail = existingTx.user_email || buyerUser?.email;
       if (buyerEmail) {
         sendCanteenPaymentConfirmationToStudent({
           to: buyerEmail,
-          studentName: existingTx.user_name || 'Discente FATEC',
+          studentName: existingTx.user_name || buyerUser?.name || 'Discente FATEC',
           orderId: id,
           totalAmount: Number(existingTx.total_amount),
-          items: existingTx.items?.map((item) => ({
+          items: (existingTx.items || []).map((item) => ({
             name: item.product_name || 'Item da Cantina',
             quantity: item.quantity,
-            unitPrice: item.unit_price,
-            subtotal: item.subtotal,
+            unitPrice: Number(item.unit_price),
+            subtotal: Number(item.subtotal || item.quantity * item.unit_price),
           })),
-          validatedBy: session.name,
+          validatedBy: dbUser?.name || session.name || 'Conferente da Cantina',
         }).catch((err) => console.error('[CANTEEN CONFIRM] Erro ao enviar e-mail ao aluno:', err));
       }
     }
 
-    const ip = req.headers.get('x-forwarded-for') || '127.0.0.1';
-    await db.audit.log({
-      user_id: session.sub,
-      action: 'CANTEEN_TRANSACTION_STATUS_UPDATED',
-      entity_name: 'canteen_transactions',
-      entity_id: id,
-      ip_address: ip,
-      user_agent: req.headers.get('user-agent'),
-      payload: {
-        old_status: existingTx.status,
-        new_status: parsed.data.status,
-        updated_by_role: session.role,
-      },
-    });
+    try {
+      const ip = req.headers.get('x-forwarded-for') || '127.0.0.1';
+      await db.audit.log({
+        user_id: session.sub,
+        action: 'CANTEEN_TRANSACTION_STATUS_UPDATED',
+        entity_name: 'canteen_transactions',
+        entity_id: id,
+        ip_address: ip,
+        user_agent: req.headers.get('user-agent'),
+        payload: {
+          old_status: existingTx.status,
+          new_status: parsed.data.status,
+          updated_by_role: session.role,
+        },
+      });
+    } catch (auditErr) {
+      console.warn('[CANTEEN AUDIT] Falha não impeditiva ao registrar auditoria:', auditErr);
+    }
 
     return NextResponse.json(
       {
