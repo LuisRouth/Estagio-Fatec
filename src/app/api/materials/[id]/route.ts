@@ -21,6 +21,9 @@ const updateSchema = z.object({
   image_url: z.string().optional().nullable(),
   demo_url: z.string().optional().nullable(),
   author_name: z.string().max(150).optional().nullable(),
+  banner_type: z.string().optional().nullable(),
+  links: z.array(z.any()).optional().nullable(),
+  attachments: z.array(z.any()).optional().nullable(),
   tags: z.string().max(255).optional().nullable(),
   is_approved: z.boolean().optional(),
 });

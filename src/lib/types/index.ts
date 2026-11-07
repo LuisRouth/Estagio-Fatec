@@ -140,10 +140,13 @@ export interface AcademicMaterial {
   author_id: string;
   author_name?: string;
   material_type: MaterialType;
+  banner_type?: string | null;
   file_url: string;
   github_url?: string | null;
   image_url?: string | null;
   demo_url?: string | null;
+  links?: AnnouncementLink[];
+  attachments?: AnnouncementAttachment[];
   tags?: string | null;
   download_count: number;
   is_approved: boolean;

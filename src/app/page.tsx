@@ -74,8 +74,8 @@ export default function HomePage() {
       secondaryBtn: { label: 'Mural de Avisos', href: '/avisos' },
     },
     {
-      tag: 'Acervo Acadêmico 2026',
-      badge: '1º ao 4º Semestre',
+      tag: 'Repositório Didático',
+      badge: 'FATEC Rio Claro',
       title: 'Repositório Didático: Notas de Aula, Códigos e Roteiros',
       description: 'Centralização definitiva dos materiais didáticos dos cursos de IA e ESG. Encontre slides, códigos no GitHub e listas de exercícios organizados por matéria e semestre.',
       primaryBtn: { label: 'Explorar Disciplinas', href: '/repositorio' },
@@ -534,7 +534,7 @@ export default function HomePage() {
                 Nenhum material pendente ou novo roteiro publicado
               </div>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.35rem', lineHeight: 1.55 }}>
-                Os arquivos didáticos, apostilas e códigos dos semestres vigentes (1º ao 4º) estão catalogados na íntegra através do acervo completo.
+                Os arquivos didáticos, apostilas e códigos das disciplinas dos cursos de IA e ESG estão catalogados na íntegra no acervo.
               </p>
             </div>
           </div>

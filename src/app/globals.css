@@ -1926,8 +1926,9 @@ textarea,
 /* ==================================================================== */
 
 .badge-rose {
-  background-color: var(--accent-rose-light);
-  color: var(--accent-rose);
+  background-color: rgba(225, 29, 72, 0.12);
+  color: #f43f5e;
+  border: 1px solid rgba(244, 63, 94, 0.3);
 }
 
 .badge-amber {
@@ -1951,9 +1952,9 @@ textarea,
   padding: 0.35rem 0.65rem;
   font-size: 0.78rem;
   border-radius: 8px;
-  border: 1px solid #fecdd3;
-  background-color: #fff1f2;
-  color: #e11d48;
+  border: 1px solid rgba(225, 29, 72, 0.3);
+  background-color: rgba(225, 29, 72, 0.08);
+  color: #f43f5e;
   cursor: pointer;
   font-weight: 600;
   display: inline-flex;
@@ -1964,8 +1965,9 @@ textarea,
 }
 
 .btn-danger-outline:hover {
-  background-color: #ffe4e6;
-  border-color: #fda4af;
+  background-color: rgba(225, 29, 72, 0.2);
+  border-color: #f43f5e;
+  color: #fca5a5;
 }
 
 .dark-high-contrast .btn-danger-outline {
@@ -1985,7 +1987,7 @@ textarea,
 /* ==================================================================== */
 
 .repositorio-header-card {
-  background-color: rgba(255, 255, 255, 0.92);
+  background-color: var(--bg-card);
   backdrop-filter: blur(16px);
   border-radius: 20px;
   padding: 2.25rem 2rem;
@@ -2000,10 +2002,10 @@ textarea,
 }
 
 .repositorio-rag-card {
-  background: linear-gradient(135deg, rgba(240, 249, 255, 0.95) 0%, rgba(236, 253, 245, 0.95) 100%);
+  background-color: var(--bg-card);
   border-radius: 18px;
   padding: 1.75rem;
-  border: 1px solid rgba(2, 132, 199, 0.25);
+  border: 1px solid var(--border-light);
   box-shadow: var(--shadow-sm);
 }
 
@@ -2286,7 +2288,7 @@ textarea,
 
 .admin-user-title {
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text-main);
 }
 
 .dark-high-contrast .admin-user-title {

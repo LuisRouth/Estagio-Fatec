@@ -27,6 +27,9 @@ const materialSchema = z.object({
   image_url: z.string().optional().nullable(),
   demo_url: z.string().optional().nullable(),
   author_name: z.string().max(150).optional().nullable(),
+  banner_type: z.string().optional().nullable(),
+  links: z.array(z.any()).optional().nullable(),
+  attachments: z.array(z.any()).optional().nullable(),
   tags: z.string().max(255).optional().nullable(),
   is_approved: z.boolean().optional(),
 });
@@ -48,6 +51,7 @@ export async function GET(req: NextRequest) {
     const pendingOnly = searchParams.get('pending') === 'true';
     const authorId = searchParams.get('author_id') || undefined;
     const onlyApproved = !pendingOnly && !authorId && searchParams.get('all') !== 'true';
+    const scope = (searchParams.get('scope') || searchParams.get('catalog')) as 'repositorio' | 'vitrine' | null;
 
     const materials = await db.materials.list({
       course: course || undefined,
@@ -58,6 +62,7 @@ export async function GET(req: NextRequest) {
       onlyApproved,
       authorId,
       pendingOnly,
+      scope: scope || undefined,
     });
 
     return NextResponse.json(
@@ -134,6 +139,9 @@ export async function POST(req: NextRequest) {
       github_url: parsed.data.github_url || null,
       image_url: parsed.data.image_url || null,
       demo_url: parsed.data.demo_url || null,
+      banner_type: parsed.data.banner_type || null,
+      links: parsed.data.links || [],
+      attachments: parsed.data.attachments || [],
       tags: cleanTags || null,
       is_approved: parsed.data.is_approved !== undefined ? parsed.data.is_approved : isAutoApproved,
     });

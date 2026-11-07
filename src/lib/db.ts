@@ -1899,6 +1899,7 @@ export const db = {
       onlyApproved?: boolean;
       authorId?: string;
       pendingOnly?: boolean;
+      scope?: 'repositorio' | 'vitrine';
     }): Promise<AcademicMaterial[]> => {
       if (isMock || !pool) {
         let items = [...mockMaterials];
@@ -1908,6 +1909,11 @@ export const db = {
           items = items.filter((m) => m.author_id === filters.authorId);
         } else if (filters?.onlyApproved !== false) {
           items = items.filter((m) => m.is_approved);
+        }
+        if (filters?.scope === 'repositorio') {
+          items = items.filter((m) => m.material_type !== 'PROJETO' && m.material_type !== 'TCC');
+        } else if (filters?.scope === 'vitrine') {
+          items = items.filter((m) => m.material_type === 'PROJETO' || m.material_type === 'TCC');
         }
         if (filters?.course) {
           items = items.filter((m) => m.course === filters.course);
@@ -1951,6 +1957,11 @@ export const db = {
         params.push(filters.authorId);
       } else if (filters?.onlyApproved !== false) {
         query += ` AND m.is_approved = TRUE`;
+      }
+      if (filters?.scope === 'repositorio') {
+        query += ` AND m.material_type NOT IN ('PROJETO', 'TCC')`;
+      } else if (filters?.scope === 'vitrine') {
+        query += ` AND m.material_type IN ('PROJETO', 'TCC')`;
       }
       if (filters?.course) {
         query += ` AND m.course = $${pIdx++}`;
@@ -2015,8 +2026,8 @@ export const db = {
       const res = await pool.query(
         `INSERT INTO academic_materials (
            id, title, description, subject, course, semester, author_id,
-           material_type, file_url, github_url, image_url, demo_url, author_name, tags, is_approved
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING *`,
+           material_type, file_url, github_url, image_url, demo_url, author_name, tags, is_approved, banner_type, links, attachments
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING *`,
         [
           id,
           data.title,
@@ -2033,6 +2044,9 @@ export const db = {
           newMaterial.author_name,
           data.tags || null,
           newMaterial.is_approved,
+          data.banner_type || 'PADRAO_AZUL',
+          JSON.stringify(data.links || []),
+          JSON.stringify(data.attachments || []),
         ]
       );
       return res.rows[0];

@@ -1,137 +1,360 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
-import { AcademicMaterial, CourseType, MaterialType } from '@/lib/types';
-import ToastNotification from '@/components/ui/ToastNotification';
+import { AcademicMaterial, CourseType, MaterialType, AnnouncementLink, AnnouncementAttachment } from '@/lib/types';
 
-interface RAGSource {
-  id: string;
-  title: string;
-  subject: string;
-  course: 'IA' | 'ESG';
-  semester: number;
-  materialType: string;
-  fileUrl: string;
-  githubUrl?: string | null;
-  authorName?: string;
-  relevanceScore: number;
-  excerpt: string;
+// Presets de Capa / Banners com Gradientes Dinâmicos
+const MATERIAL_BANNER_PRESETS = [
+  {
+    id: 'PADRAO_AZUL',
+    label: 'Azul Institucional',
+    gradient: 'linear-gradient(135deg, #1e3a8a 0%, #0284c7 50%, #0f172a 100%)',
+    desc: 'Ciência de Dados & Fundamentos',
+  },
+  {
+    id: 'PADRAO_AGRO',
+    label: 'Agro & Visão Computacional',
+    gradient: 'linear-gradient(135deg, #065f46 0%, #059669 50%, #022c22 100%)',
+    desc: 'Agronegócio & Campo',
+  },
+  {
+    id: 'PADRAO_SAUDE',
+    label: 'Saúde, Bio & Imagens Médicas',
+    gradient: 'linear-gradient(135deg, #0369a1 0%, #0284c7 50%, #082f49 100%)',
+    desc: 'Medicina & Diagnóstico',
+  },
+  {
+    id: 'PADRAO_DEEPTECH',
+    label: 'IA, Deep Learning & Modelos',
+    gradient: 'linear-gradient(135deg, #4338ca 0%, #6366f1 50%, #1e1b4b 100%)',
+    desc: 'Redes Neurais, NLP & Notebooks',
+  },
+  {
+    id: 'PADRAO_ESG',
+    label: 'Gestão ESG & Sustentabilidade',
+    gradient: 'linear-gradient(135deg, #047857 0%, #0d9488 50%, #134e4a 100%)',
+    desc: 'Relatórios ODS & Governança',
+  },
+];
+
+// Componente Curricular Oficial da FATEC Rio Claro (PPC)
+interface PPCDiscipline {
+  code: string;
+  name: string;
+  course: CourseType;
+  semester: number; // 1 a 4, ou 5 para TCC / Estágio
+  hours?: number;
+  mode?: 'Presencial' | 'On-line';
 }
 
-interface RAGResponseData {
-  question: string;
-  answer: string;
-  sources: RAGSource[];
-  confidence: number;
-  mode: string;
-  latencyMs: number;
-}
+// Matriz Curricular Completa dos Cursos da FATEC Rio Claro (IA e Gestão ESG)
+const OFFICIAL_PPC_DISCIPLINES: PPCDiscipline[] = [
+  // ==========================================
+  // CST EM INTELIGÊNCIA ARTIFICIAL (38 componentes)
+  // ==========================================
+  // 1º Semestre IA (9 disciplinas)
+  { code: 'EIA-001', name: 'Projeto 1 – Gestão de Projetos Ágeis', course: 'IA', semester: 1, hours: 120, mode: 'Presencial' },
+  { code: 'EIA-002', name: 'Projeto 1 – Execução de Projetos', course: 'IA', semester: 1, hours: 120, mode: 'Presencial' },
+  { code: 'ILP-113', name: 'Linguagem de Programação I', course: 'IA', semester: 1, hours: 80, mode: 'Presencial' },
+  { code: 'CEE-070', name: 'Empreendedorismo e Inovação', course: 'IA', semester: 1, hours: 40, mode: 'Presencial' },
+  { code: 'IIA-020', name: 'Introdução à Inteligência Artificial', course: 'IA', semester: 1, hours: 80, mode: 'Presencial' },
+  { code: 'IBD-040', name: 'Introdução à Bancos de Dados', course: 'IA', semester: 1, hours: 40, mode: 'On-line' },
+  { code: 'GPJ-022', name: 'Gestão de Projetos', course: 'IA', semester: 1, hours: 40, mode: 'On-line' },
+  { code: 'ISW-052', name: 'Introdução à Computação em Nuvem', course: 'IA', semester: 1, hours: 40, mode: 'On-line' },
+  { code: 'ISW-053', name: 'Introdução à Internet das Coisas', course: 'IA', semester: 1, hours: 40, mode: 'Presencial' },
+
+  // 2º Semestre IA (9 disciplinas)
+  { code: 'EIA-003', name: 'Projeto 2 – Gestão de Projetos Ágeis', course: 'IA', semester: 2, hours: 120, mode: 'Presencial' },
+  { code: 'EIA-004', name: 'Projeto 2 – Execução de Projetos', course: 'IA', semester: 2, hours: 120, mode: 'Presencial' },
+  { code: 'IBD-041', name: 'Banco de Dados Não Relacional', course: 'IA', semester: 2, hours: 40, mode: 'On-line' },
+  { code: 'ILP-114', name: 'Linguagens de Programação II', course: 'IA', semester: 2, hours: 40, mode: 'Presencial' },
+  { code: 'IED-020', name: 'Estrutura de Dados', course: 'IA', semester: 2, hours: 80, mode: 'Presencial' },
+  { code: 'IED-021', name: 'Mineração de Dados', course: 'IA', semester: 2, hours: 80, mode: 'Presencial' },
+  { code: 'IRC-035', name: 'Redes de Computadores', course: 'IA', semester: 2, hours: 40, mode: 'On-line' },
+  { code: 'ILP-115', name: 'Linguagem e seus Códigos', course: 'IA', semester: 2, hours: 40, mode: 'On-line' },
+  { code: 'MAT-052', name: 'Matemática', course: 'IA', semester: 2, hours: 40, mode: 'Presencial' },
+
+  // 3º Semestre IA (9 disciplinas)
+  { code: 'EIA-005', name: 'Projeto 3 – Gestão de Projetos Ágeis', course: 'IA', semester: 3, hours: 120, mode: 'Presencial' },
+  { code: 'EIA-006', name: 'Projeto 3 – Execução de Projetos', course: 'IA', semester: 3, hours: 120, mode: 'Presencial' },
+  { code: 'EST-069', name: 'Estatística', course: 'IA', semester: 3, hours: 80, mode: 'Presencial' },
+  { code: 'MAQ-026', name: 'Aprendizado de Máquina I', course: 'IA', semester: 3, hours: 80, mode: 'Presencial' },
+  { code: 'IIA-021', name: 'Inteligência Computacional', course: 'IA', semester: 3, hours: 40, mode: 'On-line' },
+  { code: 'ING-297', name: 'Inglês I', course: 'IA', semester: 3, hours: 40, mode: 'Presencial' },
+  { code: 'MAG-020', name: 'Álgebra Linear', course: 'IA', semester: 3, hours: 40, mode: 'Presencial' },
+  { code: 'HIA-001', name: 'Ética na Inteligência Artificial', course: 'IA', semester: 3, hours: 40, mode: 'On-line' },
+  { code: 'BDN-009', name: 'Big Data e Inteligência Artificial', course: 'IA', semester: 3, hours: 40, mode: 'On-line' },
+
+  // 4º Semestre IA (9 disciplinas)
+  { code: 'EIA-007', name: 'Projeto 4 – Gestão de Projetos Ágeis', course: 'IA', semester: 4, hours: 120, mode: 'Presencial' },
+  { code: 'EIA-008', name: 'Projeto 4 – Execução de Projetos', course: 'IA', semester: 4, hours: 120, mode: 'Presencial' },
+  { code: 'MAQ-027', name: 'Aprendizado de Máquina II', course: 'IA', semester: 4, hours: 80, mode: 'Presencial' },
+  { code: 'IIA-022', name: 'Análise Preditiva', course: 'IA', semester: 4, hours: 40, mode: 'Presencial' },
+  { code: 'IRC-036', name: 'Redes Neurais', course: 'IA', semester: 4, hours: 80, mode: 'Presencial' },
+  { code: 'ING-298', name: 'Inglês II', course: 'IA', semester: 4, hours: 40, mode: 'Presencial' },
+  { code: 'COM-084', name: 'Ciência Cognitiva', course: 'IA', semester: 4, hours: 40, mode: 'On-line' },
+  { code: 'IIA-023', name: 'Visão Computacional', course: 'IA', semester: 4, hours: 40, mode: 'On-line' },
+  { code: 'ISG-030', name: 'Segurança da Informação', course: 'IA', semester: 4, hours: 40, mode: 'On-line' },
+
+  // Complementares IA (2 componentes)
+  { code: 'TIA-001', name: 'Trabalho de Graduação (TCC IA)', course: 'IA', semester: 5, hours: 160, mode: 'Presencial' },
+  { code: 'EIA-100', name: 'Estágio Curricular Supervisionado (IA)', course: 'IA', semester: 5, hours: 240, mode: 'Presencial' },
+
+  // ==========================================
+  // CST EM GESTÃO DA SUSTENTABILIDADE & ESG (29 componentes)
+  // ==========================================
+  // 1º Semestre ESG (7 disciplinas)
+  { code: 'ESG-W1A', name: 'Workshop de Práticas: Projetos Ambiental 1A', course: 'ESG', semester: 1, hours: 80, mode: 'Presencial' },
+  { code: 'ESG-W1B', name: 'Workshop de Práticas: Projetos Social 1B', course: 'ESG', semester: 1, hours: 100, mode: 'Presencial' },
+  { code: 'ESG-W1C', name: 'Workshop de Práticas: Projetos Governança 1C', course: 'ESG', semester: 1, hours: 100, mode: 'Presencial' },
+  { code: 'ESG-LEG', name: 'Aspectos Legais em ESG', course: 'ESG', semester: 1, hours: 80, mode: 'On-line' },
+  { code: 'ESG-INO', name: 'Gestão da Inovação e Empreendedorismo', course: 'ESG', semester: 1, hours: 40, mode: 'Presencial' },
+  { code: 'ESG-GPJ', name: 'Gestão de Projetos', course: 'ESG', semester: 1, hours: 40, mode: 'Presencial' },
+  { code: 'ESG-COM', name: 'Leitura Crítica e Escrita Profissional', course: 'ESG', semester: 1, hours: 40, mode: 'On-line' },
+
+  // 2º Semestre ESG (6 disciplinas)
+  { code: 'ESG-P2A', name: 'Práticas Ambientais 2A', course: 'ESG', semester: 2, hours: 280, mode: 'Presencial' },
+  { code: 'ESG-AMB', name: 'Gestão Ambiental', course: 'ESG', semester: 2, hours: 40, mode: 'Presencial' },
+  { code: 'ESG-RSK', name: 'Gestão de Riscos Ambientais', course: 'ESG', semester: 2, hours: 40, mode: 'Presencial' },
+  { code: 'ESG-RES', name: 'Gestão de Resíduos', course: 'ESG', semester: 2, hours: 40, mode: 'Presencial' },
+  { code: 'ESG-CIR', name: 'Economia Circular e Oportunidades Limpas', course: 'ESG', semester: 2, hours: 40, mode: 'On-line' },
+  { code: 'ESG-ESP', name: 'Espanhol para ESG – Aplicações em Projetos', course: 'ESG', semester: 2, hours: 40, mode: 'On-line' },
+
+  // 3º Semestre ESG (7 disciplinas)
+  { code: 'ESG-D3A', name: 'Gestão da Diversidade 3A', course: 'ESG', semester: 3, hours: 140, mode: 'Presencial' },
+  { code: 'ESG-I3B', name: 'Gestão da Inovação para Cadeias Globais 3B', course: 'ESG', semester: 3, hours: 140, mode: 'Presencial' },
+  { code: 'ESG-DIV', name: 'Gestão da Diversidade (Inclusão e Desenvolvimento Social)', course: 'ESG', semester: 3, hours: 40, mode: 'Presencial' },
+  { code: 'ESG-PSI', name: 'Psicologia Organizacional (Gestão e Autogestão)', course: 'ESG', semester: 3, hours: 40, mode: 'Presencial' },
+  { code: 'ESG-CAD', name: 'Cadeias Globais de Valor', course: 'ESG', semester: 3, hours: 40, mode: 'On-line' },
+  { code: 'ESG-DAT', name: 'Análise de Dados para ESG', course: 'ESG', semester: 3, hours: 40, mode: 'Presencial' },
+  { code: 'ESG-IN1', name: 'Inglês 1 para ESG – Fundamentos', course: 'ESG', semester: 3, hours: 40, mode: 'On-line' },
+
+  // 4º Semestre ESG (7 disciplinas)
+  { code: 'ESG-R4A', name: 'Reporting 4A', course: 'ESG', semester: 4, hours: 140, mode: 'Presencial' },
+  { code: 'ESG-C4B', name: 'Compliance 4B', course: 'ESG', semester: 4, hours: 140, mode: 'Presencial' },
+  { code: 'ESG-REL', name: 'Relações Institucionais', course: 'ESG', semester: 4, hours: 40, mode: 'On-line' },
+  { code: 'ESG-CMP', name: 'Compliance', course: 'ESG', semester: 4, hours: 40, mode: 'On-line' },
+  { code: 'ESG-CAP', name: 'Mercado de Capitais', course: 'ESG', semester: 4, hours: 40, mode: 'Presencial' },
+  { code: 'ESG-FIN', name: 'Finanças Sustentáveis', course: 'ESG', semester: 4, hours: 40, mode: 'Presencial' },
+  { code: 'ESG-IN2', name: 'Inglês 2 para ESG – Aplicações em Projetos', course: 'ESG', semester: 4, hours: 40, mode: 'On-line' },
+
+  // Componentes Complementares ESG (2 componentes)
+  { code: 'ESG-TCC', name: 'Trabalho de Graduação (TCC ESG)', course: 'ESG', semester: 5, hours: 160, mode: 'Presencial' },
+  { code: 'ESG-EST', name: 'Estágio Curricular Supervisionado (ESG)', course: 'ESG', semester: 5, hours: 160, mode: 'Presencial' },
+];
 
 export default function RepositorioPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'acervo' | 'meus' | 'moderacao'>('acervo');
 
-  // Materiais Gerais (Aprovados)
+  // Materiais do Acervo Geral
   const [materials, setMaterials] = useState<AcademicMaterial[]>([]);
   const [loadingMaterials, setLoadingMaterials] = useState(true);
 
-  // Meus Materiais
+  // Minhas Contribuições
   const [myMaterials, setMyMaterials] = useState<AcademicMaterial[]>([]);
   const [loadingMyMaterials, setLoadingMyMaterials] = useState(false);
 
-  // Moderação CA & ADM
+  // Moderação (CA e ADM)
   const [pendingMaterials, setPendingMaterials] = useState<AcademicMaterial[]>([]);
   const [loadingPending, setLoadingPending] = useState(false);
 
-  // Filtros
-  const [selectedCourse, setSelectedCourse] = useState<'TODOS' | 'IA' | 'ESG'>('TODOS');
+  // Filtros do Acervo
+  const [selectedCourse, setSelectedCourse] = useState<'TODOS' | CourseType>('TODOS');
   const [selectedSemester, setSelectedSemester] = useState<number | 'TODOS'>('TODOS');
-  const [selectedType, setSelectedType] = useState<string>('TODOS');
+  const [selectedType, setSelectedType] = useState<'TODOS' | MaterialType>('TODOS');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedSubject, setSelectedSubject] = useState<string>('TODAS');
 
-  // RAG AI
+  // Controle de Expansão / Recolhimento da Grade Curricular
+  const [showCurriculumExplorer, setShowCurriculumExplorer] = useState(false);
+  const [expandedSemesters, setExpandedSemesters] = useState<Record<string, boolean>>({
+    'IA-1': true,
+    'IA-2': false,
+    'IA-3': false,
+    'IA-4': false,
+    'IA-5': false,
+    'ESG-1': true,
+    'ESG-2': false,
+    'ESG-3': false,
+    'ESG-4': false,
+    'ESG-5': false,
+  });
+
+  const toggleSemester = (key: string) => {
+    setExpandedSemesters((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  // Expandir todas as 67 disciplinas simultaneamente
+  const expandAllSemesters = () => {
+    setShowCurriculumExplorer(true);
+    setSelectedCourse('TODOS');
+    setSelectedSemester('TODOS');
+    setExpandedSemesters({
+      'IA-1': true,
+      'IA-2': true,
+      'IA-3': true,
+      'IA-4': true,
+      'IA-5': true,
+      'ESG-1': true,
+      'ESG-2': true,
+      'ESG-3': true,
+      'ESG-4': true,
+      'ESG-5': true,
+    });
+  };
+
+  // Recolher todos os semestres
+  const collapseAllSemesters = () => {
+    setExpandedSemesters({
+      'IA-1': false,
+      'IA-2': false,
+      'IA-3': false,
+      'IA-4': false,
+      'IA-5': false,
+      'ESG-1': false,
+      'ESG-2': false,
+      'ESG-3': false,
+      'ESG-4': false,
+      'ESG-5': false,
+    });
+  };
+
+  // Animação interativa do MEME 67 ("SIX-SEVEN!" sem áudio)
+  const [isMeme67Active, setIsMeme67Active] = useState(false);
+
+  const handleTriggerMeme67 = (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+
+    if (isMeme67Active) return;
+    setIsMeme67Active(true);
+
+    // A dancinha visual do meme dura 3.2 segundos (sem som)
+    setTimeout(() => {
+      setIsMeme67Active(false);
+    }, 3200);
+  };
+
+  // Assistente Inteligente IA RAG
+  const [isRagOpen, setIsRagOpen] = useState(false);
   const [ragQuestion, setRagQuestion] = useState('');
   const [ragLoading, setRagLoading] = useState(false);
-  const [ragResult, setRagResult] = useState<RAGResponseData | null>(null);
+  const [ragResult, setRagResult] = useState<{ answer: string; sources: Array<{ title: string; subject: string; file_url: string; similarity: number }> } | null>(null);
   const [ragError, setRagError] = useState('');
 
-  // Modais
-  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  // Modais de Criação / Edição / Confirmação
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<AcademicMaterial | null>(null);
   const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<AcademicMaterial | null>(null);
 
-  // Form State
-  const [uploadTitle, setUploadTitle] = useState('');
-  const [uploadDesc, setUploadDesc] = useState('');
-  const [uploadSubject, setUploadSubject] = useState('');
-  const [uploadCourse, setUploadCourse] = useState<'IA' | 'ESG'>('IA');
-  const [uploadSemester, setUploadSemester] = useState<number>(1);
-  const [uploadType, setUploadType] = useState<MaterialType>('APOSTILA');
-  const [uploadFileUrl, setUploadFileUrl] = useState('');
-  const [uploadGithubUrl, setUploadGithubUrl] = useState('');
-  const [uploadAuthorName, setUploadAuthorName] = useState('');
-  const [uploadTags, setUploadTags] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploadError, setUploadError] = useState('');
+  // Form State Dinâmico
+  const [formTitle, setFormTitle] = useState('');
+  const [formDesc, setFormDesc] = useState('');
+  const [formSubject, setFormSubject] = useState('');
+  const [formCourse, setFormCourse] = useState<CourseType>('IA');
+  const [formSemester, setFormSemester] = useState<number>(1);
+  const [formType, setFormType] = useState<MaterialType>('APOSTILA');
+  const [formFileUrl, setFormFileUrl] = useState('');
+  const [formGithubUrl, setFormGithubUrl] = useState('');
+  const [formAuthorName, setFormAuthorName] = useState('');
+  const [formTags, setFormTags] = useState('');
 
-  // Toast
-  const [toast, setToast] = useState<{ message: string | null; type: 'success' | 'error' | 'info' }>({
-    message: null,
-    type: 'success',
-  });
+  // Banner & Capa Dinâmicos
+  const [formBannerType, setFormBannerType] = useState('PADRAO_AZUL');
+  const [formUseCustomImage, setFormUseCustomImage] = useState(false);
+  const [formImageUrl, setFormImageUrl] = useState('');
 
+  // Links & Anexos
+  const [formLinks, setFormLinks] = useState<AnnouncementLink[]>([]);
+  const [formAttachments, setFormAttachments] = useState<AnnouncementAttachment[]>([]);
+
+  const [formSubmitting, setFormSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
+
+  // Papéis de acesso
   const isPrivileged = currentUser?.role === 'ADMIN' || currentUser?.role === 'CA_MEMBRO' || currentUser?.role === 'PROFESSOR';
   const isCaOrAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'CA_MEMBRO';
 
-  // Buscar usuário logado
+  // Carregar usuário logado
   useEffect(() => {
     fetch('/api/auth/me')
       .then((r) => r.json())
       .then((d) => {
         if (d.success && d.data) {
           setCurrentUser(d.data);
-          setUploadAuthorName(d.data.name || '');
         }
       })
       .catch(() => {});
   }, []);
 
-  // Buscar acervo geral aprovado
+  // Lista dinâmica de matérias oficiais disponíveis conforme filtros de curso e semestre
+  const availableDisciplines = useMemo(() => {
+    return OFFICIAL_PPC_DISCIPLINES.filter((d) => {
+      if (selectedCourse !== 'TODOS' && d.course !== selectedCourse) return false;
+      if (selectedSemester !== 'TODOS' && d.semester !== selectedSemester) return false;
+      return true;
+    });
+  }, [selectedCourse, selectedSemester]);
+
+  // Se o usuário selecionou um semestre específico, garantir que ele esteja expandido
+  useEffect(() => {
+    if (selectedSemester !== 'TODOS') {
+      const crsList = selectedCourse === 'TODOS' ? ['IA', 'ESG'] : [selectedCourse];
+      setExpandedSemesters((prev) => {
+        const next = { ...prev };
+        crsList.forEach((c) => {
+          next[`${c}-${selectedSemester}`] = true;
+        });
+        return next;
+      });
+    }
+  }, [selectedSemester, selectedCourse]);
+
+  // Buscar materiais aprovados (Acervo Geral - estritamente materiais didáticos de aula)
   const fetchMaterials = async () => {
     setLoadingMaterials(true);
     try {
       const params = new URLSearchParams();
+      params.append('scope', 'repositorio');
       if (selectedCourse !== 'TODOS') params.append('course', selectedCourse);
       if (selectedSemester !== 'TODOS') params.append('semester', selectedSemester.toString());
-      if (selectedType !== 'TODOS') params.append('type', selectedType);
+      if (selectedType !== 'TODOS') params.append('material_type', selectedType);
 
       const res = await fetch(`/api/materials?${params.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && Array.isArray(data.data)) {
-          setMaterials(data.data);
-        }
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        // Garantia absoluta de separação: Repositório nunca exibe PROJETO nem TCC
+        const acervoOnly = data.data.filter(
+          (m: AcademicMaterial) => m.material_type !== 'PROJETO' && m.material_type !== 'TCC'
+        );
+        setMaterials(acervoOnly);
       }
     } catch (err) {
-      console.error('Erro ao carregar materiais do repositório:', err);
+      console.error('Erro ao buscar materiais do acervo:', err);
     } finally {
       setLoadingMaterials(false);
     }
   };
 
-  // Buscar materiais do usuário logado
+  // Buscar materiais do usuário logado (Minhas Contribuições de Aula)
   const fetchMyMaterials = async () => {
     if (!currentUser?.id) return;
     setLoadingMyMaterials(true);
     try {
-      const res = await fetch(`/api/materials?author_id=${currentUser.id}&all=true`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && Array.isArray(data.data)) {
-          setMyMaterials(data.data);
-        }
+      const res = await fetch(`/api/materials?author_id=${currentUser.id}&scope=repositorio&all=true`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        const myAcervo = data.data.filter(
+          (m: AcademicMaterial) => m.material_type !== 'PROJETO' && m.material_type !== 'TCC'
+        );
+        setMyMaterials(myAcervo);
       }
     } catch (err) {
       console.error('Erro ao buscar meus materiais:', err);
@@ -140,20 +363,21 @@ export default function RepositorioPage() {
     }
   };
 
-  // Buscar materiais pendentes para CA & ADM
+  // Buscar materiais pendentes de aula (Moderação)
   const fetchPendingMaterials = async () => {
     if (!isCaOrAdmin) return;
     setLoadingPending(true);
     try {
-      const res = await fetch('/api/materials?pending=true');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && Array.isArray(data.data)) {
-          setPendingMaterials(data.data);
-        }
+      const res = await fetch('/api/materials?pending=true&scope=repositorio');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        const pendingAcervo = data.data.filter(
+          (m: AcademicMaterial) => m.material_type !== 'PROJETO' && m.material_type !== 'TCC'
+        );
+        setPendingMaterials(pendingAcervo);
       }
     } catch (err) {
-      console.error('Erro ao buscar materiais pendentes:', err);
+      console.error('Erro ao buscar moderação:', err);
     } finally {
       setLoadingPending(false);
     }
@@ -164,277 +388,237 @@ export default function RepositorioPage() {
   }, [selectedCourse, selectedSemester, selectedType]);
 
   useEffect(() => {
-    if (currentUser?.id) {
-      fetchMyMaterials();
-      if (isCaOrAdmin) {
-        fetchPendingMaterials();
-      }
-    }
-  }, [currentUser, isCaOrAdmin]);
+    if (activeTab === 'meus') fetchMyMaterials();
+    if (activeTab === 'moderacao') fetchPendingMaterials();
+  }, [activeTab]);
 
-  // Consulta IA RAG
-  const handleAskRAG = async (customQuestion?: string) => {
-    const q = (customQuestion ?? ragQuestion).trim();
-    if (!q) return;
-    if (customQuestion) setRagQuestion(customQuestion);
+  // Consulta ao Motor de IA RAG
+  const handleAskRAG = async (overrideQuestion?: string) => {
+    const q = overrideQuestion || ragQuestion;
+    if (!q.trim()) return;
 
     setRagLoading(true);
     setRagError('');
+    setRagResult(null);
+
     try {
-      const res = await fetch('/api/ai/rag', {
+      const res = await fetch('/api/materials/rag', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question: q,
-          course: selectedCourse,
-          semester: selectedSemester === 'TODOS' ? null : Number(selectedSemester),
-          topK: 3,
+          course: selectedCourse === 'TODOS' ? undefined : selectedCourse,
+          semester: selectedSemester === 'TODOS' ? undefined : selectedSemester,
         }),
       });
+
       const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Não foi possível consultar o motor RAG.');
+      if (data.success) {
+        setRagResult(data.data);
+      } else {
+        setRagError(data.error || 'Não foi possível encontrar respostas no acervo.');
       }
-      setRagResult(data.data);
     } catch (err: any) {
-      setRagError(err.message || 'Erro na consulta ao motor de IA RAG.');
+      setRagError(err.message || 'Falha de conexão com o Assistente Gemini.');
     } finally {
       setRagLoading(false);
     }
   };
 
-  // Download
-  const handleDownload = async (id: string, fileUrl: string) => {
-    try {
-      await fetch(`/api/materials/${id}/download`, { method: 'POST' });
-      window.open(fileUrl, '_blank');
-      setMaterials((prev) =>
-        prev.map((m) => {
-          if (m.id === id) {
-            const currentCount = m.download_count ?? 0;
-            return { ...m, download_count: currentCount + 1 };
-          }
-          return m;
-        })
-      );
-    } catch {
-      window.open(fileUrl, '_blank');
-    }
+  // Abrir Modal para Publicar Novo Material
+  const handleOpenCreateModal = () => {
+    setEditingMaterial(null);
+    setFormTitle('');
+    setFormDesc('');
+    setFormCourse(selectedCourse === 'TODOS' ? 'IA' : selectedCourse);
+    setFormSemester(selectedSemester === 'TODOS' ? 1 : selectedSemester);
+    setFormSubject('');
+    setFormType('APOSTILA');
+    setFormFileUrl('');
+    setFormGithubUrl('');
+    setFormAuthorName(currentUser?.name || '');
+    setFormTags('');
+    setFormBannerType('PADRAO_AZUL');
+    setFormUseCustomImage(false);
+    setFormImageUrl('');
+    setFormLinks([]);
+    setFormAttachments([]);
+    setFormError('');
+    setIsModalOpen(true);
   };
 
-  // Submissão de novo material
-  const handleOpenUploadModal = () => {
-    setUploadTitle('');
-    setUploadDesc('');
-    setUploadSubject('');
-    setUploadCourse(currentUser?.course === 'ESG' ? 'ESG' : 'IA');
-    setUploadSemester(1);
-    setUploadType('APOSTILA');
-    setUploadFileUrl('');
-    setUploadGithubUrl('');
-    setUploadAuthorName(currentUser?.name || '');
-    setUploadTags('');
-    setUploadError('');
-    setIsUploadModalOpen(true);
+  // Abrir Modal para Editar Material Existente
+  const handleOpenEditModal = (m: AcademicMaterial) => {
+    setEditingMaterial(m);
+    setFormTitle(m.title);
+    setFormDesc(m.description || '');
+    setFormCourse(m.course);
+    setFormSemester(m.semester);
+    setFormSubject(m.subject);
+    setFormType(m.material_type);
+    setFormFileUrl(m.file_url || '');
+    setFormGithubUrl(m.github_url || '');
+    setFormAuthorName(m.author_name || '');
+    setFormTags(m.tags || '');
+    setFormBannerType(m.banner_type || 'PADRAO_AZUL');
+    setFormUseCustomImage(Boolean(m.image_url));
+    setFormImageUrl(m.image_url || '');
+    setFormLinks(Array.isArray(m.links) ? m.links : []);
+    setFormAttachments(Array.isArray(m.attachments) ? m.attachments : []);
+    setFormError('');
+    setIsModalOpen(true);
   };
 
-  const handleCreateMaterial = async (e: React.FormEvent) => {
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingMaterial(null);
+    setFormError('');
+  };
+
+  // Salvar (Criar ou Atualizar) Material
+  const handleSaveMaterial = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentUser) {
-      setToast({ message: 'Efetue login com seu e-mail institucional para submeter materiais.', type: 'error' });
+    setFormSubmitting(true);
+    setFormError('');
+
+    if (!formTitle.trim()) {
+      setFormError('O título do material é obrigatório.');
+      setFormSubmitting(false);
       return;
     }
 
-    setIsSubmitting(true);
-    setUploadError('');
+    if (!formSubject.trim()) {
+      setFormError('A disciplina oficial do PPC é obrigatória.');
+      setFormSubmitting(false);
+      return;
+    }
+
+    const payload = {
+      title: formTitle.trim(),
+      description: formDesc.trim(),
+      subject: formSubject.trim(),
+      course: formCourse,
+      semester: formSemester,
+      material_type: formType,
+      file_url: formFileUrl.trim() || '#',
+      github_url: formGithubUrl.trim() || undefined,
+      author_name: formAuthorName.trim() || currentUser?.name || 'Aluno FATEC',
+      tags: formTags.trim(),
+      banner_type: formUseCustomImage ? undefined : formBannerType,
+      image_url: formUseCustomImage ? formImageUrl.trim() : undefined,
+      links: formLinks.filter((l) => l.url.trim() && l.label.trim()),
+      attachments: formAttachments.filter((a) => a.url.trim() && a.title.trim()),
+    };
 
     try {
-      const payload = {
-        title: uploadTitle,
-        description: uploadDesc || null,
-        subject: uploadSubject,
-        course: uploadCourse,
-        semester: Number(uploadSemester),
-        material_type: uploadType,
-        file_url: uploadFileUrl.trim() || uploadGithubUrl.trim() || '#',
-        github_url: uploadGithubUrl.trim() || null,
-        author_name: uploadAuthorName.trim() || currentUser.name,
-        tags: uploadTags.trim() || null,
-      };
-
-      const res = await fetch('/api/materials', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Não foi possível cadastrar o material.');
+      if (editingMaterial) {
+        const res = await fetch(`/api/materials/${editingMaterial.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Erro ao atualizar o material didático.');
+        }
+      } else {
+        const res = await fetch('/api/materials', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Erro ao cadastrar o material didático.');
+        }
       }
 
-      setIsUploadModalOpen(false);
-      setToast({
-        message: isPrivileged
-          ? 'Material publicado com sucesso no Acervo!'
-          : 'Material submetido com sucesso! Aguardando validação do CA.',
-        type: 'success',
-      });
-
       fetchMaterials();
-      fetchMyMaterials();
-      if (isCaOrAdmin) fetchPendingMaterials();
+      if (activeTab === 'meus') fetchMyMaterials();
+      if (activeTab === 'moderacao') fetchPendingMaterials();
+      handleCloseModal();
     } catch (err: any) {
-      setUploadError(err.message || 'Erro ao submeter material.');
+      setFormError(err.message || 'Ocorreu um erro ao salvar o material.');
     } finally {
-      setIsSubmitting(false);
+      setFormSubmitting(false);
     }
   };
 
-  // Edição de material existente
-  const handleOpenEditModal = (m: AcademicMaterial) => {
-    setEditingMaterial(m);
-    setUploadTitle(m.title);
-    setUploadDesc(m.description || '');
-    setUploadSubject(m.subject);
-    setUploadCourse(m.course);
-    setUploadSemester(m.semester);
-    setUploadType(m.material_type);
-    setUploadFileUrl(m.file_url === '#' ? '' : m.file_url);
-    setUploadGithubUrl(m.github_url || '');
-    setUploadAuthorName(m.author_name || '');
-    setUploadTags(m.tags || '');
-    setUploadError('');
-    setIsEditModalOpen(true);
-  };
-
-  const handleSaveEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingMaterial) return;
-
-    setIsSubmitting(true);
-    setUploadError('');
-
+  // Moderação: Aprovar Material (CA / ADM)
+  const handleApproveMaterial = async (mat: AcademicMaterial) => {
     try {
-      const payload = {
-        title: uploadTitle,
-        description: uploadDesc || null,
-        subject: uploadSubject,
-        semester: Number(uploadSemester),
-        material_type: uploadType,
-        file_url: uploadFileUrl.trim() || uploadGithubUrl.trim() || '#',
-        github_url: uploadGithubUrl.trim() || null,
-        author_name: uploadAuthorName.trim() || currentUser.name,
-        tags: uploadTags.trim() || null,
-      };
-
-      const res = await fetch(`/api/materials/${editingMaterial.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Não foi possível atualizar o material.');
+      const res = await fetch(`/api/materials/${mat.id}/approve`, { method: 'POST' });
+      if (res.ok) {
+        setPendingMaterials((prev) => prev.filter((m) => m.id !== mat.id));
+        fetchMaterials();
       }
-
-      setIsEditModalOpen(false);
-      setEditingMaterial(null);
-      setToast({ message: 'Material acadêmico atualizado com sucesso!', type: 'success' });
-
-      fetchMaterials();
-      fetchMyMaterials();
-      if (isCaOrAdmin) fetchPendingMaterials();
-    } catch (err: any) {
-      setUploadError(err.message || 'Erro ao atualizar material.');
-    } finally {
-      setIsSubmitting(false);
+    } catch (err) {
+      console.error('Erro ao aprovar material:', err);
     }
   };
 
-  // Exclusão de material
+  // Excluir Material
   const handleConfirmDelete = async () => {
     if (!deleteConfirmTarget) return;
-
     try {
-      const res = await fetch(`/api/materials/${deleteConfirmTarget.id}`, {
-        method: 'DELETE',
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Erro ao excluir material.');
+      const res = await fetch(`/api/materials/${deleteConfirmTarget.id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setMaterials((prev) => prev.filter((m) => m.id !== deleteConfirmTarget.id));
+        setMyMaterials((prev) => prev.filter((m) => m.id !== deleteConfirmTarget.id));
+        setPendingMaterials((prev) => prev.filter((m) => m.id !== deleteConfirmTarget.id));
       }
-
-      setToast({ message: 'Material removido do acervo.', type: 'info' });
+    } catch (err) {
+      console.error('Erro ao excluir material:', err);
+    } finally {
       setDeleteConfirmTarget(null);
-      fetchMaterials();
-      fetchMyMaterials();
-      if (isCaOrAdmin) fetchPendingMaterials();
-    } catch (err: any) {
-      setToast({ message: err.message || 'Erro ao remover material.', type: 'error' });
     }
   };
 
-  // Aprovar publicação (Moderação CA & ADM)
-  const handleApproveMaterial = async (m: AcademicMaterial) => {
-    try {
-      const res = await fetch(`/api/materials/${m.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_approved: true }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Erro ao aprovar material.');
+  // Filtragem dos materiais na aba "Acervo Geral"
+  const filteredMaterials = useMemo(() => {
+    return materials.filter((m) => {
+      // Repositório é estritamente para materiais de aula, nunca projetos da vitrine nem TCCs
+      if (m.material_type === 'PROJETO' || m.material_type === 'TCC') return false;
+      if (selectedCourse !== 'TODOS' && m.course !== selectedCourse) return false;
+      if (selectedSemester !== 'TODOS' && m.semester !== selectedSemester) return false;
+      if (selectedType !== 'TODOS' && m.material_type !== selectedType) return false;
+      if (selectedSubject !== 'TODAS') {
+        const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const sNorm = normalize(selectedSubject);
+        const mNorm = normalize(m.subject);
+        if (!mNorm.includes(sNorm) && !sNorm.includes(mNorm)) {
+          return false;
+        }
       }
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        const matchTitle = m.title.toLowerCase().includes(query);
+        const matchSub = m.subject.toLowerCase().includes(query);
+        const matchTags = m.tags ? m.tags.toLowerCase().includes(query) : false;
+        const matchDesc = m.description ? m.description.toLowerCase().includes(query) : false;
+        const matchAuthor = m.author_name ? m.author_name.toLowerCase().includes(query) : false;
+        return matchTitle || matchSub || matchTags || matchDesc || matchAuthor;
+      }
+      return true;
+    });
+  }, [materials, selectedCourse, selectedSemester, selectedType, selectedSubject, searchQuery]);
 
-      setToast({ message: `Material "${m.title}" aprovado e publicado no Acervo!`, type: 'success' });
-      fetchMaterials();
-      fetchMyMaterials();
-      fetchPendingMaterials();
-    } catch (err: any) {
-      setToast({ message: err.message || 'Erro ao aprovar material.', type: 'error' });
-    }
-  };
-
-  // Filtro por busca
-  const filteredMaterials = materials.filter((m) => {
-    const q = searchQuery.toLowerCase().trim();
-    if (!q) return true;
-    return (
-      m.title.toLowerCase().includes(q) ||
-      m.subject.toLowerCase().includes(q) ||
-      (m.description && m.description.toLowerCase().includes(q)) ||
-      (m.tags && m.tags.toLowerCase().includes(q)) ||
-      (m.author_name && m.author_name.toLowerCase().includes(q))
-    );
-  });
-
-  const getTypeBadge = (type: string) => {
-    switch (type) {
-      case 'CODIGO':
-        return { label: 'Código / Notebook', className: 'material-badge material-badge-codigo' };
-      case 'APOSTILA':
-        return { label: 'Apostila / PDF', className: 'material-badge material-badge-apostila' };
-      case 'SLIDE':
-        return { label: 'Apresentação Slide', className: 'material-badge material-badge-slide' };
-      case 'TCC':
-        return { label: 'Projeto TCC', className: 'material-badge material-badge-tcc' };
-      case 'PROJETO':
-        return { label: 'Projeto Prático', className: 'material-badge material-badge-codigo' };
-      case 'DATASET':
-        return { label: 'Conjunto de Dados', className: 'material-badge material-badge-dataset' };
-      default:
-        return { label: type, className: 'material-badge' };
-    }
+  // Gradiente do Card
+  const getBannerGradient = (m: AcademicMaterial) => {
+    if (m.image_url) return `url(${m.image_url}) center/cover no-repeat`;
+    const preset = MATERIAL_BANNER_PRESETS.find((b) => b.id === m.banner_type);
+    if (preset) return preset.gradient;
+    if (m.course === 'ESG') return 'linear-gradient(135deg, #047857 0%, #0d9488 50%, #134e4a 100%)';
+    return 'linear-gradient(135deg, #1e3a8a 0%, #0284c7 50%, #0f172a 100%)';
   };
 
   return (
     <AppLayout activePath="/repositorio">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
         
-        {/* Cabeçalho do Repositório Acadêmico */}
+        {/* ============================================================== */}
+        {/* CABEÇALHO DO REPOSITÓRIO ACADÊMICO                             */}
+        {/* ============================================================== */}
         <div
           className="repositorio-header-card"
           style={{
@@ -459,13 +643,13 @@ export default function RepositorioPage() {
             <h1 style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
               Repositório Acadêmico & Acervo Didático
             </h1>
-            <p style={{ color: 'var(--text-sub)', fontSize: '0.95rem', marginTop: '0.35rem', maxWidth: '720px', lineHeight: 1.6 }}>
-              Acesso centralizado a notas de aula, códigos no GitHub, apostilas e projetos práticos. Fim dos materiais dispersos em pastas isoladas do Teams ou Classroom.
+            <p style={{ color: 'var(--text-sub)', fontSize: '0.95rem', marginTop: '0.35rem', maxWidth: '740px', lineHeight: 1.6 }}>
+              Acesso centralizado a notas de aula, códigos no GitHub, apostilas e roteiros de laboratório organizados rigorosamente pela matriz curricular oficial do PPC da FATEC Rio Claro.
             </p>
           </div>
 
           <button
-            onClick={handleOpenUploadModal}
+            onClick={handleOpenCreateModal}
             className="btn btn-emerald"
             style={{
               padding: '0.8rem 1.4rem',
@@ -480,11 +664,13 @@ export default function RepositorioPage() {
               <line x1="12" y1="5" x2="12" y2="19"></line>
               <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
-            Enviar Material / Anexo
+            Publicar Material / Anexo
           </button>
         </div>
 
-        {/* Barra de Navegação em 3 Abas */}
+        {/* ============================================================== */}
+        {/* NAVEGAÇÃO ENTRE ABAS (Acervo, Minhas Contribuições, Moderação) */}
+        {/* ============================================================== */}
         <div
           className="repositorio-tabs-container"
           style={{
@@ -509,8 +695,10 @@ export default function RepositorioPage() {
               fontSize: '0.925rem',
               cursor: 'pointer',
               border: 'none',
-              background: 'transparent',
-              transition: 'all 0.15s ease',
+              backgroundColor: activeTab === 'acervo' ? 'var(--bg-primary)' : 'transparent',
+              color: activeTab === 'acervo' ? 'var(--accent-blue)' : 'var(--text-muted)',
+              borderBottom: activeTab === 'acervo' ? '3px solid var(--accent-blue)' : '3px solid transparent',
+              transition: 'all 0.2s ease',
             }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -520,32 +708,36 @@ export default function RepositorioPage() {
             Acervo Didático Geral ({materials.length})
           </button>
 
-          {/* Aba 2: Meus Materiais */}
-          <button
-            onClick={() => setActiveTab('meus')}
-            className={`repositorio-tab-btn ${activeTab === 'meus' ? 'active' : ''}`}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.6rem',
-              padding: '0.75rem 1.25rem',
-              borderRadius: '10px 10px 0 0',
-              fontWeight: 700,
-              fontSize: '0.925rem',
-              cursor: 'pointer',
-              border: 'none',
-              background: 'transparent',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-            Meus Materiais & Anexos {currentUser && `(${myMaterials.length})`}
-          </button>
+          {/* Aba 2: Minhas Contribuições */}
+          {currentUser && (
+            <button
+              onClick={() => setActiveTab('meus')}
+              className={`repositorio-tab-btn ${activeTab === 'meus' ? 'active' : ''}`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.6rem',
+                padding: '0.75rem 1.25rem',
+                borderRadius: '10px 10px 0 0',
+                fontWeight: 700,
+                fontSize: '0.925rem',
+                cursor: 'pointer',
+                border: 'none',
+                backgroundColor: activeTab === 'meus' ? 'var(--bg-primary)' : 'transparent',
+                color: activeTab === 'meus' ? 'var(--accent-blue)' : 'var(--text-muted)',
+                borderBottom: activeTab === 'meus' ? '3px solid var(--accent-blue)' : '3px solid transparent',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+              Minhas Contribuições ({myMaterials.length})
+            </button>
+          )}
 
-          {/* Aba 3: Moderação CA & ADM */}
+          {/* Aba 3: Moderação (CA e Admin) */}
           {isCaOrAdmin && (
             <button
               onClick={() => setActiveTab('moderacao')}
@@ -560,185 +752,400 @@ export default function RepositorioPage() {
                 fontSize: '0.925rem',
                 cursor: 'pointer',
                 border: 'none',
-                background: 'transparent',
-                transition: 'all 0.15s ease',
+                backgroundColor: activeTab === 'moderacao' ? 'var(--bg-primary)' : 'transparent',
+                color: activeTab === 'moderacao' ? 'var(--accent-amber)' : 'var(--text-muted)',
+                borderBottom: activeTab === 'moderacao' ? '3px solid var(--accent-amber)' : '3px solid transparent',
+                transition: 'all 0.2s ease',
               }}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                <polyline points="9 12 11 14 15 10"></polyline>
               </svg>
-              Moderação CA & ADM
-              {pendingMaterials.length > 0 && (
-                <span
-                  style={{
-                    backgroundColor: 'var(--accent-amber)',
-                    color: '#0f172a',
-                    padding: '2px 8px',
-                    borderRadius: '12px',
-                    fontSize: '0.75rem',
-                    fontWeight: 800,
-                  }}
-                >
-                  {pendingMaterials.length}
-                </span>
-              )}
+              Fila de Moderação {pendingMaterials.length > 0 && `(${pendingMaterials.length})`}
             </button>
           )}
         </div>
 
-        {/* CONTEÚDO DA ABA 1: ACERVO GERAL */}
+        {/* ============================================================== */}
+        {/* ABA 1: ACERVO GERAL                                            */}
+        {/* ============================================================== */}
         {activeTab === 'acervo' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
             
-            {/* Motor de IA RAG — Tira-Dúvidas Baseado nos PDFs */}
+            {/* 1. ASSISTENTE INTELIGENTE RAG (GEMINI) — COLAPSÁVEL */}
             <div
-              className="repositorio-rag-card"
               style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '1rem',
+                backgroundColor: 'var(--bg-primary)',
+                borderRadius: '16px',
+                border: '1px solid var(--border-light)',
+                overflow: 'hidden',
+                boxShadow: 'var(--shadow-sm)',
+                transition: 'all 0.2s ease',
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
-                    <span className="badge badge-blue">Motor de IA RAG (Google Gemini)</span>
-                    <span className="badge badge-emerald">Leitura de PDFs & Notebooks</span>
-                  </div>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>
-                    Assistente Acadêmico Inteligente — Tire Dúvidas sobre o Acervo
-                  </h2>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-sub)', marginTop: '0.2rem' }}>
-                    Pergunte sobre conteúdos das disciplinas do 1º ao 4º semestre. O motor RAG busca nos PDFs, apostilas e códigos do repositório e cita as fontes.
-                  </p>
-                </div>
-              </div>
-
-              {/* Sugestões Rápidas */}
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                {[
-                  'O que aprendemos em Python no 1º semestre de IA?',
-                  'O que significa a sigla ESG e os ODS da ONU no 1º semestre?',
-                  'Quais são os 3 escopos de pegada de carbono nos relatórios ESG?',
-                  'Como funciona Machine Learning Supervisionado e validação cruzada?',
-                ].map((sample, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => handleAskRAG(sample)}
-                    className="repositorio-sample-pill"
-                  >
-                    {sample}
-                  </button>
-                ))}
-              </div>
-
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleAskRAG();
+              {/* Barra de Ativação do Assistente */}
+              <div
+                onClick={() => setIsRagOpen(!isRagOpen)}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '1.25rem 1.5rem',
+                  cursor: 'pointer',
+                  backgroundColor: isRagOpen ? 'var(--bg-muted)' : 'var(--bg-primary)',
+                  borderBottom: isRagOpen ? '1px solid var(--border-light)' : 'none',
                 }}
-                style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}
               >
-                <input
-                  type="text"
-                  value={ragQuestion}
-                  onChange={(e) => setRagQuestion(e.target.value)}
-                  placeholder="Digite sua dúvida acadêmica (ex.: Como calcular pegada de carbono ou configurar Python no 1º semestre?)"
-                  className="form-input"
-                  style={{ flex: '1 1 280px', padding: '0.75rem 1rem', borderRadius: '10px' }}
-                />
-                <button
-                  type="submit"
-                  disabled={ragLoading || !ragQuestion.trim()}
-                  className="btn btn-primary"
-                  style={{ padding: '0.75rem 1.4rem', fontWeight: 700, whiteSpace: 'nowrap' }}
-                >
-                  {ragLoading ? 'Consultando PDFs...' : 'Perguntar à IA RAG'}
-                </button>
-              </form>
-
-              {ragError && (
-                <div className="alert-box alert-error" style={{ marginTop: '0.25rem' }}>
-                  <div>{ragError}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                  <div
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '10px',
+                      backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'var(--accent-blue)',
+                    }}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                    </svg>
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                        Assistente Acadêmico Inteligente RAG (Gemini)
+                      </span>
+                      <span className="badge badge-blue" style={{ fontSize: '0.7rem' }}>
+                        IA Generativa
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0, marginTop: '2px' }}>
+                      Consulte apostilas, resumos e fontes das disciplinas sem precisar folhear arquivo por arquivo.
+                    </p>
+                  </div>
                 </div>
-              )}
 
-              {ragResult && (
-                <div
-                  className="repositorio-rag-result"
+                <button
+                  type="button"
+                  className="btn btn-secondary"
                   style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.85rem',
+                    padding: '0.45rem 0.9rem',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent-blue)' }}>
-                      Resposta Fundamentada nos Arquivos do Repositório ({ragResult.sources.length} fontes citadas)
+                  {isRagOpen ? 'Ocultar Assistente' : 'Consultar via IA'}
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ transform: isRagOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}
+                  >
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </button>
+              </div>
+
+              {/* Conteúdo Expandido do RAG */}
+              {isRagOpen && (
+                <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  {/* Exemplos Rápidos */}
+                  <div>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                      Sugestões de Dúvidas Acadêmicas:
                     </span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      Modo: {ragResult.mode} • {ragResult.latencyMs}ms
-                    </span>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                      {[
+                        'O que aprendemos na disciplina de Linguagem de Programação I no 1º semestre de IA?',
+                        'Quais são os principais conceitos de Aprendizado de Máquina I no 3º semestre?',
+                        'O que significa a sigla ESG e como são calculados os escopos de pegada de carbono?',
+                        'Como funciona a disciplina de Visão Computacional no 4º semestre de IA?',
+                      ].map((sug, i) => (
+                        <button
+                          key={i}
+                          onClick={() => handleAskRAG(sug)}
+                          className="repositorio-sample-pill"
+                          type="button"
+                          style={{
+                            fontSize: '0.75rem',
+                            padding: '0.4rem 0.75rem',
+                            borderRadius: '8px',
+                            backgroundColor: 'var(--bg-muted)',
+                            border: '1px solid var(--border-light)',
+                            color: 'var(--text-sub)',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          {sug}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
-                  <div style={{ fontSize: '0.9rem', color: 'var(--text-main)', lineHeight: 1.65, whiteSpace: 'pre-line' }}>
-                    {ragResult.answer}
+                  {/* Input de Busca do RAG */}
+                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <input
+                      type="text"
+                      placeholder="Digite sua dúvida acadêmica (ex: Como funciona a validação cruzada em Machine Learning?)"
+                      value={ragQuestion}
+                      onChange={(e) => setRagQuestion(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAskRAG()}
+                      className="form-input"
+                      style={{ flex: '1 1 300px' }}
+                    />
+                    <button
+                      onClick={() => handleAskRAG()}
+                      disabled={ragLoading || !ragQuestion.trim()}
+                      className="btn btn-primary"
+                      style={{ padding: '0.75rem 1.4rem', fontWeight: 700 }}
+                    >
+                      {ragLoading ? 'Pesquisando no Acervo...' : 'Perguntar ao Gemini'}
+                    </button>
                   </div>
 
-                  {ragResult.sources.length > 0 && (
-                    <div style={{ borderTop: '1px dashed var(--border-light)', paddingTop: '0.75rem' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>
-                        Fontes e PDFs Consultados pelo RAG:
+                  {ragError && (
+                    <div className="alert-box alert-error">
+                      <div>{ragError}</div>
+                    </div>
+                  )}
+
+                  {/* Resposta do RAG */}
+                  {ragResult && (
+                    <div
+                      style={{
+                        backgroundColor: 'var(--bg-muted)',
+                        borderRadius: '12px',
+                        padding: '1.25rem',
+                        border: '1px solid var(--border-light)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--accent-blue)', textTransform: 'uppercase' }}>
+                          Resposta Sintetizada via RAG
+                        </span>
+                        <button
+                          onClick={() => setRagResult(null)}
+                          style={{ background: 'none', border: 'none', fontSize: '0.8rem', color: 'var(--text-muted)', cursor: 'pointer' }}
+                        >
+                          ✕ Fechar Resposta
+                        </button>
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0.65rem' }}>
-                        {ragResult.sources.map((src) => (
-                          <div
-                            key={src.id}
-                            style={{
-                              padding: '0.65rem 0.85rem',
-                              borderRadius: '10px',
-                              backgroundColor: 'var(--bg-muted)',
-                              border: '1px solid var(--border-light)',
-                              fontSize: '0.78rem',
-                            }}
-                          >
-                            <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{src.title}</div>
-                            <div style={{ color: 'var(--accent-emerald)', fontWeight: 600, marginTop: '0.15rem' }}>
-                              {src.subject} • {src.course} ({src.semester}º Sem)
-                            </div>
-                            <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', marginTop: '0.2rem', fontFamily: 'monospace' }}>
-                              Arquivo: {src.fileUrl}
-                            </div>
+                      <p style={{ color: 'var(--text-main)', fontSize: '0.925rem', lineHeight: 1.6, whiteSpace: 'pre-wrap', margin: 0 }}>
+                        {ragResult.answer}
+                      </p>
+
+                      {ragResult.sources && ragResult.sources.length > 0 && (
+                        <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-light)' }}>
+                          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
+                            Fontes Identificadas no Acervo:
                           </div>
-                        ))}
-                      </div>
+                          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            {ragResult.sources.map((src, i) => (
+                              <a
+                                key={i}
+                                href={src.file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  fontSize: '0.75rem',
+                                  backgroundColor: 'var(--bg-primary)',
+                                  border: '1px solid var(--border-light)',
+                                  padding: '0.3rem 0.6rem',
+                                  borderRadius: '6px',
+                                  color: 'var(--accent-blue)',
+                                  textDecoration: 'none',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.3rem',
+                                }}
+                              >
+                                <span>{src.title} ({src.subject})</span>
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Barra de Filtros */}
+            {/* 2. PAINEL DE FILTROS E BUSCA */}
             <div
               className="repositorio-filter-card"
               style={{
+                backgroundColor: 'var(--bg-primary)',
+                borderRadius: '16px',
+                border: '1px solid var(--border-light)',
+                padding: '1.75rem',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '1.25rem',
+                boxShadow: 'var(--shadow-sm)',
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  {(['TODOS', 'IA', 'ESG'] as const).map((course) => {
-                    const isSelected = selectedCourse === course;
-                    const label = course === 'TODOS' ? 'Todos os Cursos' : course === 'IA' ? 'Inteligência Artificial' : 'Gestão ESG';
+              {/* LINHA 1: SELETOR DE CURSO & BUSCA GLOBAL */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                {/* Abas Segmentadas de Curso */}
+                <div style={{ display: 'flex', gap: '0.4rem', backgroundColor: 'var(--bg-muted)', padding: '4px', borderRadius: '10px', border: '1px solid var(--border-light)' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCourse('TODOS');
+                      setSelectedSubject('TODAS');
+                    }}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      borderRadius: '8px',
+                      fontWeight: selectedCourse === 'TODOS' ? 800 : 600,
+                      fontSize: '0.85rem',
+                      border: 'none',
+                      backgroundColor: selectedCourse === 'TODOS' ? 'var(--accent-blue)' : 'transparent',
+                      color: selectedCourse === 'TODOS' ? '#ffffff' : 'var(--text-main)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                    }}
+                  >
+                    <span>Todos os Cursos</span>
+                    <span
+                      onClick={handleTriggerMeme67}
+                      title="6-7"
+                      style={{
+                        backgroundColor: selectedCourse === 'TODOS' ? 'rgba(255, 255, 255, 0.25)' : 'var(--border-light)',
+                        color: selectedCourse === 'TODOS' ? '#ffffff' : 'var(--text-muted)',
+                        padding: '1px 6px',
+                        borderRadius: '10px',
+                        fontSize: '0.75rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        transition: 'transform 0.15s ease',
+                        transform: isMeme67Active ? 'scale(1.2)' : 'scale(1)',
+                      }}
+                    >
+                      {isMeme67Active ? '6-7' : OFFICIAL_PPC_DISCIPLINES.length}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCourse('IA');
+                      setSelectedSubject('TODAS');
+                    }}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      borderRadius: '8px',
+                      fontWeight: selectedCourse === 'IA' ? 800 : 600,
+                      fontSize: '0.85rem',
+                      border: 'none',
+                      backgroundColor: selectedCourse === 'IA' ? 'var(--accent-blue)' : 'transparent',
+                      color: selectedCourse === 'IA' ? '#ffffff' : 'var(--text-main)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    Inteligência Artificial (38)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCourse('ESG');
+                      setSelectedSubject('TODAS');
+                    }}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      borderRadius: '8px',
+                      fontWeight: selectedCourse === 'ESG' ? 800 : 600,
+                      fontSize: '0.85rem',
+                      border: 'none',
+                      backgroundColor: selectedCourse === 'ESG' ? 'var(--accent-emerald)' : 'transparent',
+                      color: selectedCourse === 'ESG' ? '#ffffff' : 'var(--text-main)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    Gestão ESG (29)
+                  </button>
+                </div>
+
+                {/* Input de Busca Rápida */}
+                <div style={{ flex: '1 1 280px', maxWidth: '420px', position: 'relative' }}>
+                  <input
+                    type="text"
+                    placeholder="Buscar disciplina, código, título ou tag..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="form-input"
+                    style={{ width: '100%', paddingRight: searchQuery ? '2.2rem' : '1rem' }}
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      style={{
+                        position: 'absolute',
+                        right: '10px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--text-muted)',
+                        cursor: 'pointer',
+                        fontSize: '0.9rem',
+                        fontWeight: 700,
+                      }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* LINHA 2: FILTROS DE SEMESTRE E TIPO DE MATERIAL */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-light)' }}>
+                {/* Semestres */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', marginRight: '0.2rem' }}>
+                    Semestre:
+                  </span>
+                  {(['TODOS', 1, 2, 3, 4, 5] as const).map((sem) => {
+                    const label = sem === 'TODOS' ? 'Todos' : sem === 5 ? 'TCC / Estágio' : `${sem}º Sem`;
+                    const isActive = selectedSemester === sem;
                     return (
                       <button
-                        key={course}
-                        onClick={() => setSelectedCourse(course)}
-                        className={`repositorio-course-btn ${isSelected ? 'active' : ''}`}
+                        key={sem}
+                        type="button"
+                        onClick={() => {
+                          setSelectedSemester(sem as any);
+                          setSelectedSubject('TODAS');
+                        }}
+                        style={{
+                          padding: '0.35rem 0.75rem',
+                          borderRadius: '8px',
+                          fontSize: '0.8rem',
+                          fontWeight: isActive ? 800 : 500,
+                          border: isActive ? '1px solid var(--accent-blue)' : '1px solid var(--border-light)',
+                          backgroundColor: isActive ? 'var(--accent-blue-light)' : 'transparent',
+                          color: isActive ? 'var(--accent-blue)' : 'var(--text-muted)',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
                       >
                         {label}
                       </button>
@@ -746,159 +1153,698 @@ export default function RepositorioPage() {
                   })}
                 </div>
 
-                <div style={{ minWidth: '280px', flex: '1 1 280px', maxWidth: '420px', position: 'relative' }}>
-                  <input
-                    type="text"
-                    placeholder="Buscar disciplina, matéria, código, tag..."
-                    className="form-input"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    style={{ padding: '0.65rem 1rem 0.65rem 2.4rem', borderRadius: '10px', width: '100%' }}
-                  />
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}
-                  >
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                  </svg>
+                {/* Tipo de Material de Aula (Sem TCC nem Projetos) */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', marginRight: '0.2rem' }}>
+                    Tipo:
+                  </span>
+                  {(['TODOS', 'APOSTILA', 'CODIGO', 'SLIDE', 'DATASET'] as const).map((t) => {
+                    const label = t === 'TODOS' ? 'Todos' : t === 'APOSTILA' ? 'Apostilas' : t === 'CODIGO' ? 'Códigos' : t === 'SLIDE' ? 'Slides' : 'Datasets';
+                    const isActive = selectedType === t;
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setSelectedType(t as any)}
+                        style={{
+                          padding: '0.35rem 0.75rem',
+                          borderRadius: '8px',
+                          fontSize: '0.8rem',
+                          fontWeight: isActive ? 800 : 500,
+                          border: isActive ? '1px solid var(--text-muted)' : '1px solid var(--border-light)',
+                          backgroundColor: isActive ? 'var(--bg-muted)' : 'transparent',
+                          color: isActive ? 'var(--text-main)' : 'var(--text-muted)',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexWrap: 'wrap', borderTop: '1px solid var(--border-light)', paddingTop: '1rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>Semestre:</span>
-                  {(['TODOS', 1, 2, 3, 4] as const).map((sem) => {
-                    const isSelected = selectedSemester === sem;
-                    return (
-                      <button
-                        key={String(sem)}
-                        onClick={() => setSelectedSemester(sem)}
-                        className={`repositorio-sem-btn ${isSelected ? 'active' : ''}`}
-                      >
-                        {sem === 'TODOS' ? 'Todos' : `${sem}º Sem`}
-                      </button>
-                    );
-                  })}
-                </div>
+              {/* LINHA 3: FILTRO DE DISCIPLINA & GRADE CURRICULAR EXPANSÍVEL (SEM DROPDOWN REDUNDANTE) */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-light)' }}>
+                {/* Banner de Filtro Ativo quando uma disciplina da grade está selecionada */}
+                {selectedSubject !== 'TODAS' && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      backgroundColor: 'var(--accent-blue-light)',
+                      border: '1px solid var(--accent-blue)',
+                      padding: '0.65rem 1rem',
+                      borderRadius: '8px',
+                      fontSize: '0.85rem',
+                      color: 'var(--accent-blue)',
+                      fontWeight: 700,
+                    }}
+                  >
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                      </svg>
+                      Filtro Ativo: <strong>{selectedSubject}</strong>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedSubject('TODAS')}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--accent-blue)',
+                        cursor: 'pointer',
+                        fontWeight: 800,
+                        fontSize: '0.85rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                      }}
+                    >
+                      ✕ Remover Filtro
+                    </button>
+                  </div>
+                )}
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>Tipo:</span>
-                  {[
-                    { id: 'TODOS', label: 'Todos' },
-                    { id: 'APOSTILA', label: 'Apostilas' },
-                    { id: 'CODIGO', label: 'Códigos' },
-                    { id: 'TCC', label: 'TCCs' },
-                    { id: 'SLIDE', label: 'Slides' },
-                  ].map((t) => {
-                    const isSelected = selectedType === t.id;
-                    return (
-                      <button
-                        key={t.id}
-                        onClick={() => setSelectedType(t.id)}
-                        className={`repositorio-type-btn ${isSelected ? 'active' : ''}`}
+                {/* ESTILOS DE ANIMAÇÃO DO MEME 67 ("AY, 6-7!" COM AS MÃOS ALTERNADAS) */}
+                <style>{`
+                  @keyframes memeHandLeft {
+                    0% { transform: translateY(-10px) rotate(-12deg); }
+                    50% { transform: translateY(0px) rotate(-3deg); }
+                    100% { transform: translateY(10px) rotate(6deg); }
+                  }
+                  @keyframes memeHandRight {
+                    0% { transform: translateY(10px) rotate(6deg); }
+                    50% { transform: translateY(0px) rotate(-3deg); }
+                    100% { transform: translateY(-10px) rotate(-12deg); }
+                  }
+                  @keyframes memeTextBob {
+                    0% { transform: scale(0.92) rotate(-3deg); }
+                    50% { transform: scale(1.14) rotate(3deg); }
+                    100% { transform: scale(0.92) rotate(-3deg); }
+                  }
+                  @keyframes memeBadgeSeesaw {
+                    0% { transform: rotate(-8deg) scale(1.08); }
+                    50% { transform: rotate(8deg) scale(1.08); }
+                    100% { transform: rotate(-8deg) scale(1.08); }
+                  }
+                  @keyframes memeCardPop {
+                    0% { opacity: 0; transform: translate(-50%, 15px) scale(0.5); }
+                    60% { opacity: 1; transform: translate(-50%, -4px) scale(1.06); }
+                    100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+                  }
+                  @keyframes memeGlowPulse {
+                    0% { box-shadow: 0 0 10px rgba(56, 189, 248, 0.6), 0 0 20px rgba(245, 158, 11, 0.4); }
+                    50% { box-shadow: 0 0 22px rgba(236, 72, 153, 0.7), 0 0 30px rgba(56, 189, 248, 0.5); }
+                    100% { box-shadow: 0 0 10px rgba(56, 189, 248, 0.6), 0 0 20px rgba(245, 158, 11, 0.4); }
+                  }
+                `}</style>
+
+                {/* BOTÃO PRINCIPAL: EXPANDIR GRADE CURRICULAR POR SEMESTRES */}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowCurriculumExplorer(!showCurriculumExplorer)}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '0.75rem 1rem',
+                      borderRadius: '10px',
+                      border: '1px solid var(--border-light)',
+                      backgroundColor: showCurriculumExplorer ? 'var(--bg-muted)' : 'var(--bg-primary)',
+                      color: 'var(--text-main)',
+                      fontWeight: 700,
+                      fontSize: '0.875rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      flexWrap: 'wrap',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="8" y1="6" x2="21" y2="6"></line>
+                        <line x1="8" y1="12" x2="21" y2="12"></line>
+                        <line x1="8" y1="18" x2="21" y2="18"></line>
+                        <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                        <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                        <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                      </svg>
+                      <span>
+                        {showCurriculumExplorer ? 'Ocultar Grade Curricular por Semestres' : 'Expandir Grade Curricular por Semestres'}
+                      </span>
+
+                      {/* BADGE DO 67 COM ANIMAÇÃO COMPLETA DO MEME 67 */}
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={handleTriggerMeme67}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleTriggerMeme67();
+                          }
+                        }}
+                        title="AY, 6-7!"
+                        style={{
+                          position: 'relative',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          backgroundColor: isMeme67Active ? '#0284c7' : 'var(--accent-blue)',
+                          color: '#ffffff',
+                          padding: '0.2rem 0.65rem',
+                          borderRadius: '20px',
+                          fontSize: '0.75rem',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                          transition: 'all 0.2s ease',
+                          animation: isMeme67Active ? 'memeBadgeSeesaw 0.32s ease-in-out infinite, memeGlowPulse 0.8s ease-in-out infinite' : 'none',
+                          boxShadow: isMeme67Active ? '0 0 16px rgba(56, 189, 248, 0.7)' : '0 1px 3px rgba(0,0,0,0.2)',
+                        }}
                       >
-                        {t.label}
-                      </button>
-                    );
-                  })}
+                        {/* BALÃO FLUTUANTE DO MEME 67 (MÃOS DANDO RITMO + TEXTO VIBRANTE) */}
+                        {isMeme67Active && (
+                          <div
+                            style={{
+                              position: 'absolute',
+                              bottom: 'calc(100% + 12px)',
+                              left: '50%',
+                              transform: 'translateX(-50%)',
+                              backgroundColor: '#0f172a',
+                              border: '2px solid #38bdf8',
+                              borderRadius: '16px',
+                              padding: '0.65rem 1.1rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.85rem',
+                              boxShadow: '0 14px 35px rgba(0, 0, 0, 0.7), 0 0 25px rgba(56, 189, 248, 0.5)',
+                              zIndex: 60,
+                              whiteSpace: 'nowrap',
+                              animation: 'memeCardPop 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                            }}
+                          >
+                            {/* Mão Esquerda (Palma para cima subindo/descendo) */}
+                            <div style={{ animation: 'memeHandLeft 0.32s ease-in-out infinite alternate', color: '#f59e0b', display: 'flex', alignItems: 'center' }}>
+                              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'scaleX(-1)' }}>
+                                <path d="M18 11V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v5" />
+                                <path d="M14 10V4a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7" />
+                                <path d="M10 10.5V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v9" />
+                                <path d="M6 13V9a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7a9 9 0 0 0 9 9h3a7 7 0 0 0 7-7v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v3" />
+                              </svg>
+                            </div>
+
+                            {/* Texto do Meme 6-7 */}
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                              <span
+                                style={{
+                                  fontSize: '1.25rem',
+                                  fontWeight: 900,
+                                  fontStyle: 'italic',
+                                  letterSpacing: '1px',
+                                  background: 'linear-gradient(90deg, #38bdf8, #f59e0b, #ec4899)',
+                                  WebkitBackgroundClip: 'text',
+                                  WebkitTextFillColor: 'transparent',
+                                  animation: 'memeTextBob 0.32s ease-in-out infinite alternate',
+                                  textTransform: 'uppercase',
+                                }}
+                              >
+                                SIX-SEVEN!
+                              </span>
+                              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#38bdf8', letterSpacing: '0.8px' }}>
+                                6-7
+                              </span>
+                            </div>
+
+                            {/* Mão Direita (Palma para cima ritmo alternado) */}
+                            <div style={{ animation: 'memeHandRight 0.32s ease-in-out infinite alternate', color: '#f59e0b', display: 'flex', alignItems: 'center' }}>
+                              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M18 11V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v5" />
+                                <path d="M14 10V4a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7" />
+                                <path d="M10 10.5V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v9" />
+                                <path d="M6 13V9a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7a9 9 0 0 0 9 9h3a7 7 0 0 0 7-7v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v3" />
+                              </svg>
+                            </div>
+
+                            {/* Seta do balão */}
+                            <div
+                              style={{
+                                position: 'absolute',
+                                top: '100%',
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                width: 0,
+                                height: 0,
+                                borderLeft: '7px solid transparent',
+                                borderRight: '7px solid transparent',
+                                borderTop: '7px solid #38bdf8',
+                              }}
+                            />
+                          </div>
+                        )}
+
+                        {isMeme67Active ? (
+                          <strong style={{ fontSize: '0.85rem', letterSpacing: '0.5px' }}>
+                            6-7
+                          </strong>
+                        ) : (
+                          <>
+                            <span style={{ fontWeight: 900 }}>67</span>
+                            <span>Disciplinas Oficiais</span>
+                          </>
+                        )}
+                      </span>
+                    </span>
+
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      style={{ transform: showCurriculumExplorer ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}
+                    >
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </button>
+
+                  {/* Conteúdo do Accordion por Semestre */}
+                  {showCurriculumExplorer && (
+                    <div style={{ marginTop: '0.85rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      {/* Barra Superior de Ações Rápidas da Grade */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          gap: '0.75rem',
+                          padding: '0.75rem 1rem',
+                          borderRadius: '10px',
+                          backgroundColor: 'var(--bg-primary)',
+                          border: '1px solid var(--border-light)',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '0.825rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                            Matriz Curricular Oficial (PPC):
+                          </span>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            67 disciplinas (38 Inteligência Artificial + 29 Gestão ESG)
+                          </span>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <button
+                            type="button"
+                            onClick={expandAllSemesters}
+                            style={{
+                              padding: '0.35rem 0.75rem',
+                              borderRadius: '6px',
+                              border: '1px solid var(--border-light)',
+                              backgroundColor: 'var(--bg-muted)',
+                              color: 'var(--text-main)',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Expandir Todos os Semestres
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={collapseAllSemesters}
+                            style={{
+                              padding: '0.35rem 0.75rem',
+                              borderRadius: '6px',
+                              border: '1px solid var(--border-light)',
+                              backgroundColor: 'transparent',
+                              color: 'var(--text-muted)',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Recolher Todos
+                          </button>
+                        </div>
+                      </div>
+                      {/* Seção CST Inteligência Artificial */}
+                      {(selectedCourse === 'TODOS' || selectedCourse === 'IA') && (
+                        <div style={{ border: '1px solid var(--border-light)', borderRadius: '12px', padding: '1rem', backgroundColor: 'var(--bg-muted)' }}>
+                          <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--accent-blue)', marginBottom: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span>CST em Inteligência Artificial (38 Componentes Oficiais)</span>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Matutino</span>
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                            {[1, 2, 3, 4, 5].map((sem) => {
+                              if (selectedSemester !== 'TODOS' && selectedSemester !== sem) return null;
+                              const semKey = `IA-${sem}`;
+                              const isExpanded = expandedSemesters[semKey];
+                              const semLabel = sem === 5 ? 'Componentes Complementares (TCC & Estágio)' : `${sem}º Semestre`;
+                              const semDiscs = OFFICIAL_PPC_DISCIPLINES.filter((d) => d.course === 'IA' && d.semester === sem);
+
+                              return (
+                                <div key={semKey} style={{ border: '1px solid var(--border-light)', borderRadius: '8px', backgroundColor: 'var(--bg-primary)', overflow: 'hidden' }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleSemester(semKey)}
+                                    style={{
+                                      width: '100%',
+                                      display: 'flex',
+                                      justifyContent: 'space-between',
+                                      alignItems: 'center',
+                                      padding: '0.6rem 0.85rem',
+                                      background: 'none',
+                                      border: 'none',
+                                      color: 'var(--text-main)',
+                                      fontWeight: 700,
+                                      fontSize: '0.825rem',
+                                      cursor: 'pointer',
+                                    }}
+                                  >
+                                    <span>{semLabel} ({semDiscs.length} matérias)</span>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--accent-blue)' }}>
+                                      {isExpanded ? 'Recolher ▲' : 'Expandir ▼'}
+                                    </span>
+                                  </button>
+
+                                  {isExpanded && (
+                                    <div
+                                      style={{
+                                        padding: '0.75rem',
+                                        borderTop: '1px solid var(--border-light)',
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+                                        gap: '0.45rem',
+                                      }}
+                                    >
+                                      {semDiscs.map((item) => {
+                                        const isSelected = selectedSubject === item.name;
+                                        return (
+                                          <button
+                                            key={item.code}
+                                            type="button"
+                                            onClick={() => setSelectedSubject(isSelected ? 'TODAS' : item.name)}
+                                            style={{
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              gap: '0.5rem',
+                                              padding: '0.5rem 0.65rem',
+                                              borderRadius: '8px',
+                                              border: isSelected ? '2px solid var(--accent-blue)' : '1px solid var(--border-light)',
+                                              backgroundColor: isSelected ? 'var(--accent-blue-light)' : 'var(--bg-muted)',
+                                              color: isSelected ? 'var(--accent-blue)' : 'var(--text-main)',
+                                              cursor: 'pointer',
+                                              textAlign: 'left',
+                                              fontSize: '0.78rem',
+                                              fontWeight: isSelected ? 800 : 500,
+                                              transition: 'all 0.15s ease',
+                                            }}
+                                          >
+                                            <span
+                                              style={{
+                                                fontSize: '0.68rem',
+                                                fontWeight: 800,
+                                                padding: '2px 5px',
+                                                borderRadius: '4px',
+                                                backgroundColor: isSelected ? 'var(--accent-blue)' : 'var(--border-light)',
+                                                color: isSelected ? '#ffffff' : 'var(--text-muted)',
+                                              }}
+                                            >
+                                              {item.code}
+                                            </span>
+                                            <span style={{ flex: 1, whiteSpace: 'normal', lineHeight: 1.25 }}>
+                                              {item.name}
+                                            </span>
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Seção CST Gestão ESG */}
+                      {(selectedCourse === 'TODOS' || selectedCourse === 'ESG') && (
+                        <div style={{ border: '1px solid var(--border-light)', borderRadius: '12px', padding: '1rem', backgroundColor: 'var(--bg-muted)' }}>
+                          <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--accent-emerald)', marginBottom: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span>CST em Gestão da Sustentabilidade & ESG (29 Componentes Oficiais)</span>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Noturno</span>
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                            {[1, 2, 3, 4, 5].map((sem) => {
+                              if (selectedSemester !== 'TODOS' && selectedSemester !== sem) return null;
+                              const semKey = `ESG-${sem}`;
+                              const isExpanded = expandedSemesters[semKey];
+                              const semLabel = sem === 5 ? 'Componentes Complementares (TCC & Estágio)' : `${sem}º Semestre`;
+                              const semDiscs = OFFICIAL_PPC_DISCIPLINES.filter((d) => d.course === 'ESG' && d.semester === sem);
+
+                              return (
+                                <div key={semKey} style={{ border: '1px solid var(--border-light)', borderRadius: '8px', backgroundColor: 'var(--bg-primary)', overflow: 'hidden' }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleSemester(semKey)}
+                                    style={{
+                                      width: '100%',
+                                      display: 'flex',
+                                      justifyContent: 'space-between',
+                                      alignItems: 'center',
+                                      padding: '0.6rem 0.85rem',
+                                      background: 'none',
+                                      border: 'none',
+                                      color: 'var(--text-main)',
+                                      fontWeight: 700,
+                                      fontSize: '0.825rem',
+                                      cursor: 'pointer',
+                                    }}
+                                  >
+                                    <span>{semLabel} ({semDiscs.length} matérias)</span>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--accent-emerald)' }}>
+                                      {isExpanded ? 'Recolher ▲' : 'Expandir ▼'}
+                                    </span>
+                                  </button>
+
+                                  {isExpanded && (
+                                    <div
+                                      style={{
+                                        padding: '0.75rem',
+                                        borderTop: '1px solid var(--border-light)',
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+                                        gap: '0.45rem',
+                                      }}
+                                    >
+                                      {semDiscs.map((item) => {
+                                        const isSelected = selectedSubject === item.name;
+                                        return (
+                                          <button
+                                            key={item.code}
+                                            type="button"
+                                            onClick={() => setSelectedSubject(isSelected ? 'TODAS' : item.name)}
+                                            style={{
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              gap: '0.5rem',
+                                              padding: '0.5rem 0.65rem',
+                                              borderRadius: '8px',
+                                              border: isSelected ? '2px solid var(--accent-emerald)' : '1px solid var(--border-light)',
+                                              backgroundColor: isSelected ? 'rgba(16, 185, 129, 0.15)' : 'var(--bg-muted)',
+                                              color: isSelected ? 'var(--accent-emerald)' : 'var(--text-main)',
+                                              cursor: 'pointer',
+                                              textAlign: 'left',
+                                              fontSize: '0.78rem',
+                                              fontWeight: isSelected ? 800 : 500,
+                                              transition: 'all 0.15s ease',
+                                            }}
+                                          >
+                                            <span
+                                              style={{
+                                                fontSize: '0.68rem',
+                                                fontWeight: 800,
+                                                padding: '2px 5px',
+                                                borderRadius: '4px',
+                                                backgroundColor: isSelected ? 'var(--accent-emerald)' : 'var(--border-light)',
+                                                color: isSelected ? '#ffffff' : 'var(--text-muted)',
+                                              }}
+                                            >
+                                              {item.code}
+                                            </span>
+                                            <span style={{ flex: 1, whiteSpace: 'normal', lineHeight: 1.25 }}>
+                                              {item.name}
+                                            </span>
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Grade de Materiais */}
+            {/* 3. GRID DE MATERIAIS DIDÁTICOS */}
             {loadingMaterials ? (
-              <div style={{ textAlign: 'center', padding: '5rem 0', color: 'var(--text-muted)' }}>
-                Sincronizando acervo acadêmico com a base de dados...
+              <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--text-muted)' }}>
+                Carregando materiais do acervo acadêmico...
               </div>
             ) : filteredMaterials.length === 0 ? (
               <div
-                className="vitrine-empty-card"
                 style={{
-                  backgroundColor: 'var(--bg-primary)',
+                  padding: '3.5rem 2rem',
                   borderRadius: '16px',
-                  padding: '4rem 2rem',
-                  textAlign: 'center',
+                  backgroundColor: 'var(--bg-primary)',
                   border: '1px dashed var(--border-light)',
+                  textAlign: 'center',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '0.75rem',
                 }}
               >
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                  Nenhum material didático encontrado para estes filtros
+                <div
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '12px',
+                    backgroundColor: 'var(--bg-muted)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--text-muted)',
+                  }}
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                  </svg>
+                </div>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
+                  Nenhum material didático catalogado com os filtros atuais
                 </h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '0.35rem' }}>
-                  Compartilhe uma apostila, código ou projeto de aula com a comunidade acadêmica!
+                <p style={{ color: 'var(--text-sub)', fontSize: '0.875rem', maxWidth: '520px', lineHeight: 1.5, margin: 0 }}>
+                  O acervo está aberto para notas de aula, roteiros de laboratório, códigos no GitHub e apostilas da turma. Seja o primeiro a colaborar!
                 </p>
                 <button
-                  onClick={handleOpenUploadModal}
+                  type="button"
+                  onClick={handleOpenCreateModal}
                   className="btn btn-primary"
-                  style={{ marginTop: '1.25rem', padding: '0.6rem 1.25rem' }}
+                  style={{ marginTop: '0.5rem', padding: '0.65rem 1.4rem', fontWeight: 700 }}
                 >
-                  Publicar Material
+                  Publicar Material nesta Matéria
                 </button>
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.5rem' }}>
-                {filteredMaterials.map((mat) => {
-                  const typeBadge = getTypeBadge(mat.material_type);
-                  const dlCount = mat.download_count ?? 0;
-
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                {filteredMaterials.map((m) => {
+                  const bannerBg = getBannerGradient(m);
                   return (
                     <div
-                      key={mat.id}
+                      key={m.id}
                       className="card-interactive"
                       style={{
-                        padding: '1.75rem',
+                        backgroundColor: 'var(--bg-primary)',
+                        borderRadius: '16px',
+                        border: '1px solid var(--border-light)',
+                        overflow: 'hidden',
                         display: 'flex',
                         flexDirection: 'column',
-                        justifyContent: 'space-between',
-                        border: '1px solid var(--border-light)',
-                        borderRadius: '16px',
-                        backgroundColor: 'var(--bg-primary)',
+                        boxShadow: 'var(--shadow-sm)',
                       }}
                     >
-                      <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                          <span className={typeBadge.className}>
-                            {typeBadge.label}
+                      {/* Topo Visual do Card */}
+                      <div
+                        style={{
+                          height: '90px',
+                          background: bannerBg,
+                          position: 'relative',
+                          padding: '0.85rem',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                        }}
+                      >
+                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          <span
+                            style={{
+                              backgroundColor: 'rgba(0,0,0,0.6)',
+                              backdropFilter: 'blur(4px)',
+                              color: '#ffffff',
+                              fontSize: '0.7rem',
+                              fontWeight: 800,
+                              padding: '2px 8px',
+                              borderRadius: '6px',
+                            }}
+                          >
+                            {m.material_type}
                           </span>
+                          <span
+                            style={{
+                              backgroundColor: 'rgba(0,0,0,0.6)',
+                              backdropFilter: 'blur(4px)',
+                              color: '#ffffff',
+                              fontSize: '0.7rem',
+                              fontWeight: 800,
+                              padding: '2px 8px',
+                              borderRadius: '6px',
+                            }}
+                          >
+                            {m.course} • {m.semester}º Sem
+                          </span>
+                        </div>
+                      </div>
 
-                          <div style={{ display: 'flex', gap: '0.35rem' }}>
-                            <span className="badge badge-blue">{mat.course}</span>
-                            <span className="badge" style={{ backgroundColor: 'var(--bg-muted)', color: 'var(--text-muted)' }}>
-                              {mat.semester}º Sem
-                            </span>
+                      {/* Corpo do Card */}
+                      <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <div>
+                          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-blue)', textTransform: 'uppercase' }}>
+                            {m.subject}
                           </div>
+                          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '0.2rem', lineHeight: 1.35 }}>
+                            {m.title}
+                          </h3>
                         </div>
 
-                        <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent-emerald)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                          {mat.subject}
-                        </div>
-                        <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '0.25rem', lineHeight: 1.35 }}>
-                          {mat.title}
-                        </h3>
+                        {m.description && (
+                          <p style={{ color: 'var(--text-sub)', fontSize: '0.85rem', lineHeight: 1.5, margin: 0, flex: 1 }}>
+                            {m.description}
+                          </p>
+                        )}
 
-                        <p style={{ fontSize: '0.85rem', color: 'var(--text-sub)', marginTop: '0.65rem', lineHeight: 1.5, minHeight: '3.6rem' }}>
-                          {mat.description || 'Material acadêmico disponibilizado para consulta discente da FATEC Rio Claro.'}
-                        </p>
-
-                        {mat.tags && (
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.85rem' }}>
-                            {mat.tags.split(',').map((tag, idx) => (
+                        {m.tags && (
+                          <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                            {m.tags.split(',').map((tag: string, i: number) => (
                               <span
-                                key={idx}
+                                key={i}
                                 style={{
-                                  fontSize: '0.72rem',
+                                  fontSize: '0.7rem',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
                                   backgroundColor: 'var(--bg-muted)',
                                   color: 'var(--text-muted)',
-                                  padding: '2px 8px',
-                                  borderRadius: '6px',
                                 }}
                               >
                                 #{tag.trim()}
@@ -906,89 +1852,34 @@ export default function RepositorioPage() {
                             ))}
                           </div>
                         )}
-                      </div>
 
-                      <div style={{ marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-                        <span style={{ fontSize: '0.775rem', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="7 10 12 15 17 10"></polyline>
-                            <line x1="12" y1="15" x2="12" y2="3"></line>
-                          </svg>
-                          {dlCount} downloads
-                        </span>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', paddingTop: '0.5rem', borderTop: '1px solid var(--border-light)' }}>
+                          Por: <strong>{m.author_name || 'Aluno'}</strong>
+                        </div>
 
-                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                          {mat.github_url && (
+                        {/* Botões de Ação */}
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+                          {m.file_url && m.file_url !== '#' && (
                             <a
-                              href={mat.github_url}
+                              href={m.file_url}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="btn btn-secondary"
-                              style={{ padding: '0.5rem 0.85rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-                              title="Repositório no GitHub"
+                              style={{ flex: 1, padding: '0.45rem 0.75rem', fontSize: '0.8rem', fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}
                             >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                                <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
-                              </svg>
-                              Git
+                              Acessar Arquivo
                             </a>
                           )}
-                          <button
-                            onClick={() => handleDownload(mat.id, mat.file_url)}
-                            className="btn btn-primary"
-                            style={{ padding: '0.5rem 1.15rem', fontSize: '0.825rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                              <polyline points="7 10 12 15 17 10"></polyline>
-                              <line x1="12" y1="15" x2="12" y2="3"></line>
-                            </svg>
-                            Baixar Arquivo
-                          </button>
-
-                          {/* Controles para CA, ADM ou Autor */}
-                          {(isCaOrAdmin || (currentUser && currentUser.id === mat.author_id)) && (
-                            <>
-                              <button
-                                onClick={() => handleOpenEditModal(mat)}
-                                className="btn btn-secondary"
-                                style={{
-                                  padding: '0.45rem 0.75rem',
-                                  fontSize: '0.8rem',
-                                  fontWeight: 700,
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '0.35rem',
-                                }}
-                                title="Editar material (Acesso CA / ADM / Autor)"
-                              >
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M12 20h9"></path>
-                                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-                                </svg>
-                                Editar
-                              </button>
-                              <button
-                                onClick={() => setDeleteConfirmTarget(mat)}
-                                className="btn btn-danger-outline"
-                                style={{
-                                  padding: '0.45rem 0.75rem',
-                                  fontSize: '0.8rem',
-                                  fontWeight: 700,
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '0.35rem',
-                                }}
-                                title="Excluir material (Acesso CA / ADM / Autor)"
-                              >
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <polyline points="3 6 5 6 21 6"></polyline>
-                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                </svg>
-                                Excluir
-                              </button>
-                            </>
+                          {m.github_url && (
+                            <a
+                              href={m.github_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-primary"
+                              style={{ flex: 1, padding: '0.45rem 0.75rem', fontSize: '0.8rem', fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}
+                            >
+                              GitHub
+                            </a>
                           )}
                         </div>
                       </div>
@@ -1000,227 +1891,120 @@ export default function RepositorioPage() {
           </div>
         )}
 
-        {/* CONTEÚDO DA ABA 2: MEUS MATERIAIS */}
+        {/* ============================================================== */}
+        {/* ABA 2: MINHAS CONTRIBUIÇÕES                                     */}
+        {/* ============================================================== */}
         {activeTab === 'meus' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {!currentUser ? (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                  Minhas Contribuições Didáticas
+                </h2>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '0.2rem' }}>
+                  Acompanhe seus envios de apostilas, códigos e notas de aula para a comunidade.
+                </p>
+              </div>
+
+              <button type="button" onClick={handleOpenCreateModal} className="btn btn-emerald" style={{ fontWeight: 700 }}>
+                Publicar Novo Material
+              </button>
+            </div>
+
+            {loadingMyMaterials ? (
+              <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--text-muted)' }}>
+                Carregando suas contribuições...
+              </div>
+            ) : myMaterials.length === 0 ? (
               <div
                 style={{
-                  padding: '3rem 2rem',
+                  padding: '3.5rem 2rem',
                   borderRadius: '16px',
                   backgroundColor: 'var(--bg-primary)',
                   border: '1px dashed var(--border-light)',
                   textAlign: 'center',
                 }}
               >
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>
-                  Acesso Restrito aos Alunos e Docentes Autenticados
-                </h3>
-                <p style={{ color: 'var(--text-sub)', fontSize: '0.9rem', marginTop: '0.5rem', maxWidth: '520px', margin: '0.5rem auto 1.5rem' }}>
-                  Efetue login com seu e-mail institucional @fatec.sp.gov.br para gerenciar suas apostilas e anexos submetidos.
+                <h4 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                  Você ainda não publicou materiais didáticos
+                </h4>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '0.35rem' }}>
+                  Compartilhe apostilas, resumos e códigos com seus colegas de curso!
                 </p>
-                <a href="/login" className="btn btn-primary" style={{ padding: '0.75rem 1.5rem', fontWeight: 700 }}>
-                  Acessar com E-mail FATEC
-                </a>
+                <button type="button" onClick={handleOpenCreateModal} className="btn btn-primary" style={{ marginTop: '1rem', fontWeight: 700 }}>
+                  Submeter Primeiro Material
+                </button>
               </div>
             ) : (
-              <>
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '1.25rem 1.75rem',
-                    borderRadius: '14px',
-                    backgroundColor: 'var(--bg-primary)',
-                    border: '1px solid var(--border-light)',
-                    flexWrap: 'wrap',
-                    gap: '1rem',
-                  }}
-                >
-                  <div>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main)' }}>
-                      Painel do Autor: {currentUser.name}
-                    </h3>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-sub)', marginTop: '0.2rem' }}>
-                      Gerencie seus materiais acadêmicos enviados e acompanhe o status de moderação.
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={handleOpenUploadModal}
-                    className="btn btn-emerald"
-                    style={{ padding: '0.65rem 1.25rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="12" y1="5" x2="12" y2="19"></line>
-                      <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                    Novo Material
-                  </button>
-                </div>
-
-                {loadingMyMaterials ? (
-                  <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--text-muted)' }}>
-                    Buscando seus materiais submetidos...
-                  </div>
-                ) : myMaterials.length === 0 ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                {myMaterials.map((m) => (
                   <div
+                    key={m.id}
+                    className="card-interactive"
                     style={{
-                      padding: '3.5rem 2rem',
-                      borderRadius: '16px',
                       backgroundColor: 'var(--bg-primary)',
-                      border: '1px dashed var(--border-light)',
-                      textAlign: 'center',
+                      borderRadius: '16px',
+                      border: '1px solid var(--border-light)',
+                      padding: '1.25rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.75rem',
                     }}
                   >
-                    <h4 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                      Você ainda não submeteu nenhum material didático
-                    </h4>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '0.35rem' }}>
-                      Compartilhe apostilas, resumos e códigos com seus colegas de curso.
-                    </p>
-                    <button
-                      onClick={handleOpenUploadModal}
-                      className="btn btn-primary"
-                      style={{ marginTop: '1.25rem', padding: '0.65rem 1.4rem' }}
-                    >
-                      Publicar Primeiro Material
-                    </button>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {myMaterials.map((m) => {
-                      const isApproved = m.is_approved;
-                      return (
-                        <div
-                          key={m.id}
-                          className="card-interactive"
-                          style={{
-                            padding: '1.5rem',
-                            borderRadius: '14px',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            flexWrap: 'wrap',
-                            gap: '1.25rem',
-                            border: '1px solid var(--border-light)',
-                            backgroundColor: 'var(--bg-primary)',
-                          }}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <span className={`badge ${m.is_approved ? 'badge-emerald' : 'badge-amber'}`}>
+                        {m.is_approved ? 'Aprovado' : 'Em Moderação'}
+                      </span>
+                      <div style={{ display: 'flex', gap: '0.4rem' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditModal(m)}
+                          className="btn btn-secondary"
+                          style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
                         >
-                          <div style={{ flex: '1 1 300px' }}>
-                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
-                              <span
-                                style={{
-                                  backgroundColor: isApproved ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                                  color: isApproved ? '#10b981' : '#f59e0b',
-                                  border: `1px solid ${isApproved ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
-                                  padding: '2px 10px',
-                                  borderRadius: '20px',
-                                  fontSize: '0.75rem',
-                                  fontWeight: 800,
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '0.35rem',
-                                }}
-                              >
-                                {isApproved ? (
-                                  <>
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                                      <polyline points="20 6 9 17 4 12"></polyline>
-                                    </svg>
-                                    Aprovado / Publicado
-                                  </>
-                                ) : (
-                                  <>
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                      <circle cx="12" cy="12" r="10"></circle>
-                                      <line x1="12" y1="8" x2="12" y2="12"></line>
-                                      <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                                    </svg>
-                                    Pendente de Moderação pelo CA
-                                  </>
-                                )}
-                              </span>
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteConfirmTarget(m)}
+                          className="btn btn-danger"
+                          style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                        >
+                          Excluir
+                        </button>
+                      </div>
+                    </div>
 
-                              <span className="badge badge-blue">{m.course}</span>
-                              <span className="badge" style={{ backgroundColor: 'var(--bg-muted)', color: 'var(--text-muted)' }}>
-                                {m.semester}º Sem
-                              </span>
-                              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                {m.material_type}
-                              </span>
-                            </div>
-
-                            <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.25rem' }}>
-                              {m.title}
-                            </h4>
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-sub)', lineHeight: 1.4, maxWidth: '640px' }}>
-                              {m.description || m.subject}
-                            </p>
-                          </div>
-
-                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                            <button
-                              onClick={() => handleOpenEditModal(m)}
-                              className="btn btn-secondary"
-                              style={{ padding: '0.55rem 0.95rem', fontSize: '0.825rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-                            >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M12 20h9"></path>
-                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-                              </svg>
-                              Editar
-                            </button>
-
-                            <button
-                              onClick={() => setDeleteConfirmTarget(m)}
-                              className="btn btn-danger-outline"
-                              style={{ padding: '0.55rem 0.95rem', fontSize: '0.825rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-                            >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <polyline points="3 6 5 6 21 6"></polyline>
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                              </svg>
-                              Excluir
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
+                    <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+                      {m.title}
+                    </h4>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--accent-blue)', fontWeight: 700 }}>
+                      {m.subject} • {m.course} ({m.semester}º Sem)
+                    </div>
                   </div>
-                )}
-              </>
+                ))}
+              </div>
             )}
           </div>
         )}
 
-        {/* CONTEÚDO DA ABA 3: MODERAÇÃO CA & ADM */}
+        {/* ============================================================== */}
+        {/* ABA 3: FILA DE MODERAÇÃO (CA E ADM)                             */}
+        {/* ============================================================== */}
         {activeTab === 'moderacao' && isCaOrAdmin && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <div
-              style={{
-                padding: '1.5rem',
-                borderRadius: '14px',
-                backgroundColor: 'var(--bg-primary)',
-                border: '1px solid var(--border-light)',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem' }}>
-                <span className="badge badge-amber">Fila de Curadoria de Conteúdo</span>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Exclusivo: Centro Acadêmico (CA) & Administração</span>
-              </div>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>
-                Moderação de Materiais Didáticos e Anexos
-              </h3>
-              <p style={{ color: 'var(--text-sub)', fontSize: '0.875rem', marginTop: '0.25rem', maxWidth: '780px', lineHeight: 1.5 }}>
-                Avalie materiais, apostilas e anexos enviados pelos estudantes antes que sejam liberados no acervo público. Submissões do CA ou Docentes são aprovadas automaticamente.
+            <div>
+              <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                Fila de Moderação do Acervo
+              </h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '0.2rem' }}>
+                Revise os materiais submetidos pelos alunos antes de disponibilizá-los no acervo oficial.
               </p>
             </div>
 
             {loadingPending ? (
               <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--text-muted)' }}>
-                Carregando materiais pendentes de aprovação...
+                Carregando materiais em moderação...
               </div>
             ) : pendingMaterials.length === 0 ? (
               <div
@@ -1232,21 +2016,15 @@ export default function RepositorioPage() {
                   textAlign: 'center',
                 }}
               >
-                <div style={{ color: 'var(--accent-emerald)', marginBottom: '0.5rem' }}>
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                  </svg>
-                </div>
                 <h4 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                  Fila Limpa! Nenhum material pendente de moderação
+                  Nenhum material pendente de aprovação
                 </h4>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '0.35rem' }}>
-                  Todos os materiais submetidos foram devidamente revisados e publicados.
+                  Todos os uploads de estudantes foram avaliados!
                 </p>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 {pendingMaterials.map((m) => (
                   <div
                     key={m.id}
@@ -1254,17 +2032,17 @@ export default function RepositorioPage() {
                     style={{
                       padding: '1.75rem',
                       borderRadius: '16px',
-                      border: '1px solid var(--accent-amber)',
                       backgroundColor: 'var(--bg-primary)',
+                      border: '1px solid var(--border-light)',
                       display: 'flex',
                       flexDirection: 'column',
                       gap: '1rem',
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
                       <div>
-                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
-                          <span className="badge badge-amber">Aguardando Avaliação</span>
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
+                          <span className="badge badge-amber">Pendente de Avaliação</span>
                           <span className="badge badge-blue">{m.course}</span>
                           <span className="badge" style={{ backgroundColor: 'var(--bg-muted)', color: 'var(--text-muted)' }}>
                             {m.semester}º Semestre
@@ -1274,80 +2052,43 @@ export default function RepositorioPage() {
                           </span>
                         </div>
 
-                        <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                        <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
                           {m.title}
                         </h4>
-                        <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent-emerald)', marginTop: '0.15rem' }}>
+                        <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent-emerald)', marginTop: '0.2rem' }}>
                           Disciplina: {m.subject}
                         </div>
                       </div>
 
                       <div style={{ textAlign: 'right', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                        <div><strong>Enviado por:</strong> {m.author_name || 'Aluno'}</div>
+                        <div><strong>Submetido por:</strong> {m.author_name || 'Aluno'}</div>
                         <div style={{ fontSize: '0.72rem', marginTop: '0.2rem' }}>
                           {new Date(m.created_at).toLocaleDateString('pt-BR')}
                         </div>
                       </div>
                     </div>
 
-                    <p style={{ fontSize: '0.9rem', color: 'var(--text-sub)', lineHeight: 1.5 }}>
-                      {m.description || 'Sem descrição fornecida.'}
+                    <p style={{ fontSize: '0.9rem', color: 'var(--text-sub)', lineHeight: 1.5, margin: 0 }}>
+                      {m.description || 'Sem descrição fornecida pelo autor.'}
                     </p>
 
-                    <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', padding: '0.75rem', borderRadius: '10px', backgroundColor: 'var(--bg-muted)', fontSize: '0.8rem' }}>
-                      {m.file_url && m.file_url !== '#' && (
-                        <div>
-                          <strong>Arquivo / Anexo:</strong>{' '}
-                          <a href={m.file_url} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-emerald)', textDecoration: 'underline' }}>
-                            {m.file_url}
-                          </a>
-                        </div>
-                      )}
-                      {m.github_url && (
-                        <div>
-                          <strong>GitHub:</strong>{' '}
-                          <a href={m.github_url} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-blue)', textDecoration: 'underline' }}>
-                            {m.github_url}
-                          </a>
-                        </div>
-                      )}
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', borderTop: '1px solid var(--border-light)', paddingTop: '1rem', flexWrap: 'wrap' }}>
+                    {/* Ações de Moderação */}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-light)' }}>
                       <button
-                        onClick={() => handleOpenEditModal(m)}
-                        className="btn btn-secondary"
-                        style={{ padding: '0.6rem 1.1rem', fontSize: '0.85rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-                        title="Editar submissão antes de aprovar"
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M12 20h9"></path>
-                          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-                        </svg>
-                        Editar Submissão
-                      </button>
-
-                      <button
-                        onClick={() => setDeleteConfirmTarget(m)}
-                        className="btn btn-danger-outline"
-                        style={{ padding: '0.6rem 1.2rem', fontSize: '0.85rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-                      >
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="3 6 5 6 21 6"></polyline>
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        </svg>
-                        Rejeitar / Excluir
-                      </button>
-
-                      <button
+                        type="button"
                         onClick={() => handleApproveMaterial(m)}
                         className="btn btn-emerald"
-                        style={{ padding: '0.6rem 1.4rem', fontSize: '0.85rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                        style={{ fontWeight: 700 }}
                       >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                        Aprovar Publicação
+                        Aprovar para o Acervo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteConfirmTarget(m)}
+                        className="btn btn-danger"
+                        style={{ fontWeight: 700 }}
+                      >
+                        Rejeitar / Excluir
                       </button>
                     </div>
                   </div>
@@ -1357,380 +2098,299 @@ export default function RepositorioPage() {
           </div>
         )}
 
-        {/* MODAL DE SUBMISSÃO / ENVIO DE MATERIAL */}
-        {isUploadModalOpen && (
+        {/* ============================================================== */}
+        {/* MODAL: CRIAR OU EDITAR MATERIAL DIDÁTICO                       */}
+        {/* ============================================================== */}
+        {isModalOpen && (
           <div
             style={{
               position: 'fixed',
-              inset: 0,
-              backgroundColor: 'rgba(15, 23, 42, 0.65)',
-              zIndex: 110,
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.7)',
+              backdropFilter: 'blur(4px)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: '1.25rem',
-              backdropFilter: 'blur(4px)',
+              zIndex: 9999,
+              padding: '1rem',
             }}
           >
             <div
-              className="card repositorio-upload-modal"
               style={{
-                width: '100%',
-                maxWidth: '580px',
                 backgroundColor: 'var(--bg-primary)',
-                borderRadius: '20px',
-                padding: '2.25rem 2rem',
-                boxShadow: 'var(--shadow-lg)',
-                position: 'relative',
+                borderRadius: '16px',
+                border: '1px solid var(--border-light)',
+                width: '100%',
+                maxWidth: '680px',
                 maxHeight: '90vh',
                 overflowY: 'auto',
-                border: '1px solid var(--border-light)',
+                padding: '2rem',
+                boxShadow: 'var(--shadow-lg)',
               }}
             >
-              <button
-                onClick={() => setIsUploadModalOpen(false)}
-                style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: 'var(--text-muted)' }}
-              >
-                ✕
-              </button>
-
-              <div style={{ marginBottom: '1.5rem' }}>
-                <span className="badge badge-emerald">Submissão Acadêmica</span>
-                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '0.35rem' }}>
-                  Publicar Material Didático ou Anexo
-                </h2>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  {isPrivileged
-                    ? 'Aprovação imediata: Como CA/Admin/Docente, o material será publicado instantaneamente.'
-                    : 'Submissão discente: Seu arquivo passará pela moderação do CA antes de figurar no acervo público.'}
-                </p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+                  {editingMaterial ? 'Editar Material Didático' : 'Publicar Material no Acervo'}
+                </h3>
+                <button
+                  type="button"
+                  onClick={handleCloseModal}
+                  style={{ background: 'none', border: 'none', fontSize: '1.25rem', color: 'var(--text-muted)', cursor: 'pointer' }}
+                >
+                  ✕
+                </button>
               </div>
 
-              {uploadError && (
+              {formError && (
                 <div className="alert-box alert-error" style={{ marginBottom: '1rem' }}>
-                  <div>{uploadError}</div>
+                  <div>{formError}</div>
                 </div>
               )}
 
-              <form onSubmit={handleCreateMaterial} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div className="form-group">
-                  <label className="form-label">Título do Material *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="ex: Roteiro Prático: Regressão Linear com Scikit-Learn"
-                    value={uploadTitle}
-                    onChange={(e) => setUploadTitle(e.target.value)}
-                    className="form-input"
-                  />
-                </div>
+              <form onSubmit={handleSaveMaterial} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                
+                {/* 1. SELETOR VISUAL DE CAPA */}
+                <div style={{ padding: '1.25rem', borderRadius: '12px', backgroundColor: 'var(--bg-muted)', border: '1px solid var(--border-light)' }}>
+                  <label className="form-label" style={{ fontWeight: 800, marginBottom: '0.5rem', display: 'block' }}>
+                    Capa / Identidade Visual do Material
+                  </label>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div className="form-group">
-                    <label className="form-label">Disciplina / Matéria *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="ex: Aprendizado de Máquina"
-                      value={uploadSubject}
-                      onChange={(e) => setUploadSubject(e.target.value)}
-                      className="form-input"
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Curso *</label>
-                    <select
-                      value={uploadCourse}
-                      onChange={(e) => setUploadCourse(e.target.value as any)}
-                      className="form-select"
-                    >
-                      <option value="IA">Inteligência Artificial (Mat.)</option>
-                      <option value="ESG">Gestão ESG (Not.)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div className="form-group">
-                    <label className="form-label">Semestre *</label>
-                    <select
-                      value={uploadSemester}
-                      onChange={(e) => setUploadSemester(Number(e.target.value))}
-                      className="form-select"
-                    >
-                      <option value={1}>1º Semestre</option>
-                      <option value={2}>2º Semestre</option>
-                      <option value={3}>3º Semestre</option>
-                      <option value={4}>4º Semestre</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Tipo de Material *</label>
-                    <select
-                      value={uploadType}
-                      onChange={(e) => setUploadType(e.target.value as any)}
-                      className="form-select"
-                    >
-                      <option value="APOSTILA">Apostila / PDF</option>
-                      <option value="CODIGO">Código-Fonte / Notebook</option>
-                      <option value="TCC">Projeto de TCC / Artigo</option>
-                      <option value="SLIDE">Slides de Aula</option>
-                      <option value="DATASET">Dataset / CSV</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Descrição Resumida</label>
-                  <textarea
-                    placeholder="Conteúdo abordado, objetivos ou instruções de execução..."
-                    value={uploadDesc}
-                    onChange={(e) => setUploadDesc(e.target.value)}
-                    className="form-input"
-                    style={{ height: '70px', resize: 'vertical' }}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Link do Arquivo (PDF / Drive / Nuvem) *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="https://drive.google.com/... ou link direto do arquivo"
-                    value={uploadFileUrl}
-                    onChange={(e) => setUploadFileUrl(e.target.value)}
-                    className="form-input"
-                  />
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div className="form-group">
-                    <label className="form-label">Link do GitHub (Opcional)</label>
-                    <input
-                      type="url"
-                      placeholder="https://github.com/usuario/repositorio"
-                      value={uploadGithubUrl}
-                      onChange={(e) => setUploadGithubUrl(e.target.value)}
-                      className="form-input"
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Autor / Docente / Turma</label>
-                    <input
-                      type="text"
-                      placeholder="ex: Prof. Carlos / Luis Otavio"
-                      value={uploadAuthorName}
-                      onChange={(e) => setUploadAuthorName(e.target.value)}
-                      className="form-input"
-                    />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Tags (separadas por vírgula)</label>
-                  <input
-                    type="text"
-                    placeholder="python, machine-learning, scikit-learn"
-                    value={uploadTags}
-                    onChange={(e) => setUploadTags(e.target.value)}
-                    className="form-input"
-                  />
-                </div>
-
-                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="btn btn-emerald"
-                    style={{ flex: 1, padding: '0.8rem', fontWeight: 700 }}
-                  >
-                    {isSubmitting ? 'Salvando...' : 'Confirmar e Publicar'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsUploadModalOpen(false)}
-                    className="btn btn-secondary"
-                    style={{ padding: '0.8rem 1.25rem', fontWeight: 700 }}
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* MODAL DE EDIÇÃO DE MATERIAL EXISTENTE */}
-        {isEditModalOpen && editingMaterial && (
-          <div
-            style={{
-              position: 'fixed',
-              inset: 0,
-              backgroundColor: 'rgba(15, 23, 42, 0.65)',
-              zIndex: 110,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '1.25rem',
-              backdropFilter: 'blur(4px)',
-            }}
-          >
-            <div
-              className="card repositorio-upload-modal"
-              style={{
-                width: '100%',
-                maxWidth: '580px',
-                backgroundColor: 'var(--bg-primary)',
-                borderRadius: '20px',
-                padding: '2.25rem 2rem',
-                boxShadow: 'var(--shadow-lg)',
-                position: 'relative',
-                maxHeight: '90vh',
-                overflowY: 'auto',
-                border: '1px solid var(--border-light)',
-              }}
-            >
-              <button
-                onClick={() => {
-                  setIsEditModalOpen(false);
-                  setEditingMaterial(null);
-                }}
-                style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: 'var(--text-muted)' }}
-              >
-                ✕
-              </button>
-
-              <div style={{ marginBottom: '1.5rem' }}>
-                <span className="badge badge-blue">Edição de Material</span>
-                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '0.35rem' }}>
-                  Editar Informações do Material
-                </h2>
-              </div>
-
-              {uploadError && (
-                <div className="alert-box alert-error" style={{ marginBottom: '1rem' }}>
-                  <div>{uploadError}</div>
-                </div>
-              )}
-
-              <form onSubmit={handleSaveEdit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div className="form-group">
-                  <label className="form-label">Título do Material *</label>
-                  <input
-                    type="text"
-                    required
-                    value={uploadTitle}
-                    onChange={(e) => setUploadTitle(e.target.value)}
-                    className="form-input"
-                  />
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div className="form-group">
-                    <label className="form-label">Semestre *</label>
-                    <select
-                      value={uploadSemester}
-                      onChange={(e) => setUploadSemester(Number(e.target.value))}
-                      className="form-select"
-                    >
-                      <option value={1}>1º Semestre</option>
-                      <option value={2}>2º Semestre</option>
-                      <option value={3}>3º Semestre</option>
-                      <option value={4}>4º Semestre</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Tipo de Material *</label>
-                    <select
-                      value={uploadType}
-                      onChange={(e) => setUploadType(e.target.value as any)}
-                      className="form-select"
-                    >
-                      <option value="APOSTILA">Apostila / PDF</option>
-                      <option value="CODIGO">Código-Fonte / Notebook</option>
-                      <option value="TCC">Projeto de TCC / Artigo</option>
-                      <option value="SLIDE">Slides de Aula</option>
-                      <option value="DATASET">Dataset / CSV</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Descrição Resumida</label>
-                  <textarea
-                    value={uploadDesc}
-                    onChange={(e) => setUploadDesc(e.target.value)}
-                    className="form-input"
-                    style={{ height: '70px', resize: 'vertical' }}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Link do Arquivo *</label>
-                  <input
-                    type="text"
-                    required
-                    value={uploadFileUrl}
-                    onChange={(e) => setUploadFileUrl(e.target.value)}
-                    className="form-input"
-                  />
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div className="form-group">
-                    <label className="form-label">Link do GitHub</label>
-                    <input
-                      type="url"
-                      value={uploadGithubUrl}
-                      onChange={(e) => setUploadGithubUrl(e.target.value)}
-                      className="form-input"
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Autor / Nome</label>
-                    <input
-                      type="text"
-                      value={uploadAuthorName}
-                      onChange={(e) => setUploadAuthorName(e.target.value)}
-                      className="form-input"
-                    />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Tags (separadas por vírgula)</label>
-                  <input
-                    type="text"
-                    value={uploadTags}
-                    onChange={(e) => setUploadTags(e.target.value)}
-                    className="form-input"
-                  />
-                </div>
-
-                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="btn btn-emerald"
-                    style={{ flex: 1, padding: '0.8rem', fontWeight: 700 }}
-                  >
-                    {isSubmitting ? 'Salvando...' : 'Atualizar Material'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsEditModalOpen(false);
-                      setEditingMaterial(null);
+                  <div
+                    style={{
+                      height: '75px',
+                      borderRadius: '10px',
+                      background: formUseCustomImage && formImageUrl
+                        ? `url(${formImageUrl}) center/cover no-repeat`
+                        : MATERIAL_BANNER_PRESETS.find((b) => b.id === formBannerType)?.gradient || MATERIAL_BANNER_PRESETS[0].gradient,
+                      marginBottom: '0.75rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#ffffff',
+                      fontWeight: 800,
+                      fontSize: '0.95rem',
+                      textShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
                     }}
+                  >
+                    {formTitle.trim() ? formTitle : 'Pré-visualização da Capa do Material'}
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '0.5rem' }}>
+                    {MATERIAL_BANNER_PRESETS.map((preset) => {
+                      const isSelected = !formUseCustomImage && formBannerType === preset.id;
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => {
+                            setFormBannerType(preset.id);
+                            setFormUseCustomImage(false);
+                          }}
+                          style={{
+                            padding: '0.5rem',
+                            borderRadius: '8px',
+                            background: preset.gradient,
+                            color: '#ffffff',
+                            border: isSelected ? '2px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.2)',
+                            cursor: 'pointer',
+                            fontSize: '0.725rem',
+                            fontWeight: 700,
+                          }}
+                        >
+                          {preset.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. DADOS PRINCIPAIS DO MATERIAL */}
+                <div className="form-group">
+                  <label className="form-label" style={{ fontWeight: 700 }}>Título do Material *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="ex: Apostila Prática: OpenCV e YOLO para Detecção no Agro"
+                    value={formTitle}
+                    onChange={(e) => setFormTitle(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="form-group">
+                    <label className="form-label" style={{ fontWeight: 700 }}>Curso Oficial *</label>
+                    <select
+                      value={formCourse}
+                      onChange={(e) => {
+                        const newCrs = e.target.value as CourseType;
+                        setFormCourse(newCrs);
+                        setFormSubject('');
+                      }}
+                      className="form-select"
+                    >
+                      <option value="IA">CST Inteligência Artificial</option>
+                      <option value="ESG">CST Gestão ESG & Sustentabilidade</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label" style={{ fontWeight: 700 }}>Semestre Oficial *</label>
+                    <select
+                      value={formSemester}
+                      onChange={(e) => {
+                        setFormSemester(Number(e.target.value));
+                        setFormSubject('');
+                      }}
+                      className="form-select"
+                    >
+                      <option value={1}>1º Semestre</option>
+                      <option value={2}>2º Semestre</option>
+                      <option value={3}>3º Semestre</option>
+                      <option value={4}>4º Semestre</option>
+                      <option value={5}>Complementares (TCC / Estágio)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Disciplina Oficial do PPC */}
+                <div className="form-group">
+                  <label className="form-label" style={{ fontWeight: 700 }}>Disciplina Oficial do PPC *</label>
+                  <select
+                    value={formSubject}
+                    onChange={(e) => setFormSubject(e.target.value)}
+                    className="form-select"
+                    required
+                  >
+                    <option value="">Selecione uma disciplina oficial...</option>
+                    {OFFICIAL_PPC_DISCIPLINES.filter((d) => d.course === formCourse && d.semester === formSemester).map((disc) => (
+                      <option key={disc.code} value={disc.name}>
+                        [{disc.code}] {disc.name} ({disc.hours}h - {disc.mode})
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Pílulas de Seleção Rápida */}
+                  <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginTop: '0.4rem' }}>
+                    {OFFICIAL_PPC_DISCIPLINES.filter((d) => d.course === formCourse && d.semester === formSemester).map((disc) => {
+                      const isSelected = formSubject === disc.name;
+                      return (
+                        <button
+                          key={disc.code}
+                          type="button"
+                          onClick={() => setFormSubject(disc.name)}
+                          style={{
+                            fontSize: '0.7rem',
+                            fontWeight: 600,
+                            padding: '2px 7px',
+                            borderRadius: '6px',
+                            border: isSelected ? '1px solid var(--accent-blue)' : '1px solid var(--border-light)',
+                            backgroundColor: isSelected ? 'var(--accent-blue-light)' : 'var(--bg-muted)',
+                            color: isSelected ? 'var(--accent-blue)' : 'var(--text-muted)',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {disc.code}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="form-group">
+                    <label className="form-label" style={{ fontWeight: 700 }}>Tipo de Conteúdo *</label>
+                    <select
+                      value={formType}
+                      onChange={(e) => setFormType(e.target.value as MaterialType)}
+                      className="form-select"
+                    >
+                      <option value="APOSTILA">Apostila / Resumo</option>
+                      <option value="CODIGO">Código / Notebook</option>
+                      <option value="SLIDE">Slide de Aula</option>
+                      <option value="DATASET">Dataset / Planilha</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label" style={{ fontWeight: 700 }}>Autor / Compartilhado por</label>
+                    <input
+                      type="text"
+                      placeholder="Seu nome ou grupo de estudos"
+                      value={formAuthorName}
+                      onChange={(e) => setFormAuthorName(e.target.value)}
+                      className="form-input"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label" style={{ fontWeight: 700 }}>Descrição / Instruções do Material</label>
+                  <textarea
+                    rows={3}
+                    placeholder="Descreva o que o colega vai aprender, quais tópicos são cobertos e orientações para estudo..."
+                    value={formDesc}
+                    onChange={(e) => setFormDesc(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="form-group">
+                    <label className="form-label" style={{ fontWeight: 700 }}>Link do Arquivo (PDF / Drive / Nuvem)</label>
+                    <input
+                      type="url"
+                      placeholder="https://drive.google.com/..."
+                      value={formFileUrl}
+                      onChange={(e) => setFormFileUrl(e.target.value)}
+                      className="form-input"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label" style={{ fontWeight: 700 }}>Link do Repositório GitHub (Opcional)</label>
+                    <input
+                      type="url"
+                      placeholder="https://github.com/usuario/projeto"
+                      value={formGithubUrl}
+                      onChange={(e) => setFormGithubUrl(e.target.value)}
+                      className="form-input"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label" style={{ fontWeight: 700 }}>Tags de Pesquisa (separadas por vírgula)</label>
+                  <input
+                    type="text"
+                    placeholder="Python, OpenCV, Machine Learning, Regressão, ESG..."
+                    value={formTags}
+                    onChange={(e) => setFormTags(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
+
+                {/* Ações do Formulário */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
+                  <button
+                    type="button"
+                    onClick={handleCloseModal}
                     className="btn btn-secondary"
-                    style={{ padding: '0.8rem 1.25rem', fontWeight: 700 }}
+                    style={{ fontWeight: 700 }}
                   >
                     Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={formSubmitting}
+                    className="btn btn-primary"
+                    style={{ fontWeight: 700, padding: '0.75rem 1.75rem' }}
+                  >
+                    {formSubmitting ? 'Salvando...' : editingMaterial ? 'Atualizar Material' : 'Publicar Material'}
                   </button>
                 </div>
               </form>
@@ -1738,75 +2398,65 @@ export default function RepositorioPage() {
           </div>
         )}
 
-        {/* MODAL DE CONFIRMAÇÃO DE EXCLUSÃO */}
+        {/* ============================================================== */}
+        {/* MODAL: CONFIRMAÇÃO DE EXCLUSÃO                                */}
+        {/* ============================================================== */}
         {deleteConfirmTarget && (
           <div
             style={{
               position: 'fixed',
-              inset: 0,
-              backgroundColor: 'rgba(15, 23, 42, 0.7)',
-              zIndex: 120,
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.7)',
+              backdropFilter: 'blur(4px)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: '1.25rem',
-              backdropFilter: 'blur(4px)',
+              zIndex: 9999,
+              padding: '1rem',
             }}
           >
             <div
-              className="card repositorio-upload-modal"
               style={{
-                width: '100%',
-                maxWidth: '460px',
                 backgroundColor: 'var(--bg-primary)',
                 borderRadius: '16px',
-                padding: '2rem',
+                border: '1px solid var(--border-light)',
+                maxWidth: '440px',
+                width: '100%',
+                padding: '1.75rem',
                 boxShadow: 'var(--shadow-lg)',
                 textAlign: 'center',
-                border: '1px solid var(--border-light)',
               }}
             >
-              <div style={{ color: 'var(--accent-rose)', marginBottom: '1rem' }}>
-                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto' }}>
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <line x1="12" y1="8" x2="12" y2="12"></line>
-                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                </svg>
-              </div>
-
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)' }}>
-                Excluir Material Definitivamente?
-              </h3>
-              <p style={{ color: 'var(--text-sub)', fontSize: '0.875rem', marginTop: '0.5rem', lineHeight: 1.5 }}>
-                Tem certeza que deseja remover o material <strong>&ldquo;{deleteConfirmTarget.title}&rdquo;</strong> do repositório?
+              <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+                Excluir Material Didático?
+              </h4>
+              <p style={{ color: 'var(--text-sub)', fontSize: '0.875rem', margin: '0.75rem 0 1.5rem', lineHeight: 1.5 }}>
+                Tem certeza que deseja remover <strong>"{deleteConfirmTarget.title}"</strong>? Esta ação não pode ser desfeita.
               </p>
-
-              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
                 <button
-                  onClick={handleConfirmDelete}
-                  className="btn btn-danger"
-                  style={{ flex: 1, padding: '0.75rem', fontWeight: 700 }}
-                >
-                  Confirmar Exclusão
-                </button>
-                <button
+                  type="button"
                   onClick={() => setDeleteConfirmTarget(null)}
                   className="btn btn-secondary"
-                  style={{ flex: 1, padding: '0.75rem', fontWeight: 700 }}
+                  style={{ fontWeight: 700, padding: '0.6rem 1.25rem' }}
                 >
                   Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  className="btn btn-danger"
+                  style={{ fontWeight: 700, padding: '0.6rem 1.25rem' }}
+                >
+                  Sim, Excluir
                 </button>
               </div>
             </div>
           </div>
         )}
-
-        {/* Toast Notificação */}
-        <ToastNotification
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast({ message: null, type: 'success' })}
-        />
 
       </div>
     </AppLayout>
