@@ -47,6 +47,39 @@ if (!isMock && process.env.DATABASE_URL) {
   });
 }
 
+let schemaEnsured = false;
+async function ensureCanteenSchema() {
+  if (schemaEnsured || isMock || !pool) return;
+  try {
+    await pool.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='can_validate_canteen') THEN
+          ALTER TABLE users ADD COLUMN can_validate_canteen BOOLEAN DEFAULT FALSE;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='phone') THEN
+          ALTER TABLE users ADD COLUMN phone VARCHAR(30);
+        END IF;
+      END $$;
+      CREATE TABLE IF NOT EXISTS canteen_settings (
+        key VARCHAR(100) PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    schemaEnsured = true;
+  } catch (e) {
+    console.warn('[DB] Schema ensure non-fatal warning:', e);
+  }
+}
+
+const mockCanteenSettings: Record<string, string> = {
+  notification_email: process.env.CANTEEN_NOTIFY_EMAIL || 'cesar.dev@aluno.cps.sp.gov.br',
+  notification_whatsapp: process.env.CANTEEN_NOTIFY_WHATSAPP || '19999998888',
+  auto_notify_email: 'true',
+  auto_notify_whatsapp: 'true',
+};
+
 // ====================================================================
 // ESTADO EM MEMÓRIA (SEED MOCK DETERMINÍSTICO PARA DESENVOLVIMENTO & TESTES)
 // ====================================================================
@@ -903,8 +936,14 @@ export const db = {
       if (isMock || !pool) {
         return mockUsers.map(({ password_hash: _, ...safe }) => safe);
       }
-      const res = await pool.query('SELECT id, name, email, recovery_email, is_email_verified, email_verified_at, ra, role, course, semester, is_active, created_at, updated_at FROM users ORDER BY created_at DESC');
-      return res.rows;
+      await ensureCanteenSchema();
+      try {
+        const res = await pool.query('SELECT id, name, email, recovery_email, is_email_verified, email_verified_at, ra, role, course, semester, is_active, can_validate_canteen, phone, created_at, updated_at FROM users ORDER BY created_at DESC');
+        return res.rows;
+      } catch {
+        const res = await pool.query('SELECT id, name, email, recovery_email, is_email_verified, email_verified_at, ra, role, course, semester, is_active, created_at, updated_at FROM users ORDER BY created_at DESC');
+        return res.rows;
+      }
     },
 
     updateProfile: async (
@@ -1131,6 +1170,8 @@ export const db = {
         semester?: number;
         is_active?: boolean;
         is_email_verified?: boolean;
+        can_validate_canteen?: boolean;
+        phone?: string | null;
       },
       changedBy?: string,
       clientInfo?: { ip?: string; userAgent?: string }
@@ -1148,6 +1189,8 @@ export const db = {
       const newSemester = updates.semester !== undefined ? updates.semester : user.semester;
       const newIsActive = updates.is_active !== undefined ? updates.is_active : user.is_active;
       const newIsVerified = updates.is_email_verified !== undefined ? updates.is_email_verified : (user.is_email_verified ?? false);
+      const newCanValidate = updates.can_validate_canteen !== undefined ? updates.can_validate_canteen : (user.can_validate_canteen ?? false);
+      const newPhone = updates.phone !== undefined ? updates.phone : (user.phone ?? null);
 
       if (user.role === 'ADMIN' && (newRole !== 'ADMIN' || !newIsActive)) {
         const allUsers = await db.users.listAll();
@@ -1171,16 +1214,28 @@ export const db = {
             semester: newSemester,
             is_active: newIsActive,
             is_email_verified: newIsVerified,
+            can_validate_canteen: newCanValidate,
+            phone: newPhone,
             updated_at: now,
           };
         }
       } else {
-        await pool.query(
-          `UPDATE users 
-           SET name = $1, email = $2, recovery_email = $3, ra = $4, role = $5, course = $6, semester = $7, is_active = $8, is_email_verified = $9, updated_at = NOW()
-           WHERE id = $10`,
-          [newName, newEmail, newRecoveryEmail, newRa, newRole, newCourse, newSemester, newIsActive, newIsVerified, userId]
-        );
+        await ensureCanteenSchema();
+        try {
+          await pool.query(
+            `UPDATE users 
+             SET name = $1, email = $2, recovery_email = $3, ra = $4, role = $5, course = $6, semester = $7, is_active = $8, is_email_verified = $9, can_validate_canteen = $10, phone = $11, updated_at = NOW()
+             WHERE id = $12`,
+            [newName, newEmail, newRecoveryEmail, newRa, newRole, newCourse, newSemester, newIsActive, newIsVerified, newCanValidate, newPhone, userId]
+          );
+        } catch {
+          await pool.query(
+            `UPDATE users 
+             SET name = $1, email = $2, recovery_email = $3, ra = $4, role = $5, course = $6, semester = $7, is_active = $8, is_email_verified = $9, updated_at = NOW()
+             WHERE id = $10`,
+            [newName, newEmail, newRecoveryEmail, newRa, newRole, newCourse, newSemester, newIsActive, newIsVerified, userId]
+          );
+        }
       }
 
       await db.securityAudit.log({
@@ -2926,6 +2981,63 @@ export const db = {
          DO UPDATE SET is_read = TRUE, read_at = NOW()`,
         [userId, announcementId]
       );
+    },
+  },
+
+  // ------------------------------------------------------------------
+  // CONFIGURAÇÕES DA CANTINA & NOTIFICAÇÕES (PIX, E-MAIL, WHATSAPP)
+  // ------------------------------------------------------------------
+  canteenSettings: {
+    get: async (key: string, defaultValue = ''): Promise<string> => {
+      if (isMock || !pool) {
+        return mockCanteenSettings[key] !== undefined ? mockCanteenSettings[key] : defaultValue;
+      }
+      await ensureCanteenSchema();
+      try {
+        const res = await pool.query('SELECT value FROM canteen_settings WHERE key = $1', [key]);
+        if (res.rows.length === 0) return defaultValue;
+        return res.rows[0].value;
+      } catch {
+        return defaultValue;
+      }
+    },
+    getAll: async (): Promise<Record<string, string>> => {
+      if (isMock || !pool) {
+        return { ...mockCanteenSettings };
+      }
+      await ensureCanteenSchema();
+      try {
+        const res = await pool.query('SELECT key, value FROM canteen_settings');
+        const map: Record<string, string> = { ...mockCanteenSettings };
+        for (const row of res.rows) {
+          map[row.key] = row.value;
+        }
+        return map;
+      } catch {
+        return { ...mockCanteenSettings };
+      }
+    },
+    set: async (key: string, value: string): Promise<void> => {
+      if (isMock || !pool) {
+        mockCanteenSettings[key] = value;
+        return;
+      }
+      await ensureCanteenSchema();
+      try {
+        await pool.query(
+          `INSERT INTO canteen_settings (key, value, updated_at)
+           VALUES ($1, $2, NOW())
+           ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()`,
+          [key, value]
+        );
+      } catch (e) {
+        console.warn('[DB] Erro ao salvar canteen_setting:', e);
+      }
+    },
+    setMany: async (entries: Record<string, string>): Promise<void> => {
+      for (const [key, value] of Object.entries(entries)) {
+        await db.canteenSettings.set(key, value);
+      }
     },
   },
 };

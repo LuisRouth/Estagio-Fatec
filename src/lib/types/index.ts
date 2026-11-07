@@ -17,11 +17,13 @@ export interface User {
   email: string;
   recovery_email?: string | null;
   ra?: string | null;
+  phone?: string | null;
   password_hash: string;
   role: UserRole;
   course: CourseType;
   semester: number;
   is_active: boolean;
+  can_validate_canteen?: boolean;
   is_email_verified?: boolean;
   email_verified_at?: string | null;
   created_at: string;
@@ -37,6 +39,7 @@ export interface JWTPayload {
   role: UserRole;
   course: CourseType;
   semester: number;
+  can_validate_canteen?: boolean;
   iat?: number;
   exp?: number;
 }

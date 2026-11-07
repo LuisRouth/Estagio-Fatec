@@ -26,6 +26,7 @@ interface CurrentUser {
   name: string;
   email: string;
   role: 'ALUNO' | 'CA_MEMBRO' | 'PROFESSOR' | 'ADMIN';
+  can_validate_canteen?: boolean;
 }
 
 export default function CantinaAdminPage() {
@@ -35,6 +36,25 @@ export default function CantinaAdminPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('TODOS');
+
+  // Abas do Painel: Pedidos & Caixa, Produtos & Estoque, Configurações de Notificação
+  const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'settings'>('orders');
+
+  // Estados da Aba de Pedidos & Caixa
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [orderStatusFilter, setOrderStatusFilter] = useState<'TODOS' | 'PENDENTE' | 'PAGO' | 'CANCELADO'>('PENDENTE');
+  const [orderSearch, setOrderSearch] = useState('');
+
+  // Estados da Aba de Configurações
+  const [settings, setSettings] = useState({
+    notification_email: '',
+    notification_whatsapp: '',
+    auto_notify_email: true,
+    auto_notify_whatsapp: true,
+  });
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [isTestingEmail, setIsTestingEmail] = useState(false);
 
   // Modal de Criação / Edição
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -355,8 +375,10 @@ export default function CantinaAdminPage() {
         const data = await res.json();
         if (data.success && data.data) {
           setUser(data.data);
-          if (data.data.role === 'ADMIN' || data.data.role === 'CA_MEMBRO') {
+          if (data.data.role === 'ADMIN' || data.data.role === 'CA_MEMBRO' || data.data.can_validate_canteen) {
             fetchProducts();
+            fetchOrders();
+            fetchSettings();
           }
         }
       }
@@ -365,6 +387,128 @@ export default function CantinaAdminPage() {
     } finally {
       setAuthChecked(true);
       setLoading(false);
+    }
+  };
+
+  const fetchOrders = async () => {
+    setOrdersLoading(true);
+    try {
+      const res = await fetch('/api/canteen/transactions?limit=100');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.data)) {
+          setTransactions(data.data);
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao buscar pedidos:', err);
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch('/api/canteen/settings');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.data?.settings) {
+          const s = data.data.settings;
+          setSettings({
+            notification_email: s.notification_email || '',
+            notification_whatsapp: s.notification_whatsapp || '',
+            auto_notify_email: s.auto_notify_email !== 'false',
+            auto_notify_whatsapp: s.auto_notify_whatsapp !== 'false',
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao buscar configurações:', err);
+    }
+  };
+
+  const handleConfirmPayment = (tx: any) => {
+    const formattedAmount = `R$ ${Number(tx.total_amount).toFixed(2).replace('.', ',')}`;
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Confirmar Pagamento Pix & Dar Baixa?',
+      message: `Deseja dar baixa e confirmar o pagamento do pedido #${tx.id.slice(-8).toUpperCase()} do discente ${tx.user_name || 'Aluno'} no valor de ${formattedAmount}?\n\nEsta ação:\n1. Muda o status para PAGO\n2. Lança o valor no controle de caixa do Centro Acadêmico\n3. Garante a baixa do estoque\n4. Dispara e-mail automático para o estudante com o código de retirada.`,
+      confirmLabel: '✓ Confirmar e Liberar Retirada',
+      cancelLabel: 'Cancelar',
+      isDanger: false,
+      onConfirm: async () => {
+        setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+        try {
+          const res = await fetch(`/api/canteen/transactions/${tx.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'PAGO' }),
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            showToast(`✓ Pagamento do pedido #${tx.id.slice(-8).toUpperCase()} confirmado! E-mail enviado ao aluno.`);
+            fetchOrders();
+            fetchProducts();
+          } else {
+            showToast(data.error || 'Erro ao confirmar pagamento.', 'error');
+          }
+        } catch {
+          showToast('Falha de conexão com o servidor.', 'error');
+        }
+      },
+    });
+  };
+
+  const handleCancelOrder = (tx: any) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Cancelar Pedido & Estornar Estoque?',
+      message: `Deseja cancelar o pedido #${tx.id.slice(-8).toUpperCase()} de ${tx.user_name || 'Aluno'}?\n\nO estoque dos produtos será automaticamente devolvido à cantina.`,
+      confirmLabel: 'Sim, Cancelar Pedido',
+      cancelLabel: 'Voltar',
+      isDanger: true,
+      onConfirm: async () => {
+        setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+        try {
+          const res = await fetch(`/api/canteen/transactions/${tx.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'CANCELADO' }),
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            showToast(`Pedido #${tx.id.slice(-8).toUpperCase()} cancelado e estoque estornado.`);
+            fetchOrders();
+            fetchProducts();
+          } else {
+            showToast(data.error || 'Erro ao cancelar pedido.', 'error');
+          }
+        } catch {
+          showToast('Falha ao cancelar pedido.', 'error');
+        }
+      },
+    });
+  };
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingSettings(true);
+    try {
+      const res = await fetch('/api/canteen/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast('✓ Configurações de notificação salvas com sucesso!');
+      } else {
+        showToast(data.error || 'Erro ao salvar configurações.', 'error');
+      }
+    } catch {
+      showToast('Erro ao salvar configurações.', 'error');
+    } finally {
+      setIsSavingSettings(false);
     }
   };
 
@@ -544,7 +688,28 @@ export default function CantinaAdminPage() {
     return matchesCategory && matchesSearch;
   });
 
-  const isAuthorized = user && (user.role === 'ADMIN' || user.role === 'CA_MEMBRO');
+  const isAuthorized = Boolean(user && (user.role === 'ADMIN' || user.role === 'CA_MEMBRO' || user.can_validate_canteen));
+
+  const pendingOrdersCount = transactions.filter((t) => t.status === 'PENDENTE').length;
+  const paidOrdersCount = transactions.filter((t) => t.status === 'PAGO').length;
+  const totalRevenue = transactions
+    .filter((t) => t.status === 'PAGO')
+    .reduce((sum, t) => sum + Number(t.total_amount), 0);
+  const pendingRevenue = transactions
+    .filter((t) => t.status === 'PENDENTE')
+    .reduce((sum, t) => sum + Number(t.total_amount), 0);
+
+  // Filtragem de pedidos
+  const filteredTransactions = transactions.filter((t) => {
+    const matchesStatus = orderStatusFilter === 'TODOS' || t.status === orderStatusFilter;
+    const matchesSearch =
+      orderSearch.trim() === '' ||
+      t.id.toLowerCase().includes(orderSearch.toLowerCase()) ||
+      (t.user_name && t.user_name.toLowerCase().includes(orderSearch.toLowerCase())) ||
+      (t.user_email && t.user_email.toLowerCase().includes(orderSearch.toLowerCase())) ||
+      (t.items && t.items.some((item: any) => item.product_name?.toLowerCase().includes(orderSearch.toLowerCase())));
+    return matchesStatus && matchesSearch;
+  });
 
   return (
     <AppLayout activePath="/cantina">
@@ -662,7 +827,392 @@ export default function CantinaAdminPage() {
             </div>
           </div>
         ) : (
-          <>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            {/* Navegação entre Abas */}
+            <div
+              style={{
+                display: 'flex',
+                gap: '0.75rem',
+                borderBottom: '2px solid var(--border-light)',
+                paddingBottom: '0.75rem',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setActiveTab('orders')}
+                style={{
+                  padding: '0.7rem 1.25rem',
+                  borderRadius: '12px',
+                  border: 'none',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  backgroundColor: activeTab === 'orders' ? '#16a34a' : '#f1f5f9',
+                  color: activeTab === 'orders' ? '#ffffff' : '#475569',
+                  boxShadow: activeTab === 'orders' ? '0 4px 10px rgba(22, 163, 74, 0.25)' : 'none',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                💰 Conferência de Pedidos & Caixa
+                {pendingOrdersCount > 0 && (
+                  <span
+                    style={{
+                      backgroundColor: activeTab === 'orders' ? '#ffffff' : '#dc2626',
+                      color: activeTab === 'orders' ? '#16a34a' : '#ffffff',
+                      padding: '0.15rem 0.5rem',
+                      borderRadius: '999px',
+                      fontSize: '0.75rem',
+                      fontWeight: 800,
+                    }}
+                  >
+                    {pendingOrdersCount} pendente{pendingOrdersCount > 1 ? 's' : ''}
+                  </span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('products')}
+                style={{
+                  padding: '0.7rem 1.25rem',
+                  borderRadius: '12px',
+                  border: 'none',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  backgroundColor: activeTab === 'products' ? '#0284c7' : '#f1f5f9',
+                  color: activeTab === 'products' ? '#ffffff' : '#475569',
+                  boxShadow: activeTab === 'products' ? '0 4px 10px rgba(2, 132, 199, 0.25)' : 'none',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                📦 Catálogo & Estoque ({products.length})
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('settings')}
+                style={{
+                  padding: '0.7rem 1.25rem',
+                  borderRadius: '12px',
+                  border: 'none',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  backgroundColor: activeTab === 'settings' ? '#4f46e5' : '#f1f5f9',
+                  color: activeTab === 'settings' ? '#ffffff' : '#475569',
+                  boxShadow: activeTab === 'settings' ? '0 4px 10px rgba(79, 70, 229, 0.25)' : 'none',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                ⚙️ Configurações & Alertas
+              </button>
+            </div>
+
+            {/* ABA 1: CONFERÊNCIA DE PEDIDOS & CAIXA */}
+            {activeTab === 'orders' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                {/* Métricas do Caixa */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                  <div style={{ backgroundColor: '#fff7ed', borderRadius: '16px', padding: '1.25rem 1.5rem', border: '1px solid #fed7aa' }}>
+                    <span style={{ fontSize: '0.8rem', color: '#c2410c', fontWeight: 700, textTransform: 'uppercase' }}>
+                      Aguardando Conferência Pix
+                    </span>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#9a3412', marginTop: '0.25rem' }}>
+                      {pendingOrdersCount} pedido{pendingOrdersCount !== 1 ? 's' : ''}
+                    </div>
+                    <span style={{ fontSize: '0.8rem', color: '#ea580c', fontWeight: 600 }}>
+                      Total a Conferir: R$ {pendingRevenue.toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
+
+                  <div style={{ backgroundColor: '#f0fdf4', borderRadius: '16px', padding: '1.25rem 1.5rem', border: '1px solid #bbf7d0' }}>
+                    <span style={{ fontSize: '0.8rem', color: '#15803d', fontWeight: 700, textTransform: 'uppercase' }}>
+                      Pedidos Pagos & Liberados
+                    </span>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#166534', marginTop: '0.25rem' }}>
+                      {paidOrdersCount}
+                    </div>
+                    <span style={{ fontSize: '0.8rem', color: '#16a34a', fontWeight: 600 }}>
+                      Receita Total: R$ {totalRevenue.toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
+
+                  <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '1.25rem 1.5rem', border: '1px solid #e2e8f0' }}>
+                    <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>
+                      Total Geral de Pedidos
+                    </span>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginTop: '0.25rem' }}>
+                      {transactions.length}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={fetchOrders}
+                      className="btn btn-secondary"
+                      style={{ marginTop: '0.35rem', padding: '0.25rem 0.65rem', fontSize: '0.75rem' }}
+                    >
+                      ↻ Atualizar Lista
+                    </button>
+                  </div>
+                </div>
+
+                {/* Filtros da Tabela de Pedidos */}
+                <div
+                  style={{
+                    backgroundColor: '#ffffff',
+                    borderRadius: '16px',
+                    padding: '1.25rem 1.5rem',
+                    border: '1px solid var(--border-light)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '1rem',
+                  }}
+                >
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {[
+                      { id: 'PENDENTE', label: 'Pendentes de Baixa' },
+                      { id: 'PAGO', label: 'Pagos & Liberados' },
+                      { id: 'CANCELADO', label: 'Cancelados' },
+                      { id: 'TODOS', label: 'Todos os Pedidos' },
+                    ].map((st) => (
+                      <button
+                        key={st.id}
+                        type="button"
+                        onClick={() => setOrderStatusFilter(st.id as any)}
+                        className={`btn ${orderStatusFilter === st.id ? 'btn-primary' : 'btn-secondary'}`}
+                        style={{
+                          fontSize: '0.8rem',
+                          padding: '0.45rem 0.95rem',
+                          backgroundColor: orderStatusFilter === st.id && st.id === 'PENDENTE' ? '#ea580c' : undefined,
+                          borderColor: orderStatusFilter === st.id && st.id === 'PENDENTE' ? '#ea580c' : undefined,
+                        }}
+                      >
+                        {st.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={{ minWidth: '260px' }}>
+                    <input
+                      type="text"
+                      placeholder="Buscar por aluno, RA ou pedido..."
+                      value={orderSearch}
+                      onChange={(e) => setOrderSearch(e.target.value)}
+                      className="form-input"
+                      style={{ padding: '0.55rem 1rem', fontSize: '0.85rem' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Tabela de Pedidos */}
+                <div
+                  style={{
+                    backgroundColor: '#ffffff',
+                    borderRadius: '20px',
+                    border: '1px solid var(--border-light)',
+                    overflow: 'hidden',
+                    boxShadow: 'var(--shadow-sm)',
+                  }}
+                >
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+                      <thead>
+                        <tr style={{ backgroundColor: 'var(--bg-muted)', borderBottom: '1px solid var(--border-light)', color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          <th style={{ padding: '1rem 1.25rem', fontWeight: 700 }}>Pedido / Horário</th>
+                          <th style={{ padding: '1rem 1.25rem', fontWeight: 700 }}>Discente Comprador</th>
+                          <th style={{ padding: '1rem 1.25rem', fontWeight: 700 }}>Itens Adquiridos</th>
+                          <th style={{ padding: '1rem 1.25rem', fontWeight: 700 }}>Valor Total</th>
+                          <th style={{ padding: '1rem 1.25rem', fontWeight: 700 }}>Status</th>
+                          <th style={{ padding: '1rem 1.25rem', fontWeight: 700, textAlign: 'right' }}>Ações de Baixa</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ordersLoading ? (
+                          <tr>
+                            <td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                              Carregando pedidos da cantina...
+                            </td>
+                          </tr>
+                        ) : filteredTransactions.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} style={{ padding: '3.5rem 1rem', textAlign: 'center' }}>
+                              <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🎉</div>
+                              <h4 style={{ margin: 0, fontWeight: 700, color: 'var(--text-main)' }}>
+                                {orderStatusFilter === 'PENDENTE'
+                                  ? 'Nenhum pedido pendente aguardando baixa no momento!'
+                                  : 'Nenhum pedido localizado para o filtro selecionado.'}
+                              </h4>
+                              <p style={{ margin: '0.25rem 0 0', fontSize: '0.825rem', color: 'var(--text-muted)' }}>
+                                Todos os pedidos efetuados pelos alunos aparecerão aqui para conferência fácil.
+                              </p>
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredTransactions.map((tx: any) => {
+                            const isPending = tx.status === 'PENDENTE';
+                            const isPaid = tx.status === 'PAGO';
+                            const formattedTotal = `R$ ${Number(tx.total_amount).toFixed(2).replace('.', ',')}`;
+                            const dateObj = new Date(tx.created_at);
+                            const formattedDate = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+                            // Mensagem formatada para WhatsApp
+                            const itemsText = (tx.items || []).map((i: any) => `${i.quantity}x ${i.product_name}`).join(', ');
+                            const whatsappMsg = encodeURIComponent(
+                              `Olá ${tx.user_name || 'Aluno'}! Sobre o seu pedido #${tx.id.slice(-8).toUpperCase()} na Cantina FATEC (${itemsText}) no valor de ${formattedTotal}: seu Pix está em conferência.`
+                            );
+                            const whatsappUrl = `https://wa.me/?text=${whatsappMsg}`;
+
+                            return (
+                              <tr
+                                key={tx.id}
+                                style={{
+                                  borderBottom: '1px solid var(--border-light)',
+                                  backgroundColor: isPending ? 'rgba(254, 243, 199, 0.25)' : 'transparent',
+                                  transition: 'background-color 0.15s ease',
+                                }}
+                              >
+                                {/* Pedido e Data */}
+                                <td style={{ padding: '1rem 1.25rem', verticalAlign: 'top' }}>
+                                  <div style={{ fontWeight: 800, color: 'var(--text-main)', letterSpacing: '0.5px' }}>
+                                    #{tx.id.slice(-8).toUpperCase()}
+                                  </div>
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                                    🕒 {formattedDate}
+                                  </div>
+                                </td>
+
+                                {/* Comprador */}
+                                <td style={{ padding: '1rem 1.25rem', verticalAlign: 'top' }}>
+                                  <div style={{ fontWeight: 700, color: '#0f172a' }}>
+                                    {tx.user_name || 'Aluno FATEC'}
+                                  </div>
+                                  <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.15rem' }}>
+                                    {tx.user_email || 'E-mail não informado'}
+                                  </div>
+                                </td>
+
+                                {/* Itens */}
+                                <td style={{ padding: '1rem 1.25rem', verticalAlign: 'top' }}>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                    {tx.items && tx.items.length > 0 ? (
+                                      tx.items.map((item: any, idx: number) => (
+                                        <div key={idx} style={{ fontSize: '0.8rem', color: '#334155' }}>
+                                          <strong style={{ color: '#0284c7' }}>{item.quantity}x</strong> {item.product_name || 'Item'}
+                                          <span style={{ color: '#94a3b8', fontSize: '0.72rem', marginLeft: '0.35rem' }}>
+                                            (R$ {Number(item.unit_price).toFixed(2).replace('.', ',')} un)
+                                          </span>
+                                        </div>
+                                      ))
+                                    ) : (
+                                      <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Itens da compra</span>
+                                    )}
+                                  </div>
+                                </td>
+
+                                {/* Valor Total */}
+                                <td style={{ padding: '1rem 1.25rem', verticalAlign: 'top' }}>
+                                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#16a34a' }}>
+                                    {formattedTotal}
+                                  </div>
+                                </td>
+
+                                {/* Status */}
+                                <td style={{ padding: '1rem 1.25rem', verticalAlign: 'top' }}>
+                                  {isPending && (
+                                    <span style={{ padding: '0.25rem 0.6rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, backgroundColor: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                                      ⏳ Aguardando Pix
+                                    </span>
+                                  )}
+                                  {isPaid && (
+                                    <span style={{ padding: '0.25rem 0.6rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, backgroundColor: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                                      ✓ Pago & Liberado
+                                    </span>
+                                  )}
+                                  {tx.status === 'CANCELADO' && (
+                                    <span style={{ padding: '0.25rem 0.6rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, backgroundColor: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5' }}>
+                                      Cancelado
+                                    </span>
+                                  )}
+                                  {tx.status === 'EM_ANALISE' && (
+                                    <span style={{ padding: '0.25rem 0.6rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, backgroundColor: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd' }}>
+                                      Em Análise
+                                    </span>
+                                  )}
+                                  {tx.validated_at && (
+                                    <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.25rem' }}>
+                                      Baixa: {new Date(tx.validated_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                    </div>
+                                  )}
+                                </td>
+
+                                {/* Ações */}
+                                <td style={{ padding: '1rem 1.25rem', textAlign: 'right', verticalAlign: 'top' }}>
+                                  <div style={{ display: 'inline-flex', gap: '0.4rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                    {isPending ? (
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleConfirmPayment(tx)}
+                                          className="btn btn-emerald"
+                                          style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                                          title="Confirmar que o Pix entrou na conta bancária e liberar o pedido para o aluno"
+                                        >
+                                          ✓ Confirmar Pagamento Pix
+                                        </button>
+                                        <a
+                                          href={whatsappUrl}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="btn btn-secondary"
+                                          style={{ padding: '0.4rem 0.65rem', fontSize: '0.75rem', color: '#059669', borderColor: '#a7f3d0' }}
+                                          title="Abrir WhatsApp com detalhes do pedido"
+                                        >
+                                          WhatsApp
+                                        </a>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleCancelOrder(tx)}
+                                          className="btn btn-secondary"
+                                          style={{ padding: '0.4rem 0.65rem', fontSize: '0.75rem', color: '#dc2626', borderColor: '#fca5a5' }}
+                                          title="Cancelar pedido e devolver estoque"
+                                        >
+                                          Cancelar
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: 600 }}>
+                                        ✓ Baixa efetuada
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ABA 2: CATÁLOGO & ESTOQUE */}
+            {activeTab === 'products' && (
+              <>
             {/* Barra de Filtros e Busca */}
             <div
               style={{
@@ -909,7 +1459,91 @@ export default function CantinaAdminPage() {
                 </table>
               </div>
             </div>
-          </>
+              </>
+            )}
+
+            {/* ABA 3: CONFIGURAÇÕES & ALERTAS */}
+            {activeTab === 'settings' && (
+              <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', padding: '2rem 2.25rem', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.5rem' }}>
+                  ⚙️ Configurações de Notificações Automáticas da Cantina
+                </h3>
+                <p style={{ color: 'var(--text-sub)', fontSize: '0.925rem', marginBottom: '1.75rem', lineHeight: 1.6, maxWidth: '640px' }}>
+                  Defina o e-mail e o número de WhatsApp do responsável ou grupo de conferência. Sempre que um aluno finalizar o carrinho, o sistema enviará um alerta automático constando os dados do comprador, os produtos e quantidades, e o valor total a ser conferido no extrato bancário.
+                </p>
+
+                <form onSubmit={handleSaveSettings} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxWidth: '620px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.35rem' }}>
+                      E-mail do Responsável / Conferente da Cantina *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="Ex: cantina@fatec.sp.gov.br ou seu.email@fatec.sp.gov.br"
+                      value={settings.notification_email}
+                      onChange={(e) => setSettings({ ...settings, notification_email: e.target.value })}
+                      className="form-input"
+                      style={{ padding: '0.65rem 0.85rem', fontSize: '0.9rem' }}
+                    />
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'block' }}>
+                      Dispara um e-mail instantâneo via SMTP assim que a compra é gerada.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.35rem' }}>
+                      Número de WhatsApp do Conferente (com DDD)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: 19999998888 (apenas números)"
+                      value={settings.notification_whatsapp}
+                      onChange={(e) => setSettings({ ...settings, notification_whatsapp: e.target.value })}
+                      className="form-input"
+                      style={{ padding: '0.65rem 0.85rem', fontSize: '0.9rem' }}
+                    />
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'block' }}>
+                      Utilizado para links diretos de WhatsApp e conferência rápida no celular.
+                    </span>
+                  </div>
+
+                  <div style={{ backgroundColor: '#f8fafc', padding: '1rem', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600 }}>
+                      <input
+                        type="checkbox"
+                        checked={settings.auto_notify_email}
+                        onChange={(e) => setSettings({ ...settings, auto_notify_email: e.target.checked })}
+                        style={{ width: '16px', height: '16px', accentColor: '#16a34a' }}
+                      />
+                      Disparar e-mail automático a cada novo pedido realizado por alunos
+                    </label>
+
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600 }}>
+                      <input
+                        type="checkbox"
+                        checked={settings.auto_notify_whatsapp}
+                        onChange={(e) => setSettings({ ...settings, auto_notify_whatsapp: e.target.checked })}
+                        style={{ width: '16px', height: '16px', accentColor: '#16a34a' }}
+                      />
+                      Habilitar links de envio para WhatsApp nos pedidos pendentes
+                    </label>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                    <button
+                      type="submit"
+                      disabled={isSavingSettings}
+                      className="btn btn-primary"
+                      style={{ padding: '0.75rem 1.75rem', fontSize: '0.9rem', fontWeight: 700 }}
+                    >
+                      {isSavingSettings ? 'Salvando...' : '✓ Salvar Configurações de Notificação'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Modal de Cadastro / Edição de Produto */}

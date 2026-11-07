@@ -12,10 +12,12 @@ interface UserItem {
   email: string;
   recovery_email?: string | null;
   ra?: string | null;
+  phone?: string | null;
   role: 'ALUNO' | 'CA_MEMBRO' | 'PROFESSOR' | 'ADMIN';
   course: 'IA' | 'ESG';
   semester: number;
   is_active: boolean;
+  can_validate_canteen?: boolean;
   is_email_verified?: boolean;
   email_verified_at?: string | null;
   created_at: string;
@@ -91,11 +93,13 @@ export default function AdminUsuariosPage() {
     email: '',
     recoveryEmail: '',
     ra: '',
+    phone: '',
     role: 'ALUNO' as 'ALUNO' | 'CA_MEMBRO' | 'PROFESSOR' | 'ADMIN',
     course: 'IA' as 'IA' | 'ESG',
     semester: 1,
     isActive: true,
     isEmailVerified: true,
+    canValidateCanteen: false,
   });
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
 
@@ -192,6 +196,30 @@ export default function AdminUsuariosPage() {
     }
   };
 
+  // Ação: Atribuir ou Revogar Privilégio de Caixa/Conferente da Cantina
+  const handleToggleCanteenPrivilege = async (user: UserItem) => {
+    const newPrivilege = !user.can_validate_canteen;
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'toggle_canteen_privilege', canValidateCanteen: newPrivilege }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast(
+          `Privilégio de conferente da cantina ${newPrivilege ? 'atribuído para' : 'revogado de'} ${user.name}!`,
+          'success'
+        );
+        fetchUsers();
+      } else {
+        showToast(data.error || 'Erro ao alterar privilégio da cantina.', 'error');
+      }
+    } catch {
+      showToast('Falha ao comunicar com o servidor.', 'error');
+    }
+  };
+
   // Ação: Excluir Usuário do Banco com Modal Seguro
   const handleDeleteUser = (user: UserItem) => {
     setConfirmDialog({
@@ -266,11 +294,13 @@ export default function AdminUsuariosPage() {
       email: user.email,
       recoveryEmail: user.recovery_email || '',
       ra: user.ra || '',
+      phone: user.phone || '',
       role: user.role,
       course: user.course,
       semester: user.semester,
       isActive: user.is_active,
       isEmailVerified: Boolean(user.is_email_verified),
+      canValidateCanteen: Boolean(user.can_validate_canteen),
     });
   };
 
@@ -658,7 +688,28 @@ export default function AdminUsuariosPage() {
 
                           {/* Cargo */}
                           <td style={{ padding: '0.85rem 1rem' }}>
-                            {getRoleBadge(user.role)}
+                            <div>{getRoleBadge(user.role)}</div>
+                            {user.can_validate_canteen && (
+                              <div style={{ marginTop: '0.25rem' }}>
+                                <span
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.2rem',
+                                    padding: '0.15rem 0.45rem',
+                                    borderRadius: '4px',
+                                    fontSize: '0.68rem',
+                                    fontWeight: 700,
+                                    backgroundColor: '#ecfdf5',
+                                    color: '#065f46',
+                                    border: '1px solid #a7f3d0',
+                                  }}
+                                  title="Usuário possui privilégio para conferir e dar baixa em pagamentos Pix"
+                                >
+                                  🏪 Caixa Cantina
+                                </span>
+                              </div>
+                            )}
                           </td>
 
                           {/* Status e Validação */}
@@ -709,6 +760,28 @@ export default function AdminUsuariosPage() {
                                 title={user.is_active ? 'Inativar Usuário' : 'Ativar Usuário'}
                               >
                                 {user.is_active ? 'Inativar' : 'Ativar'}
+                              </button>
+
+                              {/* Botão de Privilégio Caixa da Cantina */}
+                              <button
+                                type="button"
+                                onClick={() => handleToggleCanteenPrivilege(user)}
+                                className="btn btn-secondary"
+                                style={{
+                                  padding: '0.3rem 0.55rem',
+                                  fontSize: '0.75rem',
+                                  color: user.can_validate_canteen ? '#047857' : '#64748b',
+                                  backgroundColor: user.can_validate_canteen ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
+                                  borderColor: user.can_validate_canteen ? '#6ee7b7' : '#cbd5e1',
+                                  fontWeight: user.can_validate_canteen ? 700 : 500,
+                                }}
+                                title={
+                                  user.can_validate_canteen
+                                    ? 'Revogar privilégio de conferente da cantina'
+                                    : 'Atribuir privilégio de conferente da cantina (permite dar baixa em pagamentos Pix)'
+                                }
+                              >
+                                {user.can_validate_canteen ? '✓ Caixa' : '+ Caixa'}
                               </button>
 
                               {/* Botão de Editar */}
@@ -1124,6 +1197,31 @@ export default function AdminUsuariosPage() {
                       onChange={(e) => setEditForm({ ...editForm, isEmailVerified: e.target.checked })}
                     />
                     E-mail Verificado (OTP Confirmado)
+                  </label>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem' }}>
+                    WhatsApp para Alertas (com DDD)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: 19999998888"
+                    value={editForm.phone}
+                    onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                    style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                  />
+                </div>
+
+                <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.08)', border: '1px solid #a7f3d0', borderRadius: '8px', padding: '0.75rem', marginTop: '0.25rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.825rem', fontWeight: 700, color: '#065f46' }}>
+                    <input
+                      type="checkbox"
+                      checked={editForm.canValidateCanteen}
+                      onChange={(e) => setEditForm({ ...editForm, canValidateCanteen: e.target.checked })}
+                      style={{ width: '16px', height: '16px', accentColor: '#10b981' }}
+                    />
+                    🏪 Privilégio de Caixa / Conferente da Cantina (Permite conferir e dar baixa em Pix)
                   </label>
                 </div>
 

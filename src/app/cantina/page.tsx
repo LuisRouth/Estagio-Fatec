@@ -112,7 +112,32 @@ export default function CantinaPage() {
   const [ocrFeedback, setOcrFeedback] = useState<{ status: string; notes: string } | null>(null);
   const [isSubmittingProof, setIsSubmittingProof] = useState(false);
   const [proofSubmitted, setProofSubmitted] = useState(false);
+  const [isPaymentConfirmedByCashier, setIsPaymentConfirmedByCashier] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // Polling em tempo real para verificar se o conferente da cantina deu baixa no pedido
+  useEffect(() => {
+    if (!isCheckoutModalOpen || !checkoutData?.orderId || isPaymentConfirmedByCashier) return;
+
+    const intervalId = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/canteen/transactions/${checkoutData.orderId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.data?.status === 'PAGO') {
+            setIsPaymentConfirmedByCashier(true);
+            setCart([]);
+            localStorage.removeItem('fatec_canteen_cart');
+            fetchProducts();
+          }
+        }
+      } catch {
+        // Ignora falhas transitórias de conexão durante o polling
+      }
+    }, 3000);
+
+    return () => clearInterval(intervalId);
+  }, [isCheckoutModalOpen, checkoutData?.orderId, isPaymentConfirmedByCashier]);
 
   // Carregar produtos da API
   useEffect(() => {
@@ -267,6 +292,7 @@ export default function CantinaPage() {
     setCheckoutData(null);
     setProofSubmitted(false);
     setProofText('');
+    setIsPaymentConfirmedByCashier(false);
     setIsCartOpen(true); // Reabre o carrinho para o aluno conferir ou adicionar mais itens
     fetchProducts(); // Recarrega o estoque atualizado
   };
@@ -1255,6 +1281,73 @@ export default function CantinaPage() {
                       Fechar
                     </button>
                   </div>
+                </div>
+              ) : checkoutData && isPaymentConfirmedByCashier ? (
+                <div style={{ textAlign: 'center', padding: '1.5rem 0.5rem' }}>
+                  <div
+                    style={{
+                      width: '70px',
+                      height: '70px',
+                      borderRadius: '50%',
+                      backgroundColor: '#dcfce7',
+                      color: '#16a34a',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '34px',
+                      margin: '0 auto 1.25rem',
+                      boxShadow: '0 4px 12px rgba(22, 163, 74, 0.2)',
+                    }}
+                  >
+                    ✓
+                  </div>
+                  <span className="badge badge-emerald" style={{ marginBottom: '0.5rem' }}>
+                    Baixa Confirmada pelo Caixa
+                  </span>
+                  <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#166534', margin: '0 0 0.5rem' }}>
+                    Pagamento Confirmado!
+                  </h2>
+                  <p style={{ color: '#475569', fontSize: '0.925rem', margin: '0 auto 1.5rem', maxWidth: '380px' }}>
+                    Seu pagamento via Pix foi conferido e aprovado pelo caixa da cantina. Seus produtos já estão liberados para retirada no balcão!
+                  </p>
+
+                  <div
+                    style={{
+                      backgroundColor: '#f8fafc',
+                      border: '1px dashed #cbd5e1',
+                      borderRadius: '12px',
+                      padding: '1.25rem',
+                      margin: '0 auto 1.5rem',
+                      maxWidth: '380px',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>
+                      Código de Retirada do Pedido:
+                    </span>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', letterSpacing: '1px', marginTop: '0.25rem' }}>
+                      #{checkoutData.orderId?.slice(-8).toUpperCase()}
+                    </div>
+                    <div style={{ fontSize: '0.9rem', color: '#16a34a', fontWeight: 700, marginTop: '0.4rem' }}>
+                      Total Pago: R$ {checkoutData.totalAmount.toFixed(2).replace('.', ',')}
+                    </div>
+                  </div>
+
+                  <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '1.5rem' }}>
+                    Enviamos uma confirmação detalhada para o seu e-mail institucional.
+                  </p>
+
+                  <button
+                    onClick={() => {
+                      setIsCheckoutModalOpen(false);
+                      setIsPaymentConfirmedByCashier(false);
+                      setCheckoutData(null);
+                    }}
+                    className="btn btn-emerald"
+                    style={{ padding: '0.75rem 2.25rem', fontSize: '0.95rem', fontWeight: 700 }}
+                  >
+                    ✓ Concluir e Retirar Itens
+                  </button>
                 </div>
               ) : checkoutData && (
                 <div>
