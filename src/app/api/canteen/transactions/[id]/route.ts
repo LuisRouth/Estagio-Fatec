@@ -140,21 +140,37 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     // Se o pedido foi aprovado/pago pelo conferente, notifica o aluno comprador por e-mail
     if (parsed.data.status === 'PAGO' && existingTx.status !== 'PAGO') {
       const buyerUser = await db.users.findById(existingTx.user_id);
-      const buyerEmail = existingTx.user_email || buyerUser?.email;
-      if (buyerEmail) {
-        sendCanteenPaymentConfirmationToStudent({
-          to: buyerEmail,
-          studentName: existingTx.user_name || buyerUser?.name || 'Discente FATEC',
-          orderId: id,
-          totalAmount: Number(existingTx.total_amount),
-          items: (existingTx.items || []).map((item) => ({
-            name: item.product_name || 'Item da Cantina',
-            quantity: item.quantity,
-            unitPrice: Number(item.unit_price),
-            subtotal: Number(item.subtotal || item.quantity * item.unit_price),
-          })),
-          validatedBy: dbUser?.name || session.name || 'Conferente da Cantina',
-        }).catch((err) => console.error('[CANTEEN CONFIRM] Erro ao enviar e-mail ao aluno:', err));
+      const buyerPrimaryEmail = existingTx.user_email || buyerUser?.email;
+      const buyerRecoveryEmail = buyerUser?.recovery_email;
+
+      const emailsToSend = new Set<string>();
+      // 1. E-mail institucional prioritário da conta do aluno (@aluno.cps.sp.gov.br ou @fatec.sp.gov.br)
+      if (buyerPrimaryEmail) emailsToSend.add(buyerPrimaryEmail);
+      // 2. E-mail cadastrado pelo usuário para recuperação/extrato (qualquer provedor)
+      if (buyerRecoveryEmail) emailsToSend.add(buyerRecoveryEmail);
+      // 3. E-mail de notificação/conferência configurado na Cantina
+      if (settings?.notification_email) emailsToSend.add(settings.notification_email);
+
+      const itemsFormatted = (existingTx.items || []).map((item) => ({
+        name: item.product_name || 'Item da Cantina',
+        quantity: item.quantity,
+        unitPrice: Number(item.unit_price),
+        subtotal: Number(item.subtotal || item.quantity * item.unit_price),
+      }));
+
+      for (const destEmail of emailsToSend) {
+        try {
+          await sendCanteenPaymentConfirmationToStudent({
+            to: destEmail,
+            studentName: existingTx.user_name || buyerUser?.name || 'Discente FATEC',
+            orderId: id,
+            totalAmount: Number(existingTx.total_amount),
+            items: itemsFormatted,
+            validatedBy: dbUser?.name || session.name || 'Conferente da Cantina',
+          });
+        } catch (emailErr) {
+          console.error(`[CANTEEN CONFIRM] Erro ao enviar e-mail de confirmação para ${destEmail}:`, emailErr);
+        }
       }
     }
 
