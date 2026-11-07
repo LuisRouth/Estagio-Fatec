@@ -8,9 +8,49 @@ import type { PixPayloadParams, PixPayloadResult, PixValidationResult } from './
 
 // Constantes do Padrão Pix do Banco Central
 const PIX_GUI = 'br.gov.bcb.pix';
-const DEFAULT_PIX_KEY = process.env.PIX_MERCHANT_KEY || 'ca.fatec.rc@aluno.cps.sp.gov.br';
-const DEFAULT_MERCHANT_NAME = 'FATEC RIO CLARO CA';
-const DEFAULT_MERCHANT_CITY = 'RIO CLARO';
+
+/**
+ * Normaliza qualquer formato de Chave Pix (CPF, CNPJ, Telefone, E-mail ou Chave Aleatória EVP)
+ * para o padrão estrito exigido pelo Banco Central do Brasil.
+ */
+export function normalizePixKey(key: string): string {
+  const trimmed = key.trim();
+
+  // 1. E-mail: minúsculas e sem espaços
+  if (trimmed.includes('@')) {
+    return trimmed.toLowerCase();
+  }
+
+  // 2. Chave Aleatória (EVP / UUID): 32 ou 36 caracteres com hífens
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed)) {
+    return trimmed.toLowerCase();
+  }
+
+  const digits = trimmed.replace(/\D/g, '');
+
+  // 3. CPF (11 dígitos): sem pontuação
+  if (digits.length === 11 && (trimmed.includes('.') || trimmed.includes('-'))) {
+    return digits;
+  }
+
+  // 4. CNPJ (14 dígitos): sem pontuação
+  if (digits.length === 14) {
+    return digits;
+  }
+
+  // 5. Telefone Celular: BACEN exige prefixo internacional +55 (ex: +5519999998888)
+  if (trimmed.startsWith('+')) {
+    return `+${digits}`;
+  }
+  if (digits.length === 11 && digits[2] === '9') {
+    return `+55${digits}`;
+  }
+  if (digits.length === 10) {
+    return `+55${digits}`;
+  }
+
+  return digits || trimmed;
+}
 
 /**
  * Remove acentuação e caracteres incompatíveis com o charset ASCII do EMV
@@ -76,17 +116,20 @@ export function generatePixPayload(params: PixPayloadParams): PixPayloadResult {
     throw new Error('O valor do Pix deve ser um número positivo maior que zero.');
   }
 
-  const pixKey = params.pixKey || DEFAULT_PIX_KEY;
-  const merchantName = normalizeAscii(params.merchantName || DEFAULT_MERCHANT_NAME, 25);
-  const merchantCity = normalizeAscii(params.merchantCity || DEFAULT_MERCHANT_CITY, 15);
+  const rawPixKey = params.pixKey || process.env.PIX_KEY || process.env.PIX_KEY_CA || process.env.PIX_MERCHANT_KEY || 'ca.fatec.rc@aluno.cps.sp.gov.br';
+  const pixKey = normalizePixKey(rawPixKey);
+  const rawMerchantName = params.merchantName || process.env.PIX_MERCHANT_NAME || 'FATEC RIO CLARO CA';
+  const merchantName = normalizeAscii(rawMerchantName, 25);
+  const rawMerchantCity = params.merchantCity || process.env.PIX_MERCHANT_CITY || 'RIO CLARO';
+  const merchantCity = normalizeAscii(rawMerchantCity, 15);
   const txid = params.txid ? normalizeAscii(params.txid, 25) : generateTxId('FAT');
   const formattedAmount = amount.toFixed(2);
 
   // Tag 00: Payload Format Indicator (Fixo: "01")
   let payloadWithoutCrc = formatTLV('00', '01');
 
-  // Tag 01: Point of Initiation Method (12 = Dinâmico / uso único por transação)
-  payloadWithoutCrc += formatTLV('01', '12');
+  // Tag 01: Point of Initiation Method (11 = QR Code direto com valor definido por pedido)
+  payloadWithoutCrc += formatTLV('01', '11');
 
   // Tag 26: Merchant Account Information - Pix
   // Subtag 00: GUI do BACEN ("br.gov.bcb.pix")
