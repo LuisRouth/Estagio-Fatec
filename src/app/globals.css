@@ -130,6 +130,35 @@ a.btn-emerald:hover:not(:disabled) {
   box-shadow: 0 6px 14px rgba(5, 150, 105, 0.35);
 }
 
+
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.6rem 1.15rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 9px;
+  cursor: pointer;
+  background-color: #ffffff;
+  color: var(--text-main);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.btn-outline:hover:not(:disabled),
+a.btn-outline:hover:not(:disabled) {
+  background-color: var(--bg-muted);
+  color: var(--accent-blue);
+  border-color: #cbd5e1;
+  box-shadow: var(--shadow-md);
+}
+
 .btn-secondary {
   background-color: #ffffff;
   color: var(--text-main) !important;
@@ -1694,3 +1723,740 @@ textarea,
   border: 1px solid #334155 !important;
   color: #f8fafc !important;
 }
+
+
+/* ==================================================================== */
+/* REFINAMENTO DE ALTO CONTRASTE - BOTÕES OUTLINE, FORMS E BADGES       */
+/* ==================================================================== */
+
+/* Cards e Forms no modo Alto Contraste */
+.settings-card {
+  background-color: #ffffff;
+  border: 1px solid var(--border-light);
+  color: var(--text-main);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.dark-high-contrast .settings-card,
+.dark-high-contrast form[style*="background-color: #ffffff"],
+.dark-high-contrast form[style*="backgroundColor: '#ffffff'"],
+.dark-high-contrast form[style*="background-color: rgb(255, 255, 255)"],
+.dark-high-contrast div[style*="background-color: #ffffff"] {
+  background-color: #151e2e !important;
+  border-color: #2b3a4f !important;
+  color: #f8fafc !important;
+}
+
+/* Todos os botões outline no modo alto contraste NUNCA ficam brancos */
+.dark-high-contrast .btn-outline {
+  background-color: #1e293b !important;
+  border: 1px solid #334155 !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .btn-outline:hover:not(:disabled),
+.dark-high-contrast a.btn-outline:hover:not(:disabled) {
+  background-color: #2b3a4f !important;
+  border-color: #38bdf8 !important;
+  color: #ffffff !important;
+}
+
+.dark-high-contrast .announcement-card-footer .btn-outline {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .announcement-card-footer .btn-outline:hover {
+  background-color: #2b3a4f !important;
+  border-color: #38bdf8 !important;
+}
+
+/* Badges de Status do Histórico da Cantina */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
+}
+
+.status-badge-confirmado {
+  background-color: #d1fae5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.status-badge-pendente {
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.status-badge-revisao {
+  background-color: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+.status-badge-cancelado {
+  background-color: #ffe4e6;
+  color: #9f1239;
+  border: 1px solid #fecdd3;
+}
+
+.dark-high-contrast .status-badge-confirmado {
+  background-color: rgba(5, 150, 105, 0.25) !important;
+  color: #34d399 !important;
+  border: 1px solid rgba(52, 211, 153, 0.4) !important;
+}
+
+.dark-high-contrast .status-badge-pendente {
+  background-color: rgba(217, 119, 6, 0.25) !important;
+  color: #fbbf24 !important;
+  border: 1px solid rgba(251, 191, 36, 0.4) !important;
+}
+
+.dark-high-contrast .status-badge-revisao {
+  background-color: rgba(2, 132, 199, 0.25) !important;
+  color: #38bdf8 !important;
+  border: 1px solid rgba(56, 189, 248, 0.4) !important;
+}
+
+.dark-high-contrast .status-badge-cancelado {
+  background-color: rgba(225, 29, 72, 0.25) !important;
+  color: #f87171 !important;
+  border: 1px solid rgba(248, 113, 113, 0.4) !important;
+}
+
+/* Filtros do Histórico */
+.canteen-statement-filter-btn {
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border-light);
+  background-color: #ffffff;
+  color: var(--text-sub);
+  transition: all 0.2s ease;
+}
+
+.canteen-statement-filter-btn:hover {
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+}
+
+.canteen-statement-filter-btn.active {
+  background-color: #0284c7;
+  border-color: #0284c7;
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
+}
+
+.dark-high-contrast .canteen-statement-filter-btn {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+
+.dark-high-contrast .canteen-statement-filter-btn:hover {
+  border-color: #38bdf8 !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .canteen-statement-filter-btn.active {
+  background-color: #0284c7 !important;
+  border-color: #38bdf8 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.45) !important;
+}
+
+/* Badges da Tabela de Auditoria em Alto Contraste */
+.audit-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.55rem;
+  border-radius: 4px;
+}
+
+.audit-badge-password {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.audit-badge-email {
+  background-color: #e0e7ff;
+  color: #3730a3;
+  border: 1px solid #c7d2fe;
+}
+
+.audit-badge-profile {
+  background-color: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.dark-high-contrast .audit-badge-password {
+  background-color: rgba(239, 68, 68, 0.2) !important;
+  color: #fca5a5 !important;
+  border: 1px solid rgba(239, 68, 68, 0.4) !important;
+}
+
+.dark-high-contrast .audit-badge-email {
+  background-color: rgba(99, 102, 241, 0.2) !important;
+  color: #a5b4fc !important;
+  border: 1px solid rgba(99, 102, 241, 0.4) !important;
+}
+
+.dark-high-contrast .audit-badge-profile {
+  background-color: rgba(16, 185, 129, 0.2) !important;
+  color: #6ee7b7 !important;
+  border: 1px solid rgba(16, 185, 129, 0.4) !important;
+}
+
+/* ==================================================================== */
+/* BADGES COMPLEMENTARES E BOTÕES DE AÇÃO DELETAR                       */
+/* ==================================================================== */
+
+.badge-rose {
+  background-color: var(--accent-rose-light);
+  color: var(--accent-rose);
+}
+
+.badge-amber {
+  background-color: var(--accent-amber-light);
+  color: var(--accent-amber);
+}
+
+.dark-high-contrast .badge-rose {
+  background-color: rgba(225, 29, 72, 0.2) !important;
+  color: #fca5a5 !important;
+  border: 1px solid rgba(248, 113, 113, 0.4) !important;
+}
+
+.dark-high-contrast .badge-amber {
+  background-color: rgba(217, 119, 6, 0.2) !important;
+  color: #fcd34d !important;
+  border: 1px solid rgba(251, 191, 36, 0.4) !important;
+}
+
+.btn-danger-outline {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.78rem;
+  border-radius: 8px;
+  border: 1px solid #fecdd3;
+  background-color: #fff1f2;
+  color: #e11d48;
+  cursor: pointer;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  transition: all 0.2s ease;
+}
+
+.btn-danger-outline:hover {
+  background-color: #ffe4e6;
+  border-color: #fda4af;
+}
+
+.dark-high-contrast .btn-danger-outline {
+  background-color: rgba(225, 29, 72, 0.15) !important;
+  border: 1px solid rgba(248, 113, 113, 0.4) !important;
+  color: #f87171 !important;
+}
+
+.dark-high-contrast .btn-danger-outline:hover {
+  background-color: rgba(225, 29, 72, 0.28) !important;
+  border-color: #f87171 !important;
+  color: #fca5a5 !important;
+}
+
+/* ==================================================================== */
+/* REPOSITÓRIO ACADÊMICO - ESTILOS E ALTO CONTRASTE                     */
+/* ==================================================================== */
+
+.repositorio-header-card {
+  background-color: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  border-radius: 20px;
+  padding: 2.25rem 2rem;
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
+}
+
+.dark-high-contrast .repositorio-header-card {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.repositorio-rag-card {
+  background: linear-gradient(135deg, rgba(240, 249, 255, 0.95) 0%, rgba(236, 253, 245, 0.95) 100%);
+  border-radius: 18px;
+  padding: 1.75rem;
+  border: 1px solid rgba(2, 132, 199, 0.25);
+  box-shadow: var(--shadow-sm);
+}
+
+.dark-high-contrast .repositorio-rag-card {
+  background: #151e2e !important;
+  border-color: #2b3a4f !important;
+  color: #f8fafc !important;
+}
+
+.repositorio-sample-pill {
+  font-size: 0.76rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-light);
+  background-color: #ffffff;
+  color: var(--text-sub);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.repositorio-sample-pill:hover {
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+}
+
+.dark-high-contrast .repositorio-sample-pill {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+
+.dark-high-contrast .repositorio-sample-pill:hover {
+  background-color: #2b3a4f !important;
+  border-color: #38bdf8 !important;
+  color: #f8fafc !important;
+}
+
+.repositorio-rag-result {
+  background-color: #ffffff;
+  border-radius: 14px;
+  padding: 1.25rem;
+  border: 1px solid var(--border-light);
+}
+
+.dark-high-contrast .repositorio-rag-result {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.repositorio-filter-card {
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 1.5rem;
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
+}
+
+.dark-high-contrast .repositorio-filter-card {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.repositorio-course-btn {
+  border: 1px solid var(--border-light);
+  background-color: #ffffff;
+  color: var(--text-main);
+  font-weight: 500;
+  padding: 0.55rem 1.15rem;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.15s ease;
+}
+
+.repositorio-course-btn:hover {
+  border-color: var(--accent-blue);
+}
+
+.repositorio-course-btn.active {
+  border-color: var(--accent-blue);
+  background-color: var(--accent-blue-light);
+  color: var(--accent-blue-hover);
+  font-weight: 700;
+}
+
+.dark-high-contrast .repositorio-course-btn {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+
+.dark-high-contrast .repositorio-course-btn:hover {
+  border-color: #38bdf8 !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .repositorio-course-btn.active {
+  background-color: #0284c7 !important;
+  border-color: #38bdf8 !important;
+  color: #ffffff !important;
+}
+
+.repositorio-sem-btn {
+  border: 1px solid var(--border-light);
+  background-color: #ffffff;
+  color: var(--text-main);
+  font-weight: 500;
+  padding: 0.35rem 0.85rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.15s ease;
+}
+
+.repositorio-sem-btn:hover {
+  border-color: var(--accent-emerald);
+}
+
+.repositorio-sem-btn.active {
+  border-color: var(--accent-emerald);
+  background-color: var(--accent-emerald-light);
+  color: var(--accent-emerald);
+  font-weight: 700;
+}
+
+.dark-high-contrast .repositorio-sem-btn {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+
+.dark-high-contrast .repositorio-sem-btn:hover {
+  border-color: #34d399 !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .repositorio-sem-btn.active {
+  background-color: #059669 !important;
+  border-color: #34d399 !important;
+  color: #ffffff !important;
+}
+
+.repositorio-type-btn {
+  border: 1px solid var(--border-light);
+  background-color: #ffffff;
+  color: var(--text-sub);
+  font-weight: 500;
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.15s ease;
+}
+
+.repositorio-type-btn:hover {
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+}
+
+.repositorio-type-btn.active {
+  border-color: var(--accent-blue);
+  background-color: var(--bg-muted);
+  color: var(--accent-blue);
+  font-weight: 700;
+}
+
+.dark-high-contrast .repositorio-type-btn {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+
+.dark-high-contrast .repositorio-type-btn:hover {
+  border-color: #38bdf8 !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .repositorio-type-btn.active {
+  background-color: #0284c7 !important;
+  border-color: #38bdf8 !important;
+  color: #ffffff !important;
+}
+
+.dark-high-contrast .repositorio-upload-modal {
+  background-color: #0f172a !important;
+  border: 1px solid #334155 !important;
+  color: #f8fafc !important;
+}
+
+/* ==================================================================== */
+/* PAINEL ADMINISTRATIVO DE GESTÃO DE USUÁRIOS                          */
+/* ==================================================================== */
+
+.admin-header-card {
+  background-color: #ffffff;
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.dark-high-contrast .admin-header-card {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.admin-stat-card {
+  background-color: #ffffff;
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.admin-stat-card-val {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-top: 0.25rem;
+}
+
+.dark-high-contrast .admin-stat-card {
+  background-color: #151e2e !important;
+  border-color: #2b3a4f !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .admin-stat-card-val {
+  color: #f8fafc !important;
+}
+
+.admin-filter-bar {
+  background-color: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  padding: 1.15rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+.dark-high-contrast .admin-filter-bar {
+  background-color: #151e2e !important;
+  border-color: #2b3a4f !important;
+}
+
+.admin-table-card {
+  background-color: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.dark-high-contrast .admin-table-card {
+  background-color: #151e2e !important;
+  border-color: #2b3a4f !important;
+}
+
+.dark-high-contrast .admin-table-card thead tr {
+  background-color: #1e293b !important;
+  border-bottom: 1px solid #334155 !important;
+  color: #94a3b8 !important;
+}
+
+.dark-high-contrast .admin-table-card tbody tr {
+  border-bottom: 1px solid #1e293b !important;
+}
+
+.dark-high-contrast .admin-table-card tbody tr:hover {
+  background-color: #1e293b !important;
+}
+
+.admin-user-title {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.dark-high-contrast .admin-user-title {
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .admin-modal-card {
+  background-color: #0f172a !important;
+  border: 1px solid #334155 !important;
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .admin-modal-card h3 {
+  color: #f8fafc !important;
+}
+
+/* Badges de Formato de Material Didático */
+.material-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+}
+
+.material-badge-codigo {
+  background-color: #e0f2fe;
+  color: #0284c7;
+  border: 1px solid #bae6fd;
+}
+
+.material-badge-apostila {
+  background-color: #d1fae5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.material-badge-slide {
+  background-color: #fef3c7;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+.material-badge-tcc {
+  background-color: #ede9fe;
+  color: #7c3aed;
+  border: 1px solid #ddd6fe;
+}
+
+.material-badge-dataset {
+  background-color: #cffafe;
+  color: #0891b2;
+  border: 1px solid #a5f3fc;
+}
+
+.dark-high-contrast .material-badge-codigo {
+  background-color: rgba(2, 132, 199, 0.25) !important;
+  color: #38bdf8 !important;
+  border: 1px solid rgba(56, 189, 248, 0.4) !important;
+}
+
+.dark-high-contrast .material-badge-apostila {
+  background-color: rgba(5, 150, 105, 0.25) !important;
+  color: #34d399 !important;
+  border: 1px solid rgba(52, 211, 153, 0.4) !important;
+}
+
+.dark-high-contrast .material-badge-slide {
+  background-color: rgba(217, 119, 6, 0.25) !important;
+  color: #fbbf24 !important;
+  border: 1px solid rgba(251, 191, 36, 0.4) !important;
+}
+
+.dark-high-contrast .material-badge-tcc {
+  background-color: rgba(124, 58, 237, 0.25) !important;
+  color: #a78bfa !important;
+  border: 1px solid rgba(167, 139, 250, 0.4) !important;
+}
+
+.dark-high-contrast .material-badge-dataset {
+  background-color: rgba(8, 145, 178, 0.25) !important;
+  color: #22d3ee !important;
+  border: 1px solid rgba(34, 211, 238, 0.4) !important;
+}
+
+/* ====================================================================
+   VITRINE DE PROJETOS & REPOSITÓRIO: ABAS E MODAIS
+   ==================================================================== */
+.vitrine-tab-btn,
+.repositorio-tab-btn {
+  color: var(--text-sub);
+  background-color: transparent;
+  border-bottom: 2px solid transparent !important;
+  transition: all 0.2s ease;
+}
+
+.vitrine-tab-btn:hover,
+.repositorio-tab-btn:hover {
+  color: var(--text-main);
+  background-color: rgba(148, 163, 184, 0.1);
+}
+
+.vitrine-tab-btn.active,
+.repositorio-tab-btn.active {
+  color: var(--accent-blue) !important;
+  border-bottom: 2px solid var(--accent-blue) !important;
+  background-color: rgba(2, 132, 199, 0.08);
+}
+
+.vitrine-modal,
+.repositorio-upload-modal {
+  background-color: #ffffff;
+  border: 1px solid var(--border-light);
+  color: var(--text-main);
+}
+
+/* Modo Alto Contraste para Vitrine e Repositório */
+.dark-high-contrast .vitrine-header-card,
+.dark-high-contrast .vitrine-filter-card,
+.dark-high-contrast .vitrine-empty-card,
+.dark-high-contrast .vitrine-project-card {
+  background-color: #151e2e !important;
+  border-color: #2b3a4f !important;
+}
+
+.dark-high-contrast .vitrine-project-card:hover {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6) !important;
+}
+
+.dark-high-contrast .vitrine-modal,
+.dark-high-contrast .repositorio-upload-modal {
+  background-color: #151e2e !important;
+  border: 1px solid #2b3a4f !important;
+  color: #f8fafc !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8) !important;
+}
+
+.dark-high-contrast .vitrine-modal h2,
+.dark-high-contrast .vitrine-modal h3,
+.dark-high-contrast .vitrine-modal label,
+.dark-high-contrast .repositorio-upload-modal h2,
+.dark-high-contrast .repositorio-upload-modal h3,
+.dark-high-contrast .repositorio-upload-modal label {
+  color: #f8fafc !important;
+}
+
+.dark-high-contrast .vitrine-tab-btn,
+.dark-high-contrast .repositorio-tab-btn {
+  color: #94a3b8 !important;
+  background-color: transparent !important;
+}
+
+.dark-high-contrast .vitrine-tab-btn:hover,
+.dark-high-contrast .repositorio-tab-btn:hover {
+  color: #f8fafc !important;
+  background-color: #1e293b !important;
+}
+
+.dark-high-contrast .vitrine-tab-btn.active,
+.dark-high-contrast .repositorio-tab-btn.active {
+  color: #38bdf8 !important;
+  border-bottom: 2px solid #38bdf8 !important;
+  background-color: rgba(56, 189, 248, 0.12) !important;
+}
+
+.dark-high-contrast .vitrine-tabs-container,
+.dark-high-contrast .repositorio-tabs-container {
+  border-bottom-color: #2b3a4f !important;
+}
+

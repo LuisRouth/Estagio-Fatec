@@ -19,11 +19,14 @@ const materialSchema = z.object({
     errorMap: () => ({ message: 'Curso inválido. Escolha IA ou ESG.' }),
   }),
   semester: z.number().int().min(1).max(4, 'Semestre deve ser entre 1 e 4'),
-  material_type: z.enum(['SLIDE', 'APOSTILA', 'CODIGO', 'TCC', 'DATASET'] as const, {
-    errorMap: () => ({ message: 'Tipo inválido. Opções: SLIDE, APOSTILA, CODIGO, TCC, DATASET.' }),
+  material_type: z.enum(['SLIDE', 'APOSTILA', 'CODIGO', 'TCC', 'PROJETO', 'DATASET'] as const, {
+    errorMap: () => ({ message: 'Tipo inválido. Opções: SLIDE, APOSTILA, CODIGO, TCC, PROJETO, DATASET.' }),
   }),
-  file_url: z.string().min(1, 'A URL do arquivo é obrigatória'),
-  github_url: z.string().url().or(z.string().startsWith('https://github.com')).optional().nullable(),
+  file_url: z.string().optional().nullable(),
+  github_url: z.string().optional().nullable(),
+  image_url: z.string().optional().nullable(),
+  demo_url: z.string().optional().nullable(),
+  author_name: z.string().max(150).optional().nullable(),
   tags: z.string().max(255).optional().nullable(),
   is_approved: z.boolean().optional(),
 });
@@ -42,7 +45,9 @@ export async function GET(req: NextRequest) {
     const materialType = (searchParams.get('type') || searchParams.get('material_type')) as MaterialType | null;
     const subject = searchParams.get('subject') || undefined;
     const search = searchParams.get('search') || searchParams.get('q') || undefined;
-    const onlyApproved = searchParams.get('all') !== 'true';
+    const pendingOnly = searchParams.get('pending') === 'true';
+    const authorId = searchParams.get('author_id') || undefined;
+    const onlyApproved = !pendingOnly && !authorId && searchParams.get('all') !== 'true';
 
     const materials = await db.materials.list({
       course: course || undefined,
@@ -51,6 +56,8 @@ export async function GET(req: NextRequest) {
       subject,
       search: search ? sanitizeInput(search) : undefined,
       onlyApproved,
+      authorId,
+      pendingOnly,
     });
 
     return NextResponse.json(
@@ -96,13 +103,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Regra de aprovação: Docentes e Admins têm aprovação imediata;
-    // Alunos têm aprovação automática se for projeto de TCC para a vitrine
+    // Regra de aprovação: CA, Docentes e Admins têm aprovação imediata.
+    // Alunos comuns são submetidos para moderação e validação do CA/Admin.
     const isAutoApproved =
       session.role === 'PROFESSOR' ||
       session.role === 'ADMIN' ||
-      session.role === 'CA_MEMBRO' ||
-      parsed.data.material_type === 'TCC';
+      session.role === 'CA_MEMBRO';
 
     // Normalização das tags
     let cleanTags = parsed.data.tags || '';
@@ -114,6 +120,7 @@ export async function POST(req: NextRequest) {
         .join(', ');
     }
 
+    const effectiveFileUrl = parsed.data.file_url || parsed.data.github_url || '#';
     const material = await db.materials.create({
       title: sanitizeInput(parsed.data.title),
       description: parsed.data.description ? sanitizeInput(parsed.data.description) : null,
@@ -121,10 +128,12 @@ export async function POST(req: NextRequest) {
       course: parsed.data.course,
       semester: parsed.data.semester,
       author_id: session.sub,
-      author_name: session.name,
+      author_name: parsed.data.author_name ? sanitizeInput(parsed.data.author_name) : session.name,
       material_type: parsed.data.material_type,
-      file_url: parsed.data.file_url,
+      file_url: effectiveFileUrl,
       github_url: parsed.data.github_url || null,
+      image_url: parsed.data.image_url || null,
+      demo_url: parsed.data.demo_url || null,
       tags: cleanTags || null,
       is_approved: parsed.data.is_approved !== undefined ? parsed.data.is_approved : isAutoApproved,
     });

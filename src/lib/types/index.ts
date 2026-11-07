@@ -9,7 +9,7 @@ export type CourseType = 'IA' | 'ESG';
 export type ItemCategory = 'DOCE' | 'SALGADO' | 'BEBIDA' | 'CONGELADO' | 'OUTRO';
 export type TransactionStatus = 'PENDENTE' | 'PAGO' | 'CANCELADO' | 'EM_ANALISE';
 export type AnnouncementPriority = 'BAIXA' | 'MEDIA' | 'ALTA' | 'URGENTE';
-export type MaterialType = 'SLIDE' | 'APOSTILA' | 'CODIGO' | 'TCC' | 'DATASET';
+export type MaterialType = 'SLIDE' | 'APOSTILA' | 'CODIGO' | 'TCC' | 'PROJETO' | 'DATASET';
 
 export interface User {
   id: string;
@@ -142,6 +142,8 @@ export interface AcademicMaterial {
   material_type: MaterialType;
   file_url: string;
   github_url?: string | null;
+  image_url?: string | null;
+  demo_url?: string | null;
   tags?: string | null;
   download_count: number;
   is_approved: boolean;

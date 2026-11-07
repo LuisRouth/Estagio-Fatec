@@ -73,18 +73,18 @@ export default function HistoricoPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'PAGO':
       case 'CONFIRMADO':
-        return { label: '✓ Pago e Aprovado (OCR IA)', bg: 'var(--accent-emerald-light)', color: 'var(--accent-emerald)' };
+      case 'PAGO':
+        return { label: 'Pago e Aprovado', className: 'status-badge status-badge-confirmado' };
       case 'PENDENTE':
-        return { label: '⏳ Aguardando Pix', bg: 'var(--accent-amber-light)', color: 'var(--accent-amber)' };
-      case 'EM_ANALISE':
+        return { label: 'Aguardando Pix', className: 'status-badge status-badge-pendente' };
       case 'REVISAO_CA':
-        return { label: '🔍 Em Revisão pelo CA', bg: 'var(--accent-blue-light)', color: 'var(--accent-blue-hover)' };
+      case 'EM_ANALISE':
+        return { label: 'Em Revisão pelo CA', className: 'status-badge status-badge-revisao' };
       case 'CANCELADO':
-        return { label: '✕ Cancelado', bg: 'var(--accent-rose-light)', color: 'var(--accent-rose)' };
+        return { label: 'Cancelado', className: 'status-badge status-badge-cancelado' };
       default:
-        return { label: status, bg: 'var(--bg-muted)', color: 'var(--text-muted)' };
+        return { label: status, className: 'status-badge' };
     }
   };
 
@@ -112,7 +112,7 @@ export default function HistoricoPage() {
           <div>
             <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
               <span className="badge badge-emerald">Extrato Financeiro Transparente</span>
-              <span className="badge badge-blue">Honest Market FATEC</span>
+              <span className="badge badge-blue">Cantina Discente</span>
             </div>
 
             <h1 style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
@@ -212,16 +212,7 @@ export default function HistoricoPage() {
                     <button
                       key={s.id}
                       onClick={() => setFilterStatus(s.id)}
-                      style={{
-                        padding: '0.4rem 0.85rem',
-                        borderRadius: '8px',
-                        border: isSelected ? '1px solid var(--accent-blue)' : '1px solid var(--border-light)',
-                        backgroundColor: isSelected ? 'var(--accent-blue-light)' : '#ffffff',
-                        color: isSelected ? 'var(--accent-blue-hover)' : 'var(--text-sub)',
-                        fontSize: '0.8rem',
-                        fontWeight: isSelected ? 700 : 500,
-                        cursor: 'pointer',
-                      }}
+                      className={`canteen-statement-filter-btn ${isSelected ? 'active' : ''}`}
                     >
                       {s.label}
                     </button>
@@ -280,7 +271,7 @@ export default function HistoricoPage() {
                               Pedido #{tx.txid || tx.id.slice(0, 8)}
                             </span>
                             <span
-                              className="badge" style={{ backgroundColor: statusBadge.bg, color: statusBadge.color, fontWeight: 700 }}
+                              className={statusBadge.className}
                             >
                               {statusBadge.label}
                             </span>
@@ -319,7 +310,7 @@ export default function HistoricoPage() {
                       {(e2eCode || tx.notes) && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                           {e2eCode && <span style={{ fontFamily: 'monospace' }}>E2E BACEN: {e2eCode}</span>}
-                          {tx.notes && <span>📋 {tx.notes}</span>}
+                          {tx.notes && <span>{tx.notes.replace(/honest\s*market/gi, 'Cantina Discente')}</span>}
                         </div>
                       )}
                     </div>

@@ -15,7 +15,12 @@ const updateSchema = z.object({
   description: z.string().max(1000).optional().nullable(),
   subject: z.string().min(2).max(120).optional(),
   semester: z.number().int().min(1).max(4).optional(),
-  github_url: z.string().url().or(z.string().startsWith('https://github.com')).optional().nullable(),
+  material_type: z.enum(['SLIDE', 'APOSTILA', 'CODIGO', 'TCC', 'PROJETO', 'DATASET'] as const).optional(),
+  file_url: z.string().optional().nullable(),
+  github_url: z.string().optional().nullable(),
+  image_url: z.string().optional().nullable(),
+  demo_url: z.string().optional().nullable(),
+  author_name: z.string().max(150).optional().nullable(),
   tags: z.string().max(255).optional().nullable(),
   is_approved: z.boolean().optional(),
 });
@@ -84,7 +89,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     }
 
     const isAuthor = material.author_id === session.sub;
-    const isPrivileged = session.role === 'PROFESSOR' || session.role === 'ADMIN';
+    const isPrivileged = session.role === 'PROFESSOR' || session.role === 'ADMIN' || session.role === 'CA_MEMBRO';
 
     if (!isAuthor && !isPrivileged) {
       return NextResponse.json(
@@ -162,7 +167,7 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
     }
 
     const isAuthor = material.author_id === session.sub;
-    const isPrivileged = session.role === 'PROFESSOR' || session.role === 'ADMIN';
+    const isPrivileged = session.role === 'PROFESSOR' || session.role === 'ADMIN' || session.role === 'CA_MEMBRO';
 
     if (!isAuthor && !isPrivileged) {
       return NextResponse.json(

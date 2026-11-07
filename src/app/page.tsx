@@ -344,7 +344,7 @@ export default function HomePage() {
               )}
 
               <Link href="/avisos" className="btn btn-primary" style={{ fontSize: '0.85rem', padding: '0.55rem 1.15rem' }}>
-                Abrir Mural Completo ({announcements.length}) →
+                Abrir Mural Completo →
               </Link>
             </div>
           </div>

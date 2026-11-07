@@ -3,7 +3,7 @@ import path from 'path';
 // ====================================================================
 // CAMADA DE ACESSO A DADOS (POSTGRESQL + MOCK HÍBRIDO)
 // Responsável: Cesar (Backend, Banco de Dados & Segurança)
-// Sprint 2: Módulos Centrais (Catálogo Honest Market, Estoque, Pix,
+// Sprint 2: Módulos Centrais (Catálogo Cantina Discente, Estoque, Pix,
 // Histórico de Compras e Repositório Acadêmico / TCC)
 // ====================================================================
 
@@ -1252,7 +1252,7 @@ export const db = {
   },
 
   // ------------------------------------------------------------------
-  // 2. PRODUTOS DA CANTINA (HONEST MARKET & CONTROLE DE ESTOQUE)
+  // 2. PRODUTOS DA CANTINA (CANTINA DISCENTE & CONTROLE DE ESTOQUE)
   // ------------------------------------------------------------------
   products: {
     listAvailable: async (filters?: { category?: ItemCategory; search?: string }): Promise<CanteenProduct[]> => {
@@ -1897,10 +1897,16 @@ export const db = {
       subject?: string;
       search?: string;
       onlyApproved?: boolean;
+      authorId?: string;
+      pendingOnly?: boolean;
     }): Promise<AcademicMaterial[]> => {
       if (isMock || !pool) {
         let items = [...mockMaterials];
-        if (filters?.onlyApproved !== false) {
+        if (filters?.pendingOnly) {
+          items = items.filter((m) => !m.is_approved);
+        } else if (filters?.authorId) {
+          items = items.filter((m) => m.author_id === filters.authorId);
+        } else if (filters?.onlyApproved !== false) {
           items = items.filter((m) => m.is_approved);
         }
         if (filters?.course) {
@@ -1930,15 +1936,20 @@ export const db = {
       }
 
       let query = `
-        SELECT m.*, u.name as author_name
+        SELECT m.*, COALESCE(m.author_name, u.name) as author_name
         FROM academic_materials m
-        JOIN users u ON u.id = m.author_id
+        LEFT JOIN users u ON u.id = m.author_id
         WHERE 1=1
       `;
       const params: any[] = [];
       let pIdx = 1;
 
-      if (filters?.onlyApproved !== false) {
+      if (filters?.pendingOnly) {
+        query += ` AND m.is_approved = FALSE`;
+      } else if (filters?.authorId) {
+        query += ` AND m.author_id = $${pIdx++}`;
+        params.push(filters.authorId);
+      } else if (filters?.onlyApproved !== false) {
         query += ` AND m.is_approved = TRUE`;
       }
       if (filters?.course) {
@@ -2004,8 +2015,8 @@ export const db = {
       const res = await pool.query(
         `INSERT INTO academic_materials (
            id, title, description, subject, course, semester, author_id,
-           material_type, file_url, github_url, tags, is_approved
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+           material_type, file_url, github_url, image_url, demo_url, author_name, tags, is_approved
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING *`,
         [
           id,
           data.title,
@@ -2017,6 +2028,9 @@ export const db = {
           data.material_type,
           data.file_url,
           data.github_url || null,
+          data.image_url || null,
+          data.demo_url || null,
+          newMaterial.author_name,
           data.tags || null,
           newMaterial.is_approved,
         ]

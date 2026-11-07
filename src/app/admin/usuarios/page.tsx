@@ -356,61 +356,55 @@ export default function AdminUsuariosPage() {
           onCancel={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
         />
 
-        {/* Barra de Navegação Administrativa / Abas Rápidas */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#e2e8f0', padding: '0.25rem', borderRadius: '10px' }}>
-            <Link
-              href="/admin/usuarios"
-              style={{
-                textDecoration: 'none',
-                padding: '0.45rem 1rem',
-                borderRadius: '8px',
-                fontSize: '0.875rem',
-                fontWeight: 700,
-                backgroundColor: '#ffffff',
-                color: '#0f172a',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-              }}
-            >
-              👥 Gestão de Usuários (ADM)
-            </Link>
-            <Link
-              href="/cantina/admin"
-              style={{
-                textDecoration: 'none',
-                padding: '0.45rem 1rem',
-                borderRadius: '8px',
-                fontSize: '0.875rem',
-                fontWeight: 600,
-                color: '#475569',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-              }}
-            >
-              🥪 Cantina & Estoque
-            </Link>
+        {/* Cabeçalho Oficial do Painel */}
+        <div
+          className="admin-header-card"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1.25rem',
+            marginBottom: '1.5rem',
+          }}
+        >
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#b91c1c', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                FATEC RIO CLARO — SECRETARIA & ADMINISTRAÇÃO
+              </span>
+              <span className="badge badge-rose">
+                Acesso Restrito ADMIN
+              </span>
+            </div>
+            <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+              Gestão de Usuários & Contas Discentes
+            </h1>
+            <p style={{ color: 'var(--text-sub)', fontSize: '0.925rem', margin: '0.35rem 0 0 0' }}>
+              Pesquise, ative, inative ou exclua cadastros institucionais de alunos e professores diretamente pelo banco Supabase.
+            </p>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
             <button
               onClick={fetchUsers}
               disabled={loading}
               className="btn btn-secondary"
-              style={{ padding: '0.45rem 0.85rem', fontSize: '0.85rem' }}
+              style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
               title="Recarregar dados"
             >
-              🔄 Atualizar
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <polyline points="23 4 23 10 17 10"/>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+              </svg>
+              <span>Atualizar</span>
             </button>
             {isAuthorized && (
               <button
                 onClick={() => setIsCreateModalOpen(true)}
                 className="btn btn-primary"
                 style={{
-                  padding: '0.45rem 1.1rem',
+                  padding: '0.5rem 1.25rem',
                   fontSize: '0.85rem',
                   backgroundColor: '#16a34a',
                   borderColor: '#16a34a',
@@ -420,40 +414,9 @@ export default function AdminUsuariosPage() {
                   fontWeight: 700,
                 }}
               >
-                ➕ Novo Usuário
+                <span>+ Novo Usuário</span>
               </button>
             )}
-          </div>
-        </div>
-
-        {/* Cabeçalho Oficial do Painel */}
-        <div
-          style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '12px',
-            border: '1px solid #e2e8f0',
-            padding: '1.5rem',
-            marginBottom: '1.5rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#b91c1c', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  FATEC RIO CLARO — SECRETARIA & ADMINISTRAÇÃO
-                </span>
-                <span style={{ fontSize: '0.75rem', backgroundColor: '#fee2e2', color: '#991b1b', padding: '0.15rem 0.5rem', borderRadius: '4px', fontWeight: 700 }}>
-                  Acesso Restrito ADMIN
-                </span>
-              </div>
-              <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                Gestão de Usuários & Contas Discentes
-              </h1>
-              <p style={{ color: '#64748b', fontSize: '0.925rem', margin: '0.35rem 0 0 0' }}>
-                Pesquise, ative, inative ou exclua cadastros institucionais de alunos e professores diretamente pelo banco Supabase.
-              </p>
-            </div>
           </div>
         </div>
 
@@ -469,7 +432,7 @@ export default function AdminUsuariosPage() {
               boxShadow: '0 4px 6px rgba(0,0,0,0.04)',
             }}
           >
-            <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🔒</div>
+            <div style={{ marginBottom: '0.75rem', display: 'flex', justifyContent: 'center' }}><svg width='44' height='44' viewBox='0 0 24 24' fill='none' stroke='#b91c1c' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'><rect x='3' y='11' width='18' height='11' rx='2' ry='2'/><path d='M7 11V7a5 5 0 0 1 10 0v4'/></svg></div>
             <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#9a3412', marginBottom: '0.5rem' }}>
               Acesso Exclusivo para Administradores
             </h3>
@@ -492,53 +455,40 @@ export default function AdminUsuariosPage() {
                   marginBottom: '1.5rem',
                 }}
               >
-                <div style={{ backgroundColor: '#ffffff', padding: '1rem', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Total de Usuários</div>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a', marginTop: '0.25rem' }}>{stats.total}</div>
+                <div className="admin-stat-card">
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Total de Usuários</div>
+                  <div className="admin-stat-card-val">{stats.total}</div>
                   <div style={{ fontSize: '0.75rem', color: '#16a34a', marginTop: '0.2rem' }}>{stats.active} ativos / {stats.inactive} inativos</div>
                 </div>
 
-                <div style={{ backgroundColor: '#ffffff', padding: '1rem', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>E-mails Validados (OTP)</div>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0284c7', marginTop: '0.25rem' }}>{stats.verified}</div>
+                <div className="admin-stat-card">
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>E-mails Validados (OTP)</div>
+                  <div className="admin-stat-card-val" style={{ color: '#0284c7' }}>{stats.verified}</div>
                   <div style={{ fontSize: '0.75rem', color: '#dc2626', marginTop: '0.2rem' }}>{stats.unverified} pendentes</div>
                 </div>
 
-                <div style={{ backgroundColor: '#ffffff', padding: '1rem', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Inteligência Artificial</div>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#7c3aed', marginTop: '0.25rem' }}>{stats.iaCount}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>Matutino / IA</div>
+                <div className="admin-stat-card">
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Inteligência Artificial</div>
+                  <div className="admin-stat-card-val" style={{ color: '#7c3aed' }}>{stats.iaCount}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Matutino / IA</div>
                 </div>
 
-                <div style={{ backgroundColor: '#ffffff', padding: '1rem', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Gestão ESG</div>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#059669', marginTop: '0.25rem' }}>{stats.esgCount}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>Matutino / ESG</div>
+                <div className="admin-stat-card">
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Gestão ESG</div>
+                  <div className="admin-stat-card-val" style={{ color: '#059669' }}>{stats.esgCount}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Matutino / ESG</div>
                 </div>
 
-                <div style={{ backgroundColor: '#ffffff', padding: '1rem', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Admins & CA</div>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#b91c1c', marginTop: '0.25rem' }}>{stats.adminCount + stats.caCount}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>{stats.adminCount} Admins / {stats.caCount} CA</div>
+                <div className="admin-stat-card">
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Admins & CA</div>
+                  <div className="admin-stat-card-val" style={{ color: '#b91c1c' }}>{stats.adminCount + stats.caCount}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>{stats.adminCount} Admins / {stats.caCount} CA</div>
                 </div>
               </div>
             )}
 
             {/* Barra de Busca e Filtros Rápidos */}
-            <div
-              style={{
-                backgroundColor: '#ffffff',
-                borderRadius: '12px',
-                border: '1px solid #e2e8f0',
-                padding: '1.15rem',
-                marginBottom: '1.5rem',
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '0.75rem',
-                alignItems: 'center',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-              }}
-            >
+            <div className="admin-filter-bar">
               {/* Campo de Busca Geral */}
               <div style={{ flex: '1 1 280px', position: 'relative' }}>
                 <input
@@ -546,13 +496,11 @@ export default function AdminUsuariosPage() {
                   placeholder="Buscar por nome, e-mail institucional, recuperação ou RA..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  className="form-input"
                   style={{
                     width: '100%',
                     padding: '0.55rem 0.85rem',
-                    borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
                     fontSize: '0.875rem',
-                    outline: 'none',
                   }}
                 />
               </div>
@@ -561,7 +509,8 @@ export default function AdminUsuariosPage() {
               <select
                 value={courseFilter}
                 onChange={(e) => setCourseFilter(e.target.value)}
-                style={{ padding: '0.55rem 0.85rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem', backgroundColor: '#ffffff' }}
+                className="form-select"
+                style={{ width: 'auto', padding: '0.55rem 0.85rem', fontSize: '0.85rem' }}
               >
                 <option value="TODOS">Todos os Cursos</option>
                 <option value="IA">Inteligência Artificial (IA)</option>
@@ -572,7 +521,8 @@ export default function AdminUsuariosPage() {
               <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
-                style={{ padding: '0.55rem 0.85rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem', backgroundColor: '#ffffff' }}
+                className="form-select"
+                style={{ width: 'auto', padding: '0.55rem 0.85rem', fontSize: '0.85rem' }}
               >
                 <option value="TODOS">Todos os Cargos</option>
                 <option value="ALUNO">Discentes (Alunos)</option>
@@ -585,7 +535,8 @@ export default function AdminUsuariosPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                style={{ padding: '0.55rem 0.85rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem', backgroundColor: '#ffffff' }}
+                className="form-select"
+                style={{ width: 'auto', padding: '0.55rem 0.85rem', fontSize: '0.85rem' }}
               >
                 <option value="TODOS">Status (Todos)</option>
                 <option value="ATIVO">Somente Ativos</option>
@@ -596,7 +547,8 @@ export default function AdminUsuariosPage() {
               <select
                 value={verifiedFilter}
                 onChange={(e) => setVerifiedFilter(e.target.value)}
-                style={{ padding: '0.55rem 0.85rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem', backgroundColor: '#ffffff' }}
+                className="form-select"
+                style={{ width: 'auto', padding: '0.55rem 0.85rem', fontSize: '0.85rem' }}
               >
                 <option value="TODOS">Validação OTP (Todas)</option>
                 <option value="VERIFICADO">E-mail Validado</option>
@@ -621,15 +573,7 @@ export default function AdminUsuariosPage() {
             </div>
 
             {/* Tabela de Usuários */}
-            <div
-              style={{
-                backgroundColor: '#ffffff',
-                borderRadius: '12px',
-                border: '1px solid #e2e8f0',
-                overflow: 'hidden',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-              }}
-            >
+            <div className="admin-table-card">
               <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#334155' }}>
                   Usuários Encontrados: <strong>{filteredUsers.length}</strong>
@@ -641,12 +585,12 @@ export default function AdminUsuariosPage() {
 
               {loading ? (
                 <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
-                  <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>⏳</div>
+                  <div style={{ marginBottom: '0.5rem', display: 'flex', justifyContent: 'center' }}><svg width='32' height='32' viewBox='0 0 24 24' fill='none' stroke='#0284c7' strokeWidth='2'><circle cx='12' cy='12' r='10'/><polyline points='12 6 12 12 16 14'/></svg></div>
                   Carregando lista de usuários do Supabase...
                 </div>
               ) : filteredUsers.length === 0 ? (
                 <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
-                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔍</div>
+                  <div style={{ marginBottom: '0.5rem', display: 'flex', justifyContent: 'center' }}><svg width='36' height='36' viewBox='0 0 24 24' fill='none' stroke='var(--text-muted)' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'><circle cx='11' cy='11' r='8'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg></div>
                   Nenhum usuário corresponde aos filtros selecionados.
                 </div>
               ) : (
@@ -675,7 +619,7 @@ export default function AdminUsuariosPage() {
                         >
                           {/* Nome e RA */}
                           <td style={{ padding: '0.85rem 1rem' }}>
-                            <div style={{ fontWeight: 700, color: '#0f172a' }}>{user.name}</div>
+                            <div className="admin-user-title">{user.name}</div>
                             <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.15rem' }}>
                               RA: {user.ra || <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>Não informado</span>}
                             </div>
@@ -742,7 +686,7 @@ export default function AdminUsuariosPage() {
                                   </span>
                                 ) : (
                                   <span style={{ fontSize: '0.7rem', color: '#d97706', fontWeight: 600 }}>
-                                    ⏳ OTP Pendente
+                                    • OTP Pendente
                                   </span>
                                 )}
                               </div>
@@ -769,41 +713,48 @@ export default function AdminUsuariosPage() {
 
                               {/* Botão de Editar */}
                               <button
+                                type="button"
                                 onClick={() => openEditModal(user)}
                                 className="btn btn-secondary"
-                                style={{ padding: '0.3rem 0.55rem', fontSize: '0.75rem' }}
+                                style={{ padding: '0.3rem 0.55rem', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center' }}
                                 title="Editar dados do usuário"
                               >
-                                ✏️
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                  <path d="M12 20h9"/>
+                                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                                </svg>
                               </button>
 
                               {/* Botão de Resetar Senha */}
                               <button
+                                type="button"
                                 onClick={() => {
                                   setResetUser(user);
                                   setNewPasswordInput('');
                                 }}
                                 className="btn btn-secondary"
-                                style={{ padding: '0.3rem 0.55rem', fontSize: '0.75rem' }}
+                                style={{ padding: '0.3rem 0.55rem', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center' }}
                                 title="Redefinir senha de acesso"
                               >
-                                🔑
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                  <circle cx="7.5" cy="15.5" r="5.5"/>
+                                  <path d="m21 2-9.6 9.6"/>
+                                  <path d="m15.5 7.5 3 3"/>
+                                </svg>
                               </button>
 
                               {/* Botão de Excluir */}
                               <button
+                                type="button"
                                 onClick={() => handleDeleteUser(user)}
-                                className="btn btn-secondary"
-                                style={{
-                                  padding: '0.3rem 0.55rem',
-                                  fontSize: '0.75rem',
-                                  color: '#dc2626',
-                                  borderColor: '#fca5a5',
-                                  backgroundColor: '#fff1f2',
-                                }}
+                                className="btn-danger-outline"
+                                style={{ padding: '0.3rem 0.55rem', fontSize: '0.75rem' }}
                                 title="Excluir usuário do banco de dados"
                               >
-                                🗑️
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                  <polyline points="3 6 5 6 21 6"/>
+                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                </svg>
                               </button>
                             </div>
                           </td>
@@ -832,8 +783,8 @@ export default function AdminUsuariosPage() {
             }}
           >
             <div
+              className="admin-modal-card"
               style={{
-                backgroundColor: '#ffffff',
                 borderRadius: '12px',
                 width: '100%',
                 maxWidth: '520px',
@@ -844,8 +795,8 @@ export default function AdminUsuariosPage() {
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
-                  ➕ Cadastrar Novo Usuário
+                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>
+                  Cadastrar Novo Usuário
                 </h3>
                 <button
                   onClick={() => setIsCreateModalOpen(false)}
@@ -1032,8 +983,8 @@ export default function AdminUsuariosPage() {
             }}
           >
             <div
+              className="admin-modal-card"
               style={{
-                backgroundColor: '#ffffff',
                 borderRadius: '12px',
                 width: '100%',
                 maxWidth: '520px',
@@ -1044,8 +995,8 @@ export default function AdminUsuariosPage() {
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
-                  ✏️ Editar Dados do Usuário
+                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>
+                  Editar Dados do Usuário
                 </h3>
                 <button
                   onClick={() => setEditingUser(null)}
@@ -1214,8 +1165,8 @@ export default function AdminUsuariosPage() {
             }}
           >
             <div
+              className="admin-modal-card"
               style={{
-                backgroundColor: '#ffffff',
                 borderRadius: '12px',
                 width: '100%',
                 maxWidth: '440px',
@@ -1224,8 +1175,8 @@ export default function AdminUsuariosPage() {
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>
-                  🔑 Redefinir Senha de Acesso
+                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>
+                  Redefinir Senha de Acesso
                 </h3>
                 <button
                   onClick={() => setResetUser(null)}

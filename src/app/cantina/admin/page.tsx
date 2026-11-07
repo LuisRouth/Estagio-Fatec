@@ -567,45 +567,7 @@ export default function CantinaAdminPage() {
           onClose={() => setToastMessage(null)}
         />
 
-        {/* Barra de Navegação Administrativa / Abas Rápidas */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#e2e8f0', padding: '0.25rem', borderRadius: '10px' }}>
-            <Link
-              href="/cantina/admin"
-              style={{
-                textDecoration: 'none',
-                padding: '0.45rem 1rem',
-                borderRadius: '8px',
-                fontSize: '0.875rem',
-                fontWeight: 700,
-                backgroundColor: '#ffffff',
-                color: '#0f172a',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-              }}
-            >
-              🥪 Cantina & Estoque
-            </Link>
-            <Link
-              href="/admin/usuarios"
-              style={{
-                textDecoration: 'none',
-                padding: '0.45rem 1rem',
-                borderRadius: '8px',
-                fontSize: '0.875rem',
-                fontWeight: 600,
-                color: '#475569',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-              }}
-            >
-              👥 Gestão de Usuários (ADM)
-            </Link>
-          </div>
-        </div>
+
 
         {/* Topo do Painel Administrativo */}
         <div
@@ -624,8 +586,8 @@ export default function CantinaAdminPage() {
         >
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
-              <span className="badge badge-rose" style={{ backgroundColor: '#ffe4e6', color: '#e11d48' }}>
-                🛡️ Área Restrita
+              <span className="badge badge-rose">
+                Área Restrita
               </span>
               <span className="badge badge-blue">
                 {user?.role === 'ADMIN' ? 'Administrador Geral / Secretaria' : 'Membro do Centro Acadêmico (CA)'}
@@ -931,17 +893,9 @@ export default function CantinaAdminPage() {
                                   Editar
                                 </button>
                                 <button
+                                  type="button"
                                   onClick={() => handleDeleteProduct(p)}
-                                  style={{
-                                    padding: '0.35rem 0.65rem',
-                                    fontSize: '0.78rem',
-                                    borderRadius: '8px',
-                                    border: '1px solid #fecdd3',
-                                    backgroundColor: '#fff1f2',
-                                    color: '#e11d48',
-                                    cursor: 'pointer',
-                                    fontWeight: 600,
-                                  }}
+                                  className="btn-danger-outline"
                                 >
                                   Excluir
                                 </button>
@@ -998,7 +952,7 @@ export default function CantinaAdminPage() {
                 {editingProduct ? 'Editar Produto do Catálogo' : 'Cadastrar Novo Item na Cantina'}
               </h2>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-                Preencha os dados do item físico para sincronização em tempo real com o Honest Market.
+                Preencha os dados do item físico para sincronização em tempo real com a Cantina Discente.
               </p>
 
               {formError && (

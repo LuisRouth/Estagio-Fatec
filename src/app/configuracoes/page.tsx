@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
+import Link from 'next/link';
 import { UserSecurityAudit } from '@/lib/types';
 
 interface StudentConfig {
@@ -327,7 +328,21 @@ export default function ConfiguracoesPage() {
     }
   };
 
-  const isDark = config.highContrast;
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    const updateDarkState = () => {
+      if (typeof document === 'undefined') return;
+      const hasClass = document.documentElement.classList.contains('dark-high-contrast') || document.body.classList.contains('dark-high-contrast');
+      const hasStorage = localStorage.getItem('fatec_high_contrast') === 'true';
+      setIsDark(Boolean(hasClass || hasStorage || config.highContrast));
+    };
+
+    updateDarkState();
+    const observer = new MutationObserver(updateDarkState);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, [config.highContrast]);
 
   const getPasswordStrength = () => {
     if (!newPassword) return null;
@@ -485,7 +500,7 @@ export default function ConfiguracoesPage() {
         {/* TAB 1: PERFIL ACADÊMICO */}
         {activeTab === 'perfil' && (
           <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <div style={{ backgroundColor: isDark ? '#151e2e' : '#ffffff', borderRadius: '16px', padding: '2rem', border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
+            <div className="settings-card" style={{ backgroundColor: isDark ? '#151e2e' : '#ffffff', borderRadius: '16px', padding: '2rem', border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
               <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: isDark ? '#f8fafc' : 'var(--text-main)', marginBottom: '0.4rem' }}>
                 Dados do Estudante
               </h2>
@@ -605,7 +620,7 @@ export default function ConfiguracoesPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
             
             {/* Bloco de E-mails */}
-            <form onSubmit={handleSaveEmails} style={{ backgroundColor: isDark ? '#151e2e' : '#ffffff', borderRadius: '16px', padding: '2rem', border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
+            <form onSubmit={handleSaveEmails} className="settings-card" style={{ backgroundColor: isDark ? '#151e2e' : '#ffffff', borderRadius: '16px', padding: '2rem', border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
               <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: isDark ? '#f8fafc' : 'var(--text-main)', marginBottom: '0.4rem' }}>
                 Gerenciamento de E-mails Institucional & Segurança
               </h2>
@@ -751,7 +766,7 @@ export default function ConfiguracoesPage() {
             </form>
 
             {/* Bloco de Alteração de Senha */}
-            <form onSubmit={handleChangePassword} style={{ backgroundColor: isDark ? '#151e2e' : '#ffffff', borderRadius: '16px', padding: '2rem', border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
+            <form onSubmit={handleChangePassword} className="settings-card" style={{ backgroundColor: isDark ? '#151e2e' : '#ffffff', borderRadius: '16px', padding: '2rem', border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
               <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: isDark ? '#f8fafc' : 'var(--text-main)', marginBottom: '0.4rem' }}>
                 Alteração de Senha de Acesso (Auditada)
               </h2>
@@ -954,7 +969,7 @@ export default function ConfiguracoesPage() {
         {/* TAB 3: ACESSIBILIDADE & INTERFACE (PERSISTÊNCIA NO BANCO) */}
         {activeTab === 'acessibilidade' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <div style={{ backgroundColor: isDark ? '#151e2e' : '#ffffff', borderRadius: '16px', padding: '2rem', border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
+            <div className="settings-card" style={{ backgroundColor: isDark ? '#151e2e' : '#ffffff', borderRadius: '16px', padding: '2rem', border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: isDark ? '#f8fafc' : 'var(--text-main)' }}>
                   Diretrizes de Acessibilidade & Interface (e-MAG / WCAG)
@@ -1120,7 +1135,54 @@ export default function ConfiguracoesPage() {
 
         {/* TAB 4: HISTÓRICO & AUDITORIA DE SEGURANÇA */}
         {activeTab === 'historico' && (
-          <div style={{ backgroundColor: isDark ? '#151e2e' : '#ffffff', borderRadius: '16px', padding: '2rem', border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            {/* CARD 1: ATALHO PARA EXTRATO E COMPRAS NA CANTINA */}
+            <div
+              className="settings-card"
+              style={{
+                backgroundColor: isDark ? '#151e2e' : '#ffffff',
+                borderRadius: '16px',
+                padding: '1.75rem 2rem',
+                border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)',
+                boxShadow: 'var(--shadow-sm)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '1.25rem',
+              }}
+            >
+              <div style={{ maxWidth: '640px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="8" cy="21" r="1"/>
+                    <circle cx="19" cy="21" r="1"/>
+                    <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
+                  </svg>
+                  <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: isDark ? '#f8fafc' : 'var(--text-main)', margin: 0 }}>
+                    Extrato e Histórico de Compras na Cantina
+                  </h2>
+                </div>
+                <p style={{ color: isDark ? '#94a3b8' : 'var(--text-muted)', fontSize: '0.875rem', lineHeight: 1.5, margin: 0 }}>
+                  Consulte comprovantes Pix, detalhamento de pedidos, bebidas, lanches e total consumido nos intervalos acadêmicos através da Cantina Discente.
+                </p>
+              </div>
+
+              <Link
+                href="/historico"
+                className="btn btn-primary"
+                style={{ fontSize: '0.875rem', padding: '0.65rem 1.35rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}
+              >
+                <span>Ver Extrato da Cantina</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                  <polyline points="12 5 19 12 12 19"/>
+                </svg>
+              </Link>
+            </div>
+
+            {/* CARD 2: TRILHA DE AUDITORIA & HISTÓRICO DE ALTERAÇÕES */}
+            <div className="settings-card" style={{ backgroundColor: isDark ? '#151e2e' : '#ffffff', borderRadius: '16px', padding: '2rem', border: isDark ? '1px solid #2b3a4f' : '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
               <div>
                 <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: isDark ? '#f8fafc' : 'var(--text-main)', marginBottom: '0.25rem' }}>
@@ -1144,7 +1206,7 @@ export default function ConfiguracoesPage() {
                   cursor: 'pointer',
                 }}
               >
-                🔄 Atualizar Logs
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Atualizar Logs</span>
               </button>
             </div>
 
@@ -1162,6 +1224,7 @@ export default function ConfiguracoesPage() {
                       <th style={{ padding: '0.75rem' }}>Campo</th>
                       <th style={{ padding: '0.75rem' }}>Valor Anterior</th>
                       <th style={{ padding: '0.75rem' }}>Novo Valor</th>
+                      <th style={{ padding: '0.75rem' }}>IP / Origem</th>
                       <th style={{ padding: '0.75rem' }}>Autor</th>
                     </tr>
                   </thead>
@@ -1173,24 +1236,13 @@ export default function ConfiguracoesPage() {
                         </td>
                         <td style={{ padding: '0.75rem' }}>
                           <span
-                            style={{
-                              fontSize: '0.75rem',
-                              fontWeight: 700,
-                              padding: '0.2rem 0.5rem',
-                              borderRadius: '4px',
-                              backgroundColor:
-                                log.action === 'PASSWORD_CHANGE'
-                                  ? '#fee2e2'
-                                  : log.action === 'PRIMARY_EMAIL_CHANGE'
-                                  ? '#e0e7ff'
-                                  : '#f0fdf4',
-                              color:
-                                log.action === 'PASSWORD_CHANGE'
-                                  ? '#991b1b'
-                                  : log.action === 'PRIMARY_EMAIL_CHANGE'
-                                  ? '#3730a3'
-                                  : '#166534',
-                            }}
+                            className={`audit-badge ${
+                              log.action === 'PASSWORD_CHANGE'
+                                ? 'audit-badge-password'
+                                : log.action === 'PRIMARY_EMAIL_CHANGE' || log.action === 'RECOVERY_EMAIL_CHANGE'
+                                ? 'audit-badge-email'
+                                : 'audit-badge-profile'
+                            }`}
                           >
                             {log.action}
                           </span>
@@ -1198,6 +1250,9 @@ export default function ConfiguracoesPage() {
                         <td style={{ padding: '0.75rem', fontWeight: 600 }}>{log.fieldName}</td>
                         <td style={{ padding: '0.75rem', color: isDark ? '#94a3b8' : 'var(--text-muted)' }}>{log.oldValueMasked || '—'}</td>
                         <td style={{ padding: '0.75rem', color: '#059669', fontWeight: 600 }}>{log.newValueMasked || '—'}</td>
+                        <td style={{ padding: '0.75rem', fontSize: '0.78rem', color: isDark ? '#94a3b8' : 'var(--text-muted)', fontFamily: 'monospace' }}>
+                          {log.ipAddress || '127.0.0.1'}
+                        </td>
                         <td style={{ padding: '0.75rem', fontSize: '0.8rem', color: isDark ? '#94a3b8' : 'var(--text-muted)' }}>
                           {log.changedByName || 'Próprio Usuário'}
                         </td>
@@ -1207,6 +1262,7 @@ export default function ConfiguracoesPage() {
                 </table>
               </div>
             )}
+            </div>
           </div>
         )}
 

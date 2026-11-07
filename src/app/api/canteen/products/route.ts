@@ -1,5 +1,5 @@
 // ====================================================================
-// ENDPOINT: CATÁLOGO DE PRODUTOS DA CANTINA (HONEST MARKET)
+// ENDPOINT: CATÁLOGO DE PRODUTOS DA CANTINA (CANTINA DISCENTE)
 // Responsável: Cesar (Backend, Banco de Dados & Segurança)
 // Rota: GET /api/canteen/products, POST /api/canteen/products
 // ====================================================================

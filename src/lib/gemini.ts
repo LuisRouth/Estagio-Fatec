@@ -324,7 +324,7 @@ Responda APENAS um JSON válido com as chaves:
 }
 
 /**
- * Valida dados extraídos ou texto/OCR de comprovante Pix da Cantina Discente (Honest Market)
+ * Valida dados extraídos ou texto/OCR de comprovante Pix da Cantina Discente (Cantina Discente)
  * Mantém assinatura compatível com os testes unitários e suporta entrada multimodal opcional.
  */
 export async function validatePixReceiptWithGemini(

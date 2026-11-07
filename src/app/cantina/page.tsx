@@ -209,7 +209,7 @@ export default function CantinaPage() {
           productId: item.product.id,
           quantity: item.quantity,
         })),
-        notes: 'Compra autônoma Honest Market - FATEC Rio Claro',
+        notes: 'Compra na Cantina Discente - FATEC Rio Claro',
       };
 
       const res = await fetch('/api/canteen/checkout', {
@@ -544,7 +544,7 @@ export default function CantinaPage() {
         >
           <div>
             <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
-              <span className="badge badge-emerald">Honest Market Ativo</span>
+              <span className="badge badge-emerald">Cantina Aberta</span>
               <span className="badge badge-blue">Pix Automático BACEN</span>
               <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Autoatendimento Discente</span>
             </div>

@@ -241,9 +241,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     { label: 'Repositório Acadêmico', href: '/repositorio' },
     { label: 'Vitrine de Projetos', href: '/vitrine' },
     { label: 'Extrato de Consumo', href: '/historico' },
-    ...(currentUser?.role === 'ADMIN'
-      ? [{ label: 'Gestão de Usuários', href: '/admin/usuarios' }]
-      : []),
   ];
 
   return (
@@ -516,17 +513,22 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                           borderRadius: '8px',
                           color: activePath === '/admin/usuarios'
                             ? (highContrast ? '#38bdf8' : 'var(--accent-blue-hover)')
-                            : '#b91c1c',
+                            : (highContrast ? '#f87171' : '#b91c1c'),
                           fontSize: '0.85rem',
                           fontWeight: 700,
                           backgroundColor: activePath === '/admin/usuarios'
                             ? (highContrast ? '#243044' : 'var(--accent-blue-light)')
-                            : '#fef2f2',
-                          border: '1px solid #fecaca',
+                            : (highContrast ? '#1e293b' : '#fef2f2'),
+                          border: highContrast ? '1px solid #7f1d1d' : '1px solid #fecaca',
                           transition: 'background-color 0.15s ease',
                         }}
                       >
-                        <span style={{ fontSize: '1rem' }}>👥</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                          <circle cx="9" cy="7" r="4"/>
+                          <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
                         <span>Gestão de Usuários (ADM)</span>
                       </Link>
                     )}
