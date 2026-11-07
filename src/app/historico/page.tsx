@@ -173,17 +173,10 @@ export default function HistoricoPage() {
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Pagamentos via Pix conferidos</span>
             </div>
 
-<<<<<<< Updated upstream
             <div className="canteen-statement-metric-card" style={{ borderRadius: '16px', padding: '1.5rem' }}>
               <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>Pendentes de Confirmação</span>
               <div style={{ fontSize: '1.85rem', fontWeight: 800, color: summary.pendingCount > 0 ? 'var(--accent-amber)' : 'var(--text-muted)', marginTop: '0.35rem' }}>
                 {summary.pendingCount}
-=======
-            <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '1.5rem', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
-              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>Pendentes / Em Análise</span>
-              <div style={{ fontSize: '1.85rem', fontWeight: 800, color: (summary.pendingCount + (summary.inAnalysisCount || 0)) > 0 ? 'var(--accent-amber)' : 'var(--text-muted)', marginTop: '0.35rem' }}>
-                {(summary.pendingCount || 0) + (summary.inAnalysisCount || 0)}
->>>>>>> Stashed changes
               </div>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Aguardando Pix ou validação CA</span>
             </div>

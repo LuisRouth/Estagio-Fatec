@@ -639,7 +639,7 @@ DÚVIDA DO ESTUDANTE: "${cleanQuestion}"`;
   let synthesizedAnswer = '';
   if (primary) {
     synthesizedAnswer = `Com base no material **"${primary.title}"** (${primary.subject} — ${primary.course}, ${primary.semester}º Semestre, arquivo \`${primary.fileUrl}\`): ${primary.contentBody}`;
-    if (secondary && secondary.rawScore > 0) {
+    if (secondary && (selected[1]?.rawScore ?? 0) > 0) {
       synthesizedAnswer += `\n\nComplementarmente, você pode consultar **"${secondary.title}"** (${secondary.subject}, \`${secondary.fileUrl}\`), que aborda: ${secondary.contentBody.slice(
         0,
         180

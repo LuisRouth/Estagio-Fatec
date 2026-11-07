@@ -9,7 +9,13 @@ import { EmailVerificationScreen } from '@/components/auth/EmailVerificationScre
 
 export default function CadastroPage() {
   const router = useRouter();
-  const [step, setStep] = useState<'formulario' | 'verificacao'>('formulario');
+
+  // Etapas do fluxo de cadastro discente:
+  // 1. 'dados': Primeira tela com formulário acadêmico e senhas (como na foto)
+  // 2. 'recuperacao': Segunda tela para informar o e-mail de recuperação onde o código será entregue
+  // 3. 'verificacao': Terceira tela para digitar e validar o código de 6 dígitos recebido no e-mail
+  const [step, setStep] = useState<'dados' | 'recuperacao' | 'verificacao'>('dados');
+
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [recoveryEmail, setRecoveryEmail] = useState('');
@@ -62,13 +68,19 @@ export default function CadastroPage() {
 
   const passwordStrength = getPasswordStrength(senha);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Ação da Tela 1: Valida os dados iniciais e abre a Tela 2 (E-mail de Recuperação)
+  const handleProceedToRecovery = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
 
-    if (senha !== confirmSenha) {
-      setErrorMsg('As senhas digitadas não coincidem.');
+    if (!nome.trim()) {
+      setErrorMsg('Por favor, preencha o nome completo do estudante.');
+      return;
+    }
+
+    if (!isEmailValid) {
+      setErrorMsg('O cadastro discente requer e-mail institucional oficial padrão (@aluno.cps.sp.gov.br ou @fatec.sp.gov.br).');
       return;
     }
 
@@ -77,21 +89,37 @@ export default function CadastroPage() {
       return;
     }
 
-    if (!isEmailValid) {
-      setErrorMsg('O e-mail principal deve ser institucional obrigatório (@aluno.cps.sp.gov.br ou @fatec.sp.gov.br).');
+    if (senha !== confirmSenha) {
+      setErrorMsg('As senhas digitadas não coincidem.');
       return;
     }
 
+    // Salva o rascunho
+    try {
+      sessionStorage.setItem(
+        'fatec_cadastro_draft',
+        JSON.stringify({ nome, email, recoveryEmail, ra, curso, semestre, senha, confirmSenha })
+      );
+    } catch {}
+
+    // Avança para a Segunda Tela
+    setStep('recuperacao');
+  };
+
+  // Ação da Tela 2: Valida o e-mail de recuperação, despacha o código de 6 dígitos e abre a Tela 3
+  const handleSendRecoveryCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+
     const cleanRecovery = recoveryEmail.trim().toLowerCase();
     if (!cleanRecovery || !/\S+@\S+\.\S+/.test(cleanRecovery)) {
-      setErrorMsg('O e-mail de recuperação/segurança é obrigatório para envio do código de confirmação.');
+      setErrorMsg('Por favor, informe um e-mail de recuperação válido (ex: seu.email@gmail.com).');
       return;
     }
 
     setLoading(true);
 
     try {
-      // 1. Despacha o código de confirmação de 6 dígitos diretamente para o e-mail de recuperação
       const res = await fetch('/api/auth/send-verification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -108,7 +136,7 @@ export default function CadastroPage() {
         throw new Error(data.error || 'Não foi possível despachar o código de confirmação.');
       }
 
-      // Salva rascunho dos dados preenchidos no sessionStorage para que "Voltar e Corrigir" mantenha 100% dos dados
+      // Salva rascunho atualizado com o e-mail de recuperação
       try {
         sessionStorage.setItem(
           'fatec_cadastro_draft',
@@ -116,6 +144,7 @@ export default function CadastroPage() {
         );
       } catch {}
 
+      // Avança para a Terceira Tela (Validação do Código)
       setStep('verificacao');
     } catch (err: any) {
       setErrorMsg(err.message || 'Erro ao processar envio do código de confirmação.');
@@ -124,7 +153,9 @@ export default function CadastroPage() {
     }
   };
 
-  // Se o cadastro foi enviado, exibe a Tela de Verificação com validação estrita do código de 6 dígitos
+  // =========================================================================
+  // TELA 3: CONFIRMAÇÃO DO CÓDIGO DE 6 DÍGITOS
+  // =========================================================================
   if (step === 'verificacao') {
     return (
       <EmailVerificationScreen
@@ -134,7 +165,10 @@ export default function CadastroPage() {
         ra={ra}
         curso={curso}
         semestre={semestre}
-        onBackToRegister={() => setStep('formulario')}
+        onBackToRegister={() => {
+          setErrorMsg('');
+          setStep('recuperacao');
+        }}
         onConfirmCode={async (code: string) => {
           // A conta só é criada se o código recebido no e-mail de recuperação estiver correto
           const res = await fetch('/api/auth/register', {
@@ -156,7 +190,7 @@ export default function CadastroPage() {
           if (!res.ok || !data.success) {
             return {
               success: false,
-              error: data.error || 'Código incorreto ou falha ao criar conta.',
+              error: data.error || 'Código incorreto ou expirado. Tente novamente.',
             };
           }
 
@@ -170,6 +204,152 @@ export default function CadastroPage() {
     );
   }
 
+  // =========================================================================
+  // TELA 2: INFORMAR E-MAIL DE RECUPERAÇÃO E SEGURANÇA
+  // =========================================================================
+  if (step === 'recuperacao') {
+    return (
+      <div className="auth-page-container">
+        <EcoTechBackground />
+
+        <div
+          className="animate-fade-in auth-card"
+          style={{
+            width: '100%',
+            maxWidth: '540px',
+            borderRadius: '24px',
+            padding: '2.5rem 2.25rem',
+            position: 'relative',
+            zIndex: 10,
+            backgroundColor: 'rgba(255, 255, 255, 0.98)',
+            boxShadow: 'var(--shadow-xl)',
+            border: '1px solid var(--border-light)',
+          }}
+        >
+          {/* Cabeçalho FATEC */}
+          <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
+              <LogoFatec height={44} />
+            </div>
+
+            <div
+              style={{
+                display: 'inline-block',
+                padding: '0.25rem 0.85rem',
+                backgroundColor: '#e0f2fe',
+                color: '#0369a1',
+                borderRadius: '20px',
+                fontSize: '0.775rem',
+                fontWeight: 700,
+                marginBottom: '0.75rem',
+              }}
+            >
+              Etapa 2 de 3 • Segurança & Recuperação
+            </div>
+
+            <h1 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
+              E-mail de Recuperação de Conta
+            </h1>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '0.35rem', lineHeight: 1.5 }}>
+              Para sua segurança, o <strong>código de 6 dígitos</strong> de ativação será enviado ao seu e-mail pessoal.
+            </p>
+          </div>
+
+          {/* Resumo da Conta Acadêmica */}
+          <div
+            style={{
+              padding: '0.85rem 1rem',
+              backgroundColor: '#f8fafc',
+              borderRadius: '12px',
+              border: '1px solid var(--border-light)',
+              marginBottom: '1.5rem',
+              fontSize: '0.85rem',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+              <span style={{ color: 'var(--text-muted)' }}>Estudante:</span>
+              <strong style={{ color: 'var(--text-main)' }}>{nome}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: 'var(--text-muted)' }}>E-mail Institucional:</span>
+              <strong style={{ color: '#0369a1' }}>{cleanEmail}</strong>
+            </div>
+          </div>
+
+          {errorMsg && (
+            <div
+              style={{
+                padding: '0.75rem 1rem',
+                backgroundColor: 'var(--accent-rose-light)',
+                color: 'var(--accent-rose)',
+                borderRadius: '9px',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                marginBottom: '1.25rem',
+                border: '1px solid rgba(225, 29, 72, 0.2)',
+              }}
+            >
+              {errorMsg}
+            </div>
+          )}
+
+          <form onSubmit={handleSendRecoveryCode}>
+            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                <label className="form-label" htmlFor="recoveryEmail" style={{ marginBottom: 0 }}>
+                  E-mail Pessoal / Recuperação
+                </label>
+                {recoveryEmail && /\S+@\S+\.\S+/.test(recoveryEmail) && (
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-emerald)' }}>
+                    ✓ Formato válido
+                  </span>
+                )}
+              </div>
+              <input
+                id="recoveryEmail"
+                type="email"
+                className="form-input"
+                placeholder="ex: seu.email.pessoal@gmail.com"
+                value={recoveryEmail}
+                onChange={(e) => setRecoveryEmail(e.target.value)}
+                required
+                autoFocus
+                style={{ padding: '0.75rem 1rem', fontSize: '0.95rem' }}
+              />
+              <small style={{ fontSize: '0.775rem', color: 'var(--text-muted)', marginTop: '0.45rem', display: 'block', lineHeight: 1.45 }}>
+                💡 Você pode utilizar qualquer provedor pessoal de sua preferência (ex: <strong>@gmail.com</strong>, <strong>@outlook.com</strong>, <strong>@hotmail.com</strong>, etc.).
+              </small>
+            </div>
+
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={loading}
+              style={{ width: '100%', padding: '0.85rem', fontSize: '0.95rem', fontWeight: 700 }}
+            >
+              {loading ? 'Despachando código...' : 'Enviar Código de Validação →'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setErrorMsg('');
+                setStep('dados');
+              }}
+              className="btn btn-secondary"
+              style={{ width: '100%', marginTop: '0.75rem', padding: '0.65rem', fontSize: '0.85rem' }}
+            >
+              ← Voltar e Corrigir Dados Cadastrais
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // TELA 1: FORMULÁRIO DE CADASTRO INICIAL (PADRÃO IDÊNTICO À FOTO DO USUÁRIO)
+  // =========================================================================
   return (
     <div className="auth-page-container">
       {/* Fundo de Rede Neuronal e Ecológica */}
@@ -241,7 +421,7 @@ export default function CadastroPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleProceedToRecovery}>
           <div className="form-group">
             <label className="form-label" htmlFor="nome">
               Nome Completo do Estudante
@@ -297,32 +477,6 @@ export default function CadastroPage() {
                 onChange={(e) => setRa(e.target.value)}
               />
             </div>
-          </div>
-
-          {/* E-mail de Recuperação Obrigatório (Receberá o Código OTP de 6 dígitos) */}
-          <div className="form-group">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label className="form-label" htmlFor="recoveryEmail">
-                E-mail de Segurança & Recuperação (Obrigatório)
-              </label>
-              {recoveryEmail && /\S+@\S+\.\S+/.test(recoveryEmail) && (
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-emerald)' }}>
-                  ✓ Válido
-                </span>
-              )}
-            </div>
-            <input
-              id="recoveryEmail"
-              type="email"
-              className="form-input"
-              placeholder="ex: seu.email.pessoal@gmail.com"
-              value={recoveryEmail}
-              onChange={(e) => setRecoveryEmail(e.target.value)}
-              required
-            />
-            <small style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem', display: 'block', lineHeight: 1.4 }}>
-              ✉️ Aceita qualquer domínio pessoal (ex: <strong>@gmail.com</strong>, <strong>@outlook.com</strong>, etc.). O <strong>código de 6 dígitos</strong> para confirmação e ativação da conta será enviado para este endereço.
-            </small>
           </div>
 
           {/* Seleção do Curso */}
@@ -432,7 +586,7 @@ export default function CadastroPage() {
                     </svg>
                   ) : (
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
                       <circle cx="12" cy="12" r="3"></circle>
                     </svg>
                   )}
@@ -498,7 +652,7 @@ export default function CadastroPage() {
                     </svg>
                   ) : (
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
                       <circle cx="12" cy="12" r="3"></circle>
                     </svg>
                   )}
@@ -510,10 +664,9 @@ export default function CadastroPage() {
           <button
             type="submit"
             className="btn btn-primary"
-            disabled={loading}
             style={{ width: '100%', marginTop: '0.75rem', padding: '0.75rem', fontSize: '0.95rem' }}
           >
-            {loading ? 'Despachando código de verificação...' : 'Receber Código de Ativação por E-mail'}
+            Finalizar Cadastro
           </button>
         </form>
 
