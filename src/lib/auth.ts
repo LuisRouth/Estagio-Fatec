@@ -39,6 +39,7 @@ export async function generateToken(user: SafeUser | User): Promise<string> {
     role: user.role,
     course: user.course,
     semester: user.semester,
+    can_validate_canteen: Boolean(user.can_validate_canteen),
   };
 
   return new SignJWT({ ...payload })

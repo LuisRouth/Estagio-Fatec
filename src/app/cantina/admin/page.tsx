@@ -481,6 +481,9 @@ export default function CantinaAdminPage() {
           const data = await res.json();
           if (res.ok && data.success) {
             showToast(`Pedido #${tx.id.slice(-8).toUpperCase()} cancelado e estoque estornado.`);
+            setTransactions((prev) =>
+              prev.map((t) => (t.id === tx.id ? { ...t, status: 'CANCELADO', updated_at: new Date().toISOString() } : t))
+            );
             fetchOrders();
             fetchProducts();
           } else {
