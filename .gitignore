@@ -33,3 +33,7 @@ yarn-error.log*
 *.njsproj
 *.sln
 *.sw?
+
+# Uploads locais e materiais brutos
+materiais_aulas/
+public/uploads/materials/

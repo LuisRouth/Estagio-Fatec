@@ -37,8 +37,8 @@ export default function CantinaAdminPage() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('TODOS');
 
-  // Abas do Painel: Pedidos & Caixa, Produtos & Estoque, Configurações de Notificação
-  const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'settings'>('orders');
+  // Abas do Painel: Catálogo & Estoque, Pedidos & Caixa, Configurações de Notificação
+  const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'settings'>('products');
 
   // Estados da Aba de Pedidos & Caixa
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -280,7 +280,7 @@ export default function CantinaAdminPage() {
       if (res.ok && data.success && data.url) {
         setFormImageUrl(data.url);
         setImageLoadError(false);
-        showToast(`✓ Foto salva como "${data.filename || uploadCustomName}" na Galeria!`);
+        showToast(`Foto salva como "${data.filename || uploadCustomName}" na Galeria!`);
         setSelectedUploadFile(null);
         setUploadCustomName('');
         await loadGallery();
@@ -318,7 +318,7 @@ export default function CantinaAdminPage() {
       if (res.ok && data.success && data.url) {
         setFormImageUrl(data.url);
         setImageLoadError(false);
-        showToast(`✓ Imagem baixada e salva como "${data.filename || webCustomName}" na Galeria!`);
+        showToast(`Imagem baixada e salva como "${data.filename || webCustomName}" na Galeria!`);
         setWebUrlInput('');
         setWebCustomName('');
         await loadGallery();
@@ -366,6 +366,18 @@ export default function CantinaAdminPage() {
   useEffect(() => {
     checkPermission();
     loadGallery();
+
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get('tab');
+      if (tabParam === 'orders' || tabParam === 'pedidos' || tabParam === 'caixa') {
+        setActiveTab('orders');
+      } else if (tabParam === 'products' || tabParam === 'estoque' || tabParam === 'catalogo') {
+        setActiveTab('products');
+      } else if (tabParam === 'settings' || tabParam === 'configuracoes') {
+        setActiveTab('settings');
+      }
+    }
   }, []);
 
   const checkPermission = async () => {
@@ -433,7 +445,7 @@ export default function CantinaAdminPage() {
       isOpen: true,
       title: 'Confirmar Pagamento Pix & Liberar Retirada',
       message: `Confirmar recebimento de ${formattedAmount} do discente ${tx.user_name || 'Aluno'} (Pedido #${tx.id.slice(-8).toUpperCase()})? Esta ação libera a retirada e envia a confirmação por e-mail ao aluno.`,
-      confirmLabel: '✓ Confirmar e Liberar',
+      confirmLabel: 'Confirmar e Liberar',
       cancelLabel: 'Cancelar',
       isDanger: false,
       onConfirm: async () => {
@@ -446,7 +458,7 @@ export default function CantinaAdminPage() {
           });
           const data = await res.json();
           if (res.ok && data.success) {
-            showToast(`✓ Pagamento do pedido #${tx.id.slice(-8).toUpperCase()} confirmado! E-mail enviado.`);
+            showToast(`Pagamento do pedido #${tx.id.slice(-8).toUpperCase()} confirmado! E-mail enviado.`);
             setTransactions((prev) =>
               prev.map((t) => (t.id === tx.id ? { ...t, status: 'PAGO', validated_at: new Date().toISOString() } : t))
             );
@@ -507,7 +519,7 @@ export default function CantinaAdminPage() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        showToast('✓ Configurações de notificação salvas com sucesso!');
+        showToast('Configurações de notificação salvas com sucesso!');
       } else {
         showToast(data.error || 'Erro ao salvar configurações.', 'error');
       }
@@ -742,12 +754,9 @@ export default function CantinaAdminPage() {
 
         {/* Topo do Painel Administrativo */}
         <div
+          className="canteen-admin-card"
           style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '20px',
             padding: '2rem 2.25rem',
-            border: '1px solid var(--border-light)',
-            boxShadow: 'var(--shadow-sm)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -780,7 +789,7 @@ export default function CantinaAdminPage() {
             <Link href="/cantina" className="btn btn-secondary" style={{ fontSize: '0.85rem', padding: '0.65rem 1.25rem' }}>
               ← Voltar à Loja
             </Link>
-            {isAuthorized && (
+            {isAuthorized && activeTab === 'products' && (
               <button
                 onClick={() => handleOpenModal()}
                 className="btn btn-primary"
@@ -795,9 +804,8 @@ export default function CantinaAdminPage() {
         {/* Verificação de Permissão de Acesso */}
         {authChecked && !isAuthorized ? (
           <div
+            className="canteen-admin-card"
             style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '20px',
               padding: '4rem 2rem',
               border: '1px dashed var(--border-light)',
               textAlign: 'center',
@@ -808,7 +816,12 @@ export default function CantinaAdminPage() {
               gap: '1rem',
             }}
           >
-            <div style={{ fontSize: '3.5rem' }}>🔒</div>
+            <div style={{ color: 'var(--text-muted)', display: 'flex', justifyContent: 'center' }}>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+            </div>
             <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)' }}>
               Acesso Restrito a Gestores da Cantina
             </h3>
@@ -820,9 +833,12 @@ export default function CantinaAdminPage() {
                 onClick={handleQuickAdminLogin}
                 disabled={isQuickLoggingIn}
                 className="btn btn-primary"
-                style={{ padding: '0.65rem 1.5rem', backgroundColor: '#0284c7' }}
+                style={{ padding: '0.65rem 1.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
               >
-                {isQuickLoggingIn ? 'Autenticando...' : '⚡ Acessar como Administrador (1-Clique Dev)'}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                </svg>
+                {isQuickLoggingIn ? 'Autenticando...' : 'Acessar como Administrador (1-Clique Dev)'}
               </button>
               <Link href="/login" className="btn btn-secondary" style={{ padding: '0.65rem 1.5rem' }}>
                 Fazer Login Manual
@@ -847,29 +863,33 @@ export default function CantinaAdminPage() {
             >
               <button
                 type="button"
-                onClick={() => setActiveTab('orders')}
-                style={{
-                  padding: '0.7rem 1.25rem',
-                  borderRadius: '12px',
-                  border: 'none',
-                  fontWeight: 700,
-                  fontSize: '0.9rem',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  backgroundColor: activeTab === 'orders' ? '#16a34a' : '#f1f5f9',
-                  color: activeTab === 'orders' ? '#ffffff' : '#475569',
-                  boxShadow: activeTab === 'orders' ? '0 4px 10px rgba(22, 163, 74, 0.25)' : 'none',
-                  transition: 'all 0.15s ease',
-                }}
+                onClick={() => setActiveTab('products')}
+                className={`canteen-admin-tab-btn ${activeTab === 'products' ? 'active-products' : ''}`}
               >
-                💰 Conferência de Pedidos & Caixa
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m7.5 4.27 9 5.15"/>
+                  <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+                  <path d="m3.3 7 8.7 5 8.7-5"/>
+                  <path d="M12 22V12"/>
+                </svg>
+                Catálogo & Estoque ({products.length})
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('orders')}
+                className={`canteen-admin-tab-btn ${activeTab === 'orders' ? 'active-orders' : ''}`}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect width="20" height="14" x="2" y="5" rx="2"/>
+                  <line x1="2" x2="22" y1="10" strokeLinecap="round"/>
+                </svg>
+                Conferência de Pedidos & Caixa
                 {pendingOrdersCount > 0 && (
                   <span
                     style={{
-                      backgroundColor: activeTab === 'orders' ? '#ffffff' : '#dc2626',
-                      color: activeTab === 'orders' ? '#16a34a' : '#ffffff',
+                      backgroundColor: activeTab === 'orders' ? '#ffffff' : 'var(--accent-amber)',
+                      color: activeTab === 'orders' ? 'var(--accent-emerald)' : '#ffffff',
                       padding: '0.15rem 0.5rem',
                       borderRadius: '999px',
                       fontSize: '0.75rem',
@@ -883,346 +903,24 @@ export default function CantinaAdminPage() {
 
               <button
                 type="button"
-                onClick={() => setActiveTab('products')}
-                style={{
-                  padding: '0.7rem 1.25rem',
-                  borderRadius: '12px',
-                  border: 'none',
-                  fontWeight: 700,
-                  fontSize: '0.9rem',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  backgroundColor: activeTab === 'products' ? '#0284c7' : '#f1f5f9',
-                  color: activeTab === 'products' ? '#ffffff' : '#475569',
-                  boxShadow: activeTab === 'products' ? '0 4px 10px rgba(2, 132, 199, 0.25)' : 'none',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                📦 Catálogo & Estoque ({products.length})
-              </button>
-
-              <button
-                type="button"
                 onClick={() => setActiveTab('settings')}
-                style={{
-                  padding: '0.7rem 1.25rem',
-                  borderRadius: '12px',
-                  border: 'none',
-                  fontWeight: 700,
-                  fontSize: '0.9rem',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  backgroundColor: activeTab === 'settings' ? '#4f46e5' : '#f1f5f9',
-                  color: activeTab === 'settings' ? '#ffffff' : '#475569',
-                  boxShadow: activeTab === 'settings' ? '0 4px 10px rgba(79, 70, 229, 0.25)' : 'none',
-                  transition: 'all 0.15s ease',
-                }}
+                className={`canteen-admin-tab-btn ${activeTab === 'settings' ? 'active-settings' : ''}`}
               >
-                ⚙️ Configurações & Alertas
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+                Configurações & Alertas
               </button>
             </div>
-
-            {/* ABA 1: CONFERÊNCIA DE PEDIDOS & CAIXA */}
-            {activeTab === 'orders' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                {/* Métricas do Caixa */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
-                  <div style={{ backgroundColor: '#fff7ed', borderRadius: '16px', padding: '1.25rem 1.5rem', border: '1px solid #fed7aa' }}>
-                    <span style={{ fontSize: '0.8rem', color: '#c2410c', fontWeight: 700, textTransform: 'uppercase' }}>
-                      Aguardando Conferência Pix
-                    </span>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#9a3412', marginTop: '0.25rem' }}>
-                      {pendingOrdersCount} pedido{pendingOrdersCount !== 1 ? 's' : ''}
-                    </div>
-                    <span style={{ fontSize: '0.8rem', color: '#ea580c', fontWeight: 600 }}>
-                      Total a Conferir: R$ {pendingRevenue.toFixed(2).replace('.', ',')}
-                    </span>
-                  </div>
-
-                  <div style={{ backgroundColor: '#f0fdf4', borderRadius: '16px', padding: '1.25rem 1.5rem', border: '1px solid #bbf7d0' }}>
-                    <span style={{ fontSize: '0.8rem', color: '#15803d', fontWeight: 700, textTransform: 'uppercase' }}>
-                      Pedidos Pagos & Liberados
-                    </span>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#166534', marginTop: '0.25rem' }}>
-                      {paidOrdersCount}
-                    </div>
-                    <span style={{ fontSize: '0.8rem', color: '#16a34a', fontWeight: 600 }}>
-                      Receita Total: R$ {totalRevenue.toFixed(2).replace('.', ',')}
-                    </span>
-                  </div>
-
-                  <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '1.25rem 1.5rem', border: '1px solid #e2e8f0' }}>
-                    <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>
-                      Total Geral de Pedidos
-                    </span>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginTop: '0.25rem' }}>
-                      {transactions.length}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={fetchOrders}
-                      className="btn btn-secondary"
-                      style={{ marginTop: '0.35rem', padding: '0.25rem 0.65rem', fontSize: '0.75rem' }}
-                    >
-                      ↻ Atualizar Lista
-                    </button>
-                  </div>
-                </div>
-
-                {/* Filtros da Tabela de Pedidos */}
-                <div
-                  style={{
-                    backgroundColor: '#ffffff',
-                    borderRadius: '16px',
-                    padding: '1.25rem 1.5rem',
-                    border: '1px solid var(--border-light)',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: '1rem',
-                  }}
-                >
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    {[
-                      { id: 'PENDENTE', label: 'Pendentes de Baixa' },
-                      { id: 'PAGO', label: 'Pagos & Liberados' },
-                      { id: 'CANCELADO', label: 'Cancelados' },
-                      { id: 'TODOS', label: 'Todos os Pedidos' },
-                    ].map((st) => (
-                      <button
-                        key={st.id}
-                        type="button"
-                        onClick={() => setOrderStatusFilter(st.id as any)}
-                        className={`btn ${orderStatusFilter === st.id ? 'btn-primary' : 'btn-secondary'}`}
-                        style={{
-                          fontSize: '0.8rem',
-                          padding: '0.45rem 0.95rem',
-                          backgroundColor: orderStatusFilter === st.id && st.id === 'PENDENTE' ? '#ea580c' : undefined,
-                          borderColor: orderStatusFilter === st.id && st.id === 'PENDENTE' ? '#ea580c' : undefined,
-                        }}
-                      >
-                        {st.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div style={{ minWidth: '260px' }}>
-                    <input
-                      type="text"
-                      placeholder="Buscar por aluno, RA ou pedido..."
-                      value={orderSearch}
-                      onChange={(e) => setOrderSearch(e.target.value)}
-                      className="form-input"
-                      style={{ padding: '0.55rem 1rem', fontSize: '0.85rem' }}
-                    />
-                  </div>
-                </div>
-
-                {/* Tabela de Pedidos */}
-                <div
-                  style={{
-                    backgroundColor: '#ffffff',
-                    borderRadius: '20px',
-                    border: '1px solid var(--border-light)',
-                    overflow: 'hidden',
-                    boxShadow: 'var(--shadow-sm)',
-                  }}
-                >
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
-                      <thead>
-                        <tr style={{ backgroundColor: 'var(--bg-muted)', borderBottom: '1px solid var(--border-light)', color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                          <th style={{ padding: '1rem 1.25rem', fontWeight: 700 }}>Pedido / Horário</th>
-                          <th style={{ padding: '1rem 1.25rem', fontWeight: 700 }}>Discente Comprador</th>
-                          <th style={{ padding: '1rem 1.25rem', fontWeight: 700 }}>Itens Adquiridos</th>
-                          <th style={{ padding: '1rem 1.25rem', fontWeight: 700 }}>Valor Total</th>
-                          <th style={{ padding: '1rem 1.25rem', fontWeight: 700 }}>Status</th>
-                          <th style={{ padding: '1rem 1.25rem', fontWeight: 700, textAlign: 'right' }}>Ações de Baixa</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {ordersLoading ? (
-                          <tr>
-                            <td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                              Carregando pedidos da cantina...
-                            </td>
-                          </tr>
-                        ) : filteredTransactions.length === 0 ? (
-                          <tr>
-                            <td colSpan={6} style={{ padding: '3.5rem 1rem', textAlign: 'center' }}>
-                              <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🎉</div>
-                              <h4 style={{ margin: 0, fontWeight: 700, color: 'var(--text-main)' }}>
-                                {orderStatusFilter === 'PENDENTE'
-                                  ? 'Nenhum pedido pendente aguardando baixa no momento!'
-                                  : 'Nenhum pedido localizado para o filtro selecionado.'}
-                              </h4>
-                              <p style={{ margin: '0.25rem 0 0', fontSize: '0.825rem', color: 'var(--text-muted)' }}>
-                                Todos os pedidos efetuados pelos alunos aparecerão aqui para conferência fácil.
-                              </p>
-                            </td>
-                          </tr>
-                        ) : (
-                          filteredTransactions.map((tx: any) => {
-                            const isPending = tx.status === 'PENDENTE';
-                            const isPaid = tx.status === 'PAGO';
-                            const formattedTotal = `R$ ${Number(tx.total_amount).toFixed(2).replace('.', ',')}`;
-                            const dateObj = new Date(tx.created_at);
-                            const formattedDate = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-
-                            // Mensagem formatada para WhatsApp
-                            const itemsText = (tx.items || []).map((i: any) => `${i.quantity}x ${i.product_name}`).join(', ');
-                            const whatsappMsg = encodeURIComponent(
-                              `Olá ${tx.user_name || 'Aluno'}! Sobre o seu pedido #${tx.id.slice(-8).toUpperCase()} na Cantina FATEC (${itemsText}) no valor de ${formattedTotal}: seu Pix está em conferência.`
-                            );
-                            const whatsappUrl = `https://wa.me/?text=${whatsappMsg}`;
-
-                            return (
-                              <tr
-                                key={tx.id}
-                                style={{
-                                  borderBottom: '1px solid var(--border-light)',
-                                  backgroundColor: isPending ? 'rgba(254, 243, 199, 0.25)' : 'transparent',
-                                  transition: 'background-color 0.15s ease',
-                                }}
-                              >
-                                {/* Pedido e Data */}
-                                <td style={{ padding: '1rem 1.25rem', verticalAlign: 'top' }}>
-                                  <div style={{ fontWeight: 800, color: 'var(--text-main)', letterSpacing: '0.5px' }}>
-                                    #{tx.id.slice(-8).toUpperCase()}
-                                  </div>
-                                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                                    🕒 {formattedDate}
-                                  </div>
-                                </td>
-
-                                {/* Comprador */}
-                                <td style={{ padding: '1rem 1.25rem', verticalAlign: 'top' }}>
-                                  <div style={{ fontWeight: 700, color: '#0f172a' }}>
-                                    {tx.user_name || 'Aluno FATEC'}
-                                  </div>
-                                  <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.15rem' }}>
-                                    {tx.user_email || 'E-mail não informado'}
-                                  </div>
-                                </td>
-
-                                {/* Itens */}
-                                <td style={{ padding: '1rem 1.25rem', verticalAlign: 'top' }}>
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                    {tx.items && tx.items.length > 0 ? (
-                                      tx.items.map((item: any, idx: number) => (
-                                        <div key={idx} style={{ fontSize: '0.8rem', color: '#334155' }}>
-                                          <strong style={{ color: '#0284c7' }}>{item.quantity}x</strong> {item.product_name || 'Item'}
-                                          <span style={{ color: '#94a3b8', fontSize: '0.72rem', marginLeft: '0.35rem' }}>
-                                            (R$ {Number(item.unit_price).toFixed(2).replace('.', ',')} un)
-                                          </span>
-                                        </div>
-                                      ))
-                                    ) : (
-                                      <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Itens da compra</span>
-                                    )}
-                                  </div>
-                                </td>
-
-                                {/* Valor Total */}
-                                <td style={{ padding: '1rem 1.25rem', verticalAlign: 'top' }}>
-                                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#16a34a' }}>
-                                    {formattedTotal}
-                                  </div>
-                                </td>
-
-                                {/* Status */}
-                                <td style={{ padding: '1rem 1.25rem', verticalAlign: 'top' }}>
-                                  {isPending && (
-                                    <span style={{ padding: '0.25rem 0.6rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, backgroundColor: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                                      ⏳ Aguardando Pix
-                                    </span>
-                                  )}
-                                  {isPaid && (
-                                    <span style={{ padding: '0.25rem 0.6rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, backgroundColor: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                                      ✓ Pago & Liberado
-                                    </span>
-                                  )}
-                                  {tx.status === 'CANCELADO' && (
-                                    <span style={{ padding: '0.25rem 0.6rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, backgroundColor: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5' }}>
-                                      Cancelado
-                                    </span>
-                                  )}
-                                  {tx.status === 'EM_ANALISE' && (
-                                    <span style={{ padding: '0.25rem 0.6rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, backgroundColor: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd' }}>
-                                      Em Análise
-                                    </span>
-                                  )}
-                                  {tx.validated_at && (
-                                    <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.25rem' }}>
-                                      Baixa: {new Date(tx.validated_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                    </div>
-                                  )}
-                                </td>
-
-                                {/* Ações */}
-                                <td style={{ padding: '1rem 1.25rem', textAlign: 'right', verticalAlign: 'top' }}>
-                                  <div style={{ display: 'inline-flex', gap: '0.4rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                                    {isPending ? (
-                                      <>
-                                        <button
-                                          type="button"
-                                          onClick={() => handleConfirmPayment(tx)}
-                                          className="btn btn-emerald"
-                                          style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
-                                          title="Confirmar que o Pix entrou na conta bancária e liberar o pedido para o aluno"
-                                        >
-                                          ✓ Confirmar Pagamento Pix
-                                        </button>
-                                        <a
-                                          href={whatsappUrl}
-                                          target="_blank"
-                                          rel="noreferrer"
-                                          className="btn btn-secondary"
-                                          style={{ padding: '0.4rem 0.65rem', fontSize: '0.75rem', color: '#059669', borderColor: '#a7f3d0' }}
-                                          title="Abrir WhatsApp com detalhes do pedido"
-                                        >
-                                          WhatsApp
-                                        </a>
-                                        <button
-                                          type="button"
-                                          onClick={() => handleCancelOrder(tx)}
-                                          className="btn btn-secondary"
-                                          style={{ padding: '0.4rem 0.65rem', fontSize: '0.75rem', color: '#dc2626', borderColor: '#fca5a5' }}
-                                          title="Cancelar pedido e devolver estoque"
-                                        >
-                                          Cancelar
-                                        </button>
-                                      </>
-                                    ) : (
-                                      <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: 600 }}>
-                                        ✓ Baixa efetuada
-                                      </span>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* ABA 2: CATÁLOGO & ESTOQUE */}
             {activeTab === 'products' && (
               <>
             {/* Barra de Filtros e Busca */}
             <div
+              className="canteen-admin-card"
               style={{
-                backgroundColor: '#ffffff',
                 borderRadius: '16px',
                 padding: '1.25rem 1.75rem',
                 border: '1px solid var(--border-light)',
@@ -1260,8 +958,8 @@ export default function CantinaAdminPage() {
 
             {/* Tabela de Gestão de Produtos */}
             <div
+              className="canteen-admin-card"
               style={{
-                backgroundColor: '#ffffff',
                 borderRadius: '20px',
                 border: '1px solid var(--border-light)',
                 overflow: 'hidden',
@@ -1321,7 +1019,7 @@ export default function CantinaAdminPage() {
                                   {p.image_url ? (
                                     <img src={p.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                   ) : (
-                                    <span>📦</span>
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
                                   )}
                                 </div>
                                 <div>
@@ -1355,9 +1053,9 @@ export default function CantinaAdminPage() {
                                     fontWeight: 800,
                                     fontSize: '1.05rem',
                                     color: isOutOfStock
-                                      ? '#ef4444'
+                                      ? 'var(--accent-rose)'
                                       : isLowStock
-                                      ? '#f59e0b'
+                                      ? 'var(--accent-amber)'
                                       : 'var(--accent-emerald)',
                                   }}
                                 >
@@ -1374,13 +1072,8 @@ export default function CantinaAdminPage() {
                                   onClick={() => handleQuickStockAdjust(p.id, -1)}
                                   disabled={p.current_stock <= 0}
                                   title="Remover 1 unidade do estoque"
+                                  className="canteen-quick-stock-btn"
                                   style={{
-                                    width: '28px',
-                                    height: '28px',
-                                    borderRadius: '6px',
-                                    border: '1px solid var(--border-light)',
-                                    backgroundColor: '#ffffff',
-                                    fontWeight: 700,
                                     cursor: p.current_stock <= 0 ? 'not-allowed' : 'pointer',
                                     opacity: p.current_stock <= 0 ? 0.4 : 1,
                                   }}
@@ -1390,30 +1083,19 @@ export default function CantinaAdminPage() {
                                 <button
                                   onClick={() => handleQuickStockAdjust(p.id, 1)}
                                   title="Adicionar 1 unidade ao estoque"
-                                  style={{
-                                    width: '28px',
-                                    height: '28px',
-                                    borderRadius: '6px',
-                                    border: '1px solid var(--border-light)',
-                                    backgroundColor: '#ffffff',
-                                    fontWeight: 700,
-                                    cursor: 'pointer',
-                                  }}
+                                  className="canteen-quick-stock-btn"
                                 >
                                   +1
                                 </button>
                                 <button
                                   onClick={() => handleQuickStockAdjust(p.id, 10)}
                                   title="Reposição em lote (+10 unidades)"
+                                  className="canteen-quick-stock-btn"
                                   style={{
+                                    width: 'auto',
                                     padding: '0.2rem 0.5rem',
-                                    borderRadius: '6px',
-                                    border: '1px solid var(--border-light)',
-                                    backgroundColor: 'var(--bg-muted)',
                                     fontSize: '0.75rem',
-                                    fontWeight: 700,
                                     color: 'var(--accent-emerald)',
-                                    cursor: 'pointer',
                                   }}
                                 >
                                   +10
@@ -1424,15 +1106,15 @@ export default function CantinaAdminPage() {
                             {/* Status */}
                             <td style={{ padding: '1.15rem 1.25rem', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
                               {isOutOfStock ? (
-                                <span className="badge" style={{ backgroundColor: '#ffe4e6', color: '#e11d48', fontSize: '0.72rem' }}>
+                                <span className="canteen-order-badge-cancelled">
                                   Esgotado
                                 </span>
                               ) : isLowStock ? (
-                                <span className="badge" style={{ backgroundColor: '#fef3c7', color: '#b45309', fontSize: '0.72rem' }}>
+                                <span className="canteen-order-badge-pending">
                                   Estoque Crítico
                                 </span>
                               ) : (
-                                <span className="badge badge-emerald" style={{ fontSize: '0.72rem' }}>
+                                <span className="canteen-order-badge-paid">
                                   Normal
                                 </span>
                               )}
@@ -1468,12 +1150,288 @@ export default function CantinaAdminPage() {
               </>
             )}
 
+            {/* ABA 1: CONFERÊNCIA DE PEDIDOS & CAIXA */}
+            {activeTab === 'orders' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                {/* Métricas do Caixa */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                  <div className="canteen-admin-stat-pending">
+                    <span className="stat-label">Aguardando Conferência Pix</span>
+                    <div className="stat-val">{pendingOrdersCount} pedido{pendingOrdersCount !== 1 ? 's' : ''}</div>
+                    <span className="stat-sub">Total a Conferir: R$ {pendingRevenue.toFixed(2).replace('.', ',')}</span>
+                  </div>
+
+                  <div className="canteen-admin-stat-paid">
+                    <span className="stat-label">Pedidos Pagos & Liberados</span>
+                    <div className="stat-val">{paidOrdersCount}</div>
+                    <span className="stat-sub">Receita Total: R$ {totalRevenue.toFixed(2).replace('.', ',')}</span>
+                  </div>
+
+                  <div className="canteen-admin-stat-total">
+                    <span className="stat-label">Total Geral de Pedidos</span>
+                    <div className="stat-val">{transactions.length}</div>
+                    <button
+                      type="button"
+                      onClick={fetchOrders}
+                      className="btn btn-secondary"
+                      style={{ marginTop: '0.35rem', padding: '0.25rem 0.65rem', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
+                      Atualizar Lista
+                    </button>
+                  </div>
+                </div>
+
+                {/* Filtros da Tabela de Pedidos */}
+                <div
+                  className="canteen-admin-card"
+                  style={{
+                    borderRadius: '16px',
+                    padding: '1.25rem 1.5rem',
+                    border: '1px solid var(--border-light)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '1rem',
+                  }}
+                >
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {[
+                      { id: 'PENDENTE', label: 'Pendentes de Baixa' },
+                      { id: 'PAGO', label: 'Pagos & Liberados' },
+                      { id: 'CANCELADO', label: 'Cancelados' },
+                      { id: 'TODOS', label: 'Todos os Pedidos' },
+                    ].map((st) => (
+                      <button
+                        key={st.id}
+                        type="button"
+                        onClick={() => setOrderStatusFilter(st.id as any)}
+                        className={`btn ${orderStatusFilter === st.id ? 'btn-primary' : 'btn-secondary'}`}
+                        style={{
+                          fontSize: '0.8rem',
+                          padding: '0.45rem 0.95rem',
+                          backgroundColor: orderStatusFilter === st.id && st.id === 'PENDENTE' ? 'var(--accent-amber)' : undefined,
+                          borderColor: orderStatusFilter === st.id && st.id === 'PENDENTE' ? 'var(--accent-amber)' : undefined,
+                        }}
+                      >
+                        {st.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={{ minWidth: '260px' }}>
+                    <input
+                      type="text"
+                      placeholder="Buscar por aluno, RA ou pedido..."
+                      value={orderSearch}
+                      onChange={(e) => setOrderSearch(e.target.value)}
+                      className="form-input"
+                      style={{ padding: '0.55rem 1rem', fontSize: '0.85rem' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Tabela de Pedidos */}
+                <div
+                  className="canteen-admin-card"
+                  style={{
+                    borderRadius: '20px',
+                    border: '1px solid var(--border-light)',
+                    overflow: 'hidden',
+                    boxShadow: 'var(--shadow-sm)',
+                  }}
+                >
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+                      <thead>
+                        <tr style={{ backgroundColor: 'var(--bg-muted)', borderBottom: '1px solid var(--border-light)', color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          <th style={{ padding: '1rem 1.25rem', fontWeight: 700 }}>Pedido / Horário</th>
+                          <th style={{ padding: '1rem 1.25rem', fontWeight: 700 }}>Discente Comprador</th>
+                          <th style={{ padding: '1rem 1.25rem', fontWeight: 700 }}>Itens Adquiridos</th>
+                          <th style={{ padding: '1rem 1.25rem', fontWeight: 700 }}>Valor Total</th>
+                          <th style={{ padding: '1rem 1.25rem', fontWeight: 700 }}>Status</th>
+                          <th style={{ padding: '1rem 1.25rem', fontWeight: 700, textAlign: 'right' }}>Ações de Baixa</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ordersLoading ? (
+                          <tr>
+                            <td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                              Carregando pedidos da cantina...
+                            </td>
+                          </tr>
+                        ) : filteredTransactions.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} style={{ padding: '3.5rem 1rem', textAlign: 'center' }}>
+                              <div style={{ color: 'var(--accent-emerald)', display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+                              <h4 style={{ margin: 0, fontWeight: 700, color: 'var(--text-main)' }}>
+                                {orderStatusFilter === 'PENDENTE'
+                                  ? 'Nenhum pedido pendente aguardando baixa no momento!'
+                                  : 'Nenhum pedido localizado para o filtro selecionado.'}
+                              </h4>
+                              <p style={{ margin: '0.25rem 0 0', fontSize: '0.825rem', color: 'var(--text-muted)' }}>
+                                Todos os pedidos efetuados pelos alunos aparecerão aqui para conferência fácil.
+                              </p>
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredTransactions.map((tx: any) => {
+                            const isPending = tx.status === 'PENDENTE';
+                            const isPaid = tx.status === 'PAGO';
+                            const formattedTotal = `R$ ${Number(tx.total_amount).toFixed(2).replace('.', ',')}`;
+                            const dateObj = new Date(tx.created_at);
+                            const formattedDate = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+                            // Mensagem formatada para WhatsApp
+                            const itemsText = (tx.items || []).map((i: any) => `${i.quantity}x ${i.product_name}`).join(', ');
+                            const whatsappMsg = encodeURIComponent(
+                              `Olá ${tx.user_name || 'Aluno'}! Sobre o seu pedido #${tx.id.slice(-8).toUpperCase()} na Cantina FATEC (${itemsText}) no valor de ${formattedTotal}: seu Pix está em conferência.`
+                            );
+                            const whatsappUrl = `https://wa.me/?text=${whatsappMsg}`;
+
+                            return (
+                              <tr
+                                key={tx.id}
+                                style={{
+                                  borderBottom: '1px solid var(--border-light)',
+                                  backgroundColor: isPending ? 'rgba(254, 243, 199, 0.25)' : 'transparent',
+                                  transition: 'background-color 0.15s ease',
+                                }}
+                              >
+                                {/* Pedido e Data */}
+                                <td style={{ padding: '1rem 1.25rem', verticalAlign: 'top' }}>
+                                  <div style={{ fontWeight: 800, color: 'var(--text-main)', letterSpacing: '0.5px' }}>
+                                    #{tx.id.slice(-8).toUpperCase()}
+                                  </div>
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>{formattedDate}</div>
+                                </td>
+
+                                {/* Comprador */}
+                                <td style={{ padding: '1rem 1.25rem', verticalAlign: 'top' }}>
+                                  <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>
+                                    {tx.user_name || 'Aluno FATEC'}
+                                  </div>
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                                    {tx.user_email || 'E-mail não informado'}
+                                  </div>
+                                </td>
+
+                                {/* Itens */}
+                                <td style={{ padding: '1rem 1.25rem', verticalAlign: 'top' }}>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                    {tx.items && tx.items.length > 0 ? (
+                                      tx.items.map((item: any, idx: number) => (
+                                        <div key={idx} style={{ fontSize: '0.8rem', color: 'var(--text-sub)' }}>
+                                          <strong style={{ color: 'var(--accent-blue)' }}>{item.quantity}x</strong> {item.product_name || 'Item'}
+                                          <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem', marginLeft: '0.35rem' }}>
+                                            (R$ {Number(item.unit_price).toFixed(2).replace('.', ',')} un)
+                                          </span>
+                                        </div>
+                                      ))
+                                    ) : (
+                                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Itens da compra</span>
+                                    )}
+                                  </div>
+                                </td>
+
+                                {/* Valor Total */}
+                                <td style={{ padding: '1rem 1.25rem', verticalAlign: 'top' }}>
+                                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent-emerald)' }}>
+                                    {formattedTotal}
+                                  </div>
+                                </td>
+
+                                {/* Status */}
+                                <td style={{ padding: '1rem 1.25rem', verticalAlign: 'top' }}>
+                                  {isPending && (
+                                    <span className="canteen-order-badge-pending">
+                                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                      Aguardando Pix
+                                    </span>
+                                  )}
+                                  {isPaid && (
+                                    <span className="canteen-order-badge-paid">
+                                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                      Pago & Liberado
+                                    </span>
+                                  )}
+                                  {tx.status === 'CANCELADO' && (
+                                    <span className="canteen-order-badge-cancelled">
+                                      Cancelado
+                                    </span>
+                                  )}
+                                  {tx.status === 'EM_ANALISE' && (
+                                    <span className="canteen-order-badge-analysis">
+                                      Em Análise
+                                    </span>
+                                  )}
+                                  {tx.validated_at && (
+                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                                      Baixa: {new Date(tx.validated_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                    </div>
+                                  )}
+                                </td>
+
+                                {/* Ações */}
+                                <td style={{ padding: '1rem 1.25rem', textAlign: 'right', verticalAlign: 'top' }}>
+                                  <div style={{ display: 'inline-flex', gap: '0.4rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                    {isPending ? (
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleConfirmPayment(tx)}
+                                          className="btn btn-emerald"
+                                          style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                                          title="Confirmar que o Pix entrou na conta bancária e liberar o pedido para o aluno"
+                                        >
+                                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Confirmar Pagamento Pix
+                                        </button>
+                                        <a
+                                          href={whatsappUrl}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="btn btn-secondary"
+                                          style={{ padding: '0.4rem 0.65rem', fontSize: '0.75rem', color: 'var(--accent-emerald)' }}
+                                          title="Abrir WhatsApp com detalhes do pedido"
+                                        >
+                                          WhatsApp
+                                        </a>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleCancelOrder(tx)}
+                                          className="btn btn-secondary"
+                                          style={{ padding: '0.4rem 0.65rem', fontSize: '0.75rem', color: 'var(--accent-rose)' }}
+                                          title="Cancelar pedido e devolver estoque"
+                                        >
+                                          Cancelar
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <span style={{ fontSize: '0.75rem', color: 'var(--accent-emerald)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Baixa efetuada</span>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* ABA 3: CONFIGURAÇÕES & ALERTAS */}
             {activeTab === 'settings' && (
-              <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', padding: '2rem 2.25rem', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
-                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.5rem' }}>
-                  ⚙️ Configurações de Notificações Automáticas da Cantina
-                </h3>
+              <div className="canteen-admin-card" style={{ padding: '2rem 2.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--text-main)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+                    Configurações de Notificações Automáticas da Cantina
+                  </h3>
+                </div>
                 <p style={{ color: 'var(--text-sub)', fontSize: '0.925rem', marginBottom: '1.75rem', lineHeight: 1.6, maxWidth: '640px' }}>
                   Defina o e-mail e o número de WhatsApp do responsável ou grupo de conferência. Sempre que um aluno finalizar o carrinho, o sistema enviará um alerta automático constando os dados do comprador, os produtos e quantidades, e o valor total a ser conferido no extrato bancário.
                 </p>
@@ -1514,13 +1472,13 @@ export default function CantinaAdminPage() {
                     </span>
                   </div>
 
-                  <div style={{ backgroundColor: '#f8fafc', padding: '1rem', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div className="canteen-settings-box" style={{ padding: '1rem', borderRadius: '10px', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600 }}>
                       <input
                         type="checkbox"
                         checked={settings.auto_notify_email}
                         onChange={(e) => setSettings({ ...settings, auto_notify_email: e.target.checked })}
-                        style={{ width: '16px', height: '16px', accentColor: '#16a34a' }}
+                        style={{ width: '16px', height: '16px', accentColor: 'var(--accent-emerald)' }}
                       />
                       Disparar e-mail automático a cada novo pedido realizado por alunos
                     </label>
@@ -1530,7 +1488,7 @@ export default function CantinaAdminPage() {
                         type="checkbox"
                         checked={settings.auto_notify_whatsapp}
                         onChange={(e) => setSettings({ ...settings, auto_notify_whatsapp: e.target.checked })}
-                        style={{ width: '16px', height: '16px', accentColor: '#16a34a' }}
+                        style={{ width: '16px', height: '16px', accentColor: 'var(--accent-emerald)' }}
                       />
                       Habilitar links de envio para WhatsApp nos pedidos pendentes
                     </label>
@@ -1543,7 +1501,7 @@ export default function CantinaAdminPage() {
                       className="btn btn-primary"
                       style={{ padding: '0.75rem 1.75rem', fontSize: '0.9rem', fontWeight: 700 }}
                     >
-                      {isSavingSettings ? 'Salvando...' : '✓ Salvar Configurações de Notificação'}
+                      {isSavingSettings ? 'Salvando...' : 'Salvar Configurações de Notificação'}
                     </button>
                   </div>
                 </form>
@@ -1572,7 +1530,8 @@ export default function CantinaAdminPage() {
               style={{
                 width: '100%',
                 maxWidth: '560px',
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--bg-card)',
+                border: '1px solid var(--border-light)',
                 borderRadius: '20px',
                 padding: '2.25rem 2rem',
                 boxShadow: 'var(--shadow-lg)',
@@ -1583,9 +1542,10 @@ export default function CantinaAdminPage() {
             >
               <button
                 onClick={() => setIsModalOpen(false)}
-                style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: 'var(--text-muted)' }}
+                style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                title="Fechar"
               >
-                ✕
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
 
               <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.35rem' }}>
@@ -1668,7 +1628,7 @@ export default function CantinaAdminPage() {
                 </div>
 
                 {/* Gerenciador de Imagem do Produto (Multi-modo: Upload, Galeria ou Link Web com Nomes Personalizados) */}
-                <div className="form-group canteen-gallery-container" style={{ backgroundColor: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
+                <div className="form-group canteen-gallery-container" style={{ backgroundColor: 'var(--bg-muted)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
                     <label className="form-label" style={{ margin: 0, fontWeight: 700 }}>
                       Foto do Produto
@@ -1684,10 +1644,10 @@ export default function CantinaAdminPage() {
                           padding: '0.3rem 0.65rem',
                           fontSize: '0.75rem',
                           borderRadius: '6px',
-                          border: imageInputTab === 'gallery' ? '1px solid var(--accent-blue)' : '1px solid #cbd5e1',
-                          backgroundColor: imageInputTab === 'gallery' ? 'var(--accent-blue-light)' : '#ffffff',
-                          color: imageInputTab === 'gallery' ? 'var(--accent-blue-hover)' : '#64748b',
-                          fontWeight: imageInputTab === 'gallery' ? 700 : 500,
+                          border: imageInputTab === 'gallery' ? '1px solid var(--accent-blue)' : '1px solid var(--border-light)',
+                          backgroundColor: imageInputTab === 'gallery' ? 'var(--accent-blue)' : 'var(--bg-card)',
+                          color: imageInputTab === 'gallery' ? '#ffffff' : 'var(--text-muted)',
+                          fontWeight: 700,
                           cursor: 'pointer',
                         }}
                       >
@@ -1700,10 +1660,10 @@ export default function CantinaAdminPage() {
                           padding: '0.3rem 0.65rem',
                           fontSize: '0.75rem',
                           borderRadius: '6px',
-                          border: imageInputTab === 'upload' ? '1px solid var(--accent-blue)' : '1px solid #cbd5e1',
-                          backgroundColor: imageInputTab === 'upload' ? 'var(--accent-blue-light)' : '#ffffff',
-                          color: imageInputTab === 'upload' ? 'var(--accent-blue-hover)' : '#64748b',
-                          fontWeight: imageInputTab === 'upload' ? 700 : 500,
+                          border: imageInputTab === 'upload' ? '1px solid var(--accent-blue)' : '1px solid var(--border-light)',
+                          backgroundColor: imageInputTab === 'upload' ? 'var(--accent-blue)' : 'var(--bg-card)',
+                          color: imageInputTab === 'upload' ? '#ffffff' : 'var(--text-muted)',
+                          fontWeight: 700,
                           cursor: 'pointer',
                         }}
                       >
@@ -1716,10 +1676,10 @@ export default function CantinaAdminPage() {
                           padding: '0.3rem 0.65rem',
                           fontSize: '0.75rem',
                           borderRadius: '6px',
-                          border: imageInputTab === 'url' ? '1px solid var(--accent-blue)' : '1px solid #cbd5e1',
-                          backgroundColor: imageInputTab === 'url' ? 'var(--accent-blue-light)' : '#ffffff',
-                          color: imageInputTab === 'url' ? 'var(--accent-blue-hover)' : '#64748b',
-                          fontWeight: imageInputTab === 'url' ? 700 : 500,
+                          border: imageInputTab === 'url' ? '1px solid var(--accent-blue)' : '1px solid var(--border-light)',
+                          backgroundColor: imageInputTab === 'url' ? 'var(--accent-blue)' : 'var(--bg-card)',
+                          color: imageInputTab === 'url' ? '#ffffff' : 'var(--text-muted)',
+                          fontWeight: 700,
                           cursor: 'pointer',
                         }}
                       >
@@ -1736,11 +1696,11 @@ export default function CantinaAdminPage() {
                       gap: '1rem',
                       alignItems: 'center',
                       marginBottom: '0.85rem',
-                      backgroundColor: imageLoadError ? '#fef2f2' : '#ffffff',
+                      backgroundColor: imageLoadError ? 'rgba(239, 68, 68, 0.1)' : 'var(--bg-card)',
                       padding: '0.75rem',
                       borderRadius: '10px',
                       border: '1px solid',
-                      borderColor: imageLoadError ? '#fca5a5' : '#e2e8f0',
+                      borderColor: imageLoadError ? 'var(--accent-rose)' : 'var(--border-light)',
                     }}
                   >
                     <div
@@ -1748,9 +1708,9 @@ export default function CantinaAdminPage() {
                         width: '72px',
                         height: '72px',
                         borderRadius: '8px',
-                        backgroundColor: imageLoadError ? '#fee2e2' : '#f1f5f9',
+                        backgroundColor: 'var(--bg-muted)',
                         border: '1px solid',
-                        borderColor: imageLoadError ? '#ef4444' : '#cbd5e1',
+                        borderColor: imageLoadError ? 'var(--accent-rose)' : 'var(--border-light)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -1769,10 +1729,10 @@ export default function CantinaAdminPage() {
                             onError={() => setImageLoadError(true)}
                           />
                         ) : (
-                          <span style={{ fontSize: '1.5rem' }} title="Imagem não encontrada ou corrompida">⚠️</span>
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-rose)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                         )
                       ) : (
-                        <span style={{ fontSize: '0.7rem', color: '#94a3b8', textAlign: 'center' }}>Sem foto</span>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: 'center' }}>Sem foto</span>
                       )}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -1780,7 +1740,7 @@ export default function CantinaAdminPage() {
                         style={{
                           fontSize: '0.8rem',
                           fontWeight: 700,
-                          color: imageLoadError ? '#b91c1c' : 'var(--text-main)',
+                          color: imageLoadError ? 'var(--accent-rose)' : 'var(--text-main)',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
@@ -1791,12 +1751,12 @@ export default function CantinaAdminPage() {
                       <div
                         style={{
                           fontSize: '0.72rem',
-                          color: imageLoadError ? '#ef4444' : 'var(--text-muted)',
+                          color: imageLoadError ? 'var(--accent-rose)' : 'var(--text-muted)',
                           marginTop: '0.15rem',
                         }}
                       >
                         {imageLoadError
-                          ? '⚠️ Falha ao carregar arquivo (inexistente ou link quebrado)'
+                          ? 'Falha ao carregar arquivo (inexistente ou link quebrado)'
                           : formImageUrl
                           ? 'Imagem ativa para exibição no catálogo'
                           : 'Escolha uma foto da galeria, envie do seu celular/PC ou cole uma URL'}
@@ -1812,14 +1772,14 @@ export default function CantinaAdminPage() {
                             style={{
                               background: 'none',
                               border: 'none',
-                              color: '#ef4444',
+                              color: 'var(--accent-rose)',
                               fontSize: '0.75rem',
                               fontWeight: 600,
                               cursor: 'pointer',
                               padding: 0,
                             }}
                           >
-                            ✕ Tirar imagem deste produto
+                            Tirar imagem deste produto
                           </button>
                           {formImageUrl.startsWith('/images/products/') && (
                             <button
@@ -1828,7 +1788,7 @@ export default function CantinaAdminPage() {
                               style={{
                                 background: 'none',
                                 border: 'none',
-                                color: '#b91c1c',
+                                color: 'var(--accent-rose)',
                                 fontSize: '0.7rem',
                                 fontWeight: 500,
                                 cursor: 'pointer',
@@ -1860,14 +1820,11 @@ export default function CantinaAdminPage() {
                           type="button"
                           onClick={loadGallery}
                           disabled={isLoadingGallery}
+                          className="btn btn-secondary"
                           style={{
                             padding: '0.45rem 0.75rem',
                             fontSize: '0.75rem',
                             fontWeight: 600,
-                            borderRadius: '6px',
-                            border: '1px solid #cbd5e1',
-                            backgroundColor: '#ffffff',
-                            cursor: 'pointer',
                           }}
                           title="Atualizar galeria do servidor"
                         >
@@ -1883,9 +1840,9 @@ export default function CantinaAdminPage() {
                           maxHeight: '190px',
                           overflowY: 'auto',
                           padding: '0.35rem',
-                          backgroundColor: '#ffffff',
+                          backgroundColor: 'var(--bg-card)',
                           borderRadius: '8px',
-                          border: '1px solid #e2e8f0',
+                          border: '1px solid var(--border-light)',
                         }}
                       >
                         {((galleryImages.length > 0
@@ -1913,8 +1870,8 @@ export default function CantinaAdminPage() {
                                 alignItems: 'center',
                                 padding: '0.35rem',
                                 borderRadius: '8px',
-                                border: isSelected ? '2px solid var(--accent-blue)' : '1px solid #e2e8f0',
-                                backgroundColor: isSelected ? 'var(--accent-blue-light)' : '#ffffff',
+                                border: isSelected ? '2px solid var(--accent-blue)' : '1px solid var(--border-light)',
+                                backgroundColor: isSelected ? 'rgba(2, 132, 199, 0.15)' : 'var(--bg-muted)',
                                 cursor: 'pointer',
                                 transition: 'all 0.15s ease',
                               }}
@@ -1937,7 +1894,7 @@ export default function CantinaAdminPage() {
                                   width: '18px',
                                   height: '18px',
                                   borderRadius: '50%',
-                                  backgroundColor: '#ef4444',
+                                  backgroundColor: 'var(--accent-rose)',
                                   color: '#ffffff',
                                   border: 'none',
                                   fontSize: '0.65rem',
@@ -1949,7 +1906,7 @@ export default function CantinaAdminPage() {
                                   boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
                                 }}
                               >
-                                ✕
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                               </button>
 
                               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1986,7 +1943,7 @@ export default function CantinaAdminPage() {
 
                   {/* ABA 2: Enviar Foto com Nome Personalizado */}
                   {imageInputTab === 'upload' && (
-                    <div style={{ backgroundColor: '#ffffff', padding: '0.85rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ backgroundColor: 'var(--bg-card)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--border-light)' }}>
                       <label
                         style={{
                           display: 'flex',
@@ -1995,18 +1952,18 @@ export default function CantinaAdminPage() {
                           justifyContent: 'center',
                           padding: '1.25rem',
                           borderRadius: '10px',
-                          border: '2px dashed #cbd5e1',
-                          backgroundColor: '#f8fafc',
+                          border: '2px dashed var(--border-light)',
+                          backgroundColor: 'var(--bg-muted)',
                           cursor: isUploadingImage ? 'wait' : 'pointer',
                           transition: 'all 0.15s ease',
                           marginBottom: '0.65rem',
                         }}
                       >
-                        <span style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>📷</span>
+                        <div style={{ color: 'var(--accent-blue)', marginBottom: '0.25rem' }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg></div>
                         <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--accent-blue)' }}>
                           {selectedUploadFile ? selectedUploadFile.name : 'Clique para selecionar foto do celular ou PC'}
                         </span>
-                        <span style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.2rem' }}>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
                           Suporta JPG, PNG ou WebP até 5MB
                         </span>
                         <input
@@ -2032,7 +1989,7 @@ export default function CantinaAdminPage() {
                               className="form-input"
                               style={{ fontSize: '0.8rem', padding: '0.45rem 0.65rem', flex: 1 }}
                             />
-                            <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
                               {selectedUploadFile.name.substring(selectedUploadFile.name.lastIndexOf('.')) || '.jpg'}
                             </span>
                           </div>
@@ -2043,7 +2000,7 @@ export default function CantinaAdminPage() {
                             className="btn btn-primary"
                             style={{ width: '100%', padding: '0.6rem', fontSize: '0.825rem', fontWeight: 700 }}
                           >
-                            {isUploadingImage ? 'Salvando foto...' : '📤 Salvar Foto com Este Nome na Galeria'}
+                            {isUploadingImage ? 'Salvando foto...' : 'Salvar Foto com Este Nome na Galeria'}
                           </button>
                         </div>
                       )}
@@ -2052,7 +2009,7 @@ export default function CantinaAdminPage() {
 
                   {/* ABA 3: Link Web com Opção de Baixar e Salvar com Nome Personalizado */}
                   {imageInputTab === 'url' && (
-                    <div style={{ backgroundColor: '#ffffff', padding: '0.85rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ backgroundColor: 'var(--bg-card)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--border-light)' }}>
                       <div style={{ marginBottom: '0.65rem' }}>
                         <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-main)', display: 'block', marginBottom: '0.25rem' }}>
                           Link da Imagem na Web (URL):
@@ -2099,7 +2056,7 @@ export default function CantinaAdminPage() {
                           className="btn btn-primary"
                           style={{ width: '100%', padding: '0.6rem', fontSize: '0.825rem', fontWeight: 700 }}
                         >
-                          {isDownloadingWeb ? 'Baixando e salvando imagem...' : '📥 Baixar e Salvar Imagem na Galeria'}
+                          {isDownloadingWeb ? 'Baixando e salvando imagem...' : 'Baixar e Salvar Imagem na Galeria'}
                         </button>
                         <button
                           type="button"

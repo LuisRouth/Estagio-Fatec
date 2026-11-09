@@ -98,8 +98,8 @@ const OFFICIAL_PPC_DISCIPLINES: PPCDiscipline[] = [
   { code: 'ISG-030', name: 'Segurança da Informação', course: 'IA', semester: 4, hours: 40, mode: 'On-line' },
 
   // Complementares IA (2 componentes)
-  { code: 'TIA-001', name: 'Trabalho de Graduação (TCC IA)', course: 'IA', semester: 5, hours: 160, mode: 'Presencial' },
-  { code: 'EIA-100', name: 'Estágio Curricular Supervisionado (IA)', course: 'IA', semester: 5, hours: 240, mode: 'Presencial' },
+  { code: 'TIA-001', name: 'Trabalho de Graduação (TCC IA)', course: 'IA', semester: 4, hours: 160, mode: 'Presencial' },
+  { code: 'EIA-100', name: 'Estágio Curricular Supervisionado (IA)', course: 'IA', semester: 4, hours: 240, mode: 'Presencial' },
 
   // ==========================================
   // CST EM GESTÃO DA SUSTENTABILIDADE & ESG (29 componentes)
@@ -140,8 +140,8 @@ const OFFICIAL_PPC_DISCIPLINES: PPCDiscipline[] = [
   { code: 'ESG-IN2', name: 'Inglês 2 para ESG – Aplicações em Projetos', course: 'ESG', semester: 4, hours: 40, mode: 'On-line' },
 
   // Componentes Complementares ESG (2 componentes)
-  { code: 'ESG-TCC', name: 'Trabalho de Graduação (TCC ESG)', course: 'ESG', semester: 5, hours: 160, mode: 'Presencial' },
-  { code: 'ESG-EST', name: 'Estágio Curricular Supervisionado (ESG)', course: 'ESG', semester: 5, hours: 160, mode: 'Presencial' },
+  { code: 'ESG-TCC', name: 'Trabalho de Graduação (TCC ESG)', course: 'ESG', semester: 4, hours: 160, mode: 'Presencial' },
+  { code: 'ESG-EST', name: 'Estágio Curricular Supervisionado (ESG)', course: 'ESG', semester: 4, hours: 160, mode: 'Presencial' },
 ];
 
 export default function RepositorioPage() {
@@ -1124,8 +1124,8 @@ export default function RepositorioPage() {
                   <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', marginRight: '0.2rem' }}>
                     Semestre:
                   </span>
-                  {(['TODOS', 1, 2, 3, 4, 5] as const).map((sem) => {
-                    const label = sem === 'TODOS' ? 'Todos' : sem === 5 ? 'TCC / Estágio' : `${sem}º Sem`;
+                  {(['TODOS', 1, 2, 3, 4] as const).map((sem) => {
+                    const label = sem === 'TODOS' ? 'Todos' : `${sem}º Sem`;
                     const isActive = selectedSemester === sem;
                     return (
                       <button
@@ -1508,7 +1508,7 @@ export default function RepositorioPage() {
                           </div>
 
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                            {[1, 2, 3, 4, 5].map((sem) => {
+                            {[1, 2, 3, 4].map((sem) => {
                               if (selectedSemester !== 'TODOS' && selectedSemester !== sem) return null;
                               const semKey = `IA-${sem}`;
                               const isExpanded = expandedSemesters[semKey];
@@ -1609,7 +1609,7 @@ export default function RepositorioPage() {
                           </div>
 
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                            {[1, 2, 3, 4, 5].map((sem) => {
+                            {[1, 2, 3, 4].map((sem) => {
                               if (selectedSemester !== 'TODOS' && selectedSemester !== sem) return null;
                               const semKey = `ESG-${sem}`;
                               const isExpanded = expandedSemesters[semKey];

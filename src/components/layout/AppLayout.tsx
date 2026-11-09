@@ -240,7 +240,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     { label: 'Cantina Discente', href: '/cantina' },
     { label: 'Repositório Acadêmico', href: '/repositorio' },
     { label: 'Vitrine de Projetos', href: '/vitrine' },
-    { label: 'Extrato de Consumo', href: '/historico' },
   ];
 
   return (
