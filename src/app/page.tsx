@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import AppLayout from '@/components/layout/AppLayout';
-import { Announcement, CourseType } from '@/lib/types';
+import { Announcement, CourseType, AcademicMaterial } from '@/lib/types';
 import AnnouncementCard from '@/components/announcements/AnnouncementCard';
 import AnnouncementDetailModal from '@/components/announcements/AnnouncementDetailModal';
 import AnnouncementFormModal from '@/components/announcements/AnnouncementFormModal';
@@ -25,6 +25,29 @@ export default function HomePage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [toast, setToast] = useState<{ message: string | null; type: 'success' | 'error' | 'info' }>({ message: null, type: 'success' });
 
+  // Materiais Didáticos na Home (Conexão direta com o Repositório)
+  const [homeMaterials, setHomeMaterials] = useState<AcademicMaterial[]>([]);
+  const [materialsLoading, setMaterialsLoading] = useState(true);
+  const [homeMaterialCourse, setHomeMaterialCourse] = useState<CourseType | 'TODOS'>('TODOS');
+
+  // Carregar materiais do repositório
+  const fetchHomeMaterials = async () => {
+    setMaterialsLoading(true);
+    try {
+      const res = await fetch('/api/materials?scope=repositorio');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.data)) {
+          setHomeMaterials(data.data);
+        }
+      }
+    } catch (e) {
+      console.error('Erro ao buscar materiais na home:', e);
+    } finally {
+      setMaterialsLoading(false);
+    }
+  };
+
   // Carregar usuário logado e comunicados oficiais
   const fetchHomeAnnouncements = async () => {
     setAnnouncementsLoading(true);
@@ -45,6 +68,7 @@ export default function HomePage() {
 
   useEffect(() => {
     fetchHomeAnnouncements();
+    fetchHomeMaterials();
     fetch('/api/auth/me')
       .then((r) => r.json())
       .then((d) => {
@@ -339,12 +363,12 @@ export default function HomePage() {
                   className="btn btn-outline"
                   style={{ fontSize: '0.825rem', fontWeight: 700 }}
                 >
-                  + Publicar Comunicado
+                  Publicar Comunicado
                 </button>
               )}
 
               <Link href="/avisos" className="btn btn-primary" style={{ fontSize: '0.85rem', padding: '0.55rem 1.15rem' }}>
-                Abrir Mural Completo →
+                Abrir Mural Completo
               </Link>
             </div>
           </div>
@@ -493,51 +517,195 @@ export default function HomePage() {
           />
         </section>
 
-        {/* 3. REPOSITÓRIO ACADÊMICO — SEÇÃO EM ESTADO VAZIO */}
+        {/* 3. REPOSITÓRIO ACADÊMICO — MATERIAIS DIDÁTICOS CONECTADOS */}
         <section
           className="card-interactive"
           style={{
             padding: '2.25rem',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
-              <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.35rem' }}>
+                <span className="badge badge-blue">Acervo de Aulas</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  {homeMaterials.length} materiais catalogados
+                </span>
+              </div>
+              <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
                 Repositório Acadêmico
               </h2>
-              <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                Notas de aula, roteiros de laboratório e acervo dos cursos de IA e ESG
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-sub)', marginTop: '0.2rem' }}>
+                Notas de aula, roteiros de laboratório, apostilas e códigos dos cursos de IA e ESG
               </p>
             </div>
 
-            <Link href="/repositorio" className="btn btn-primary" style={{ fontSize: '0.85rem', padding: '0.55rem 1.15rem' }}>
-              Abrir Repositório
-            </Link>
-          </div>
-
-          <div
-            style={{
-              padding: '3.5rem 1.5rem',
-              backgroundColor: 'var(--bg-muted)',
-              borderRadius: '12px',
-              border: '1px dashed var(--border-light)',
-              textAlign: 'center',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.75rem',
-            }}
-          >
-            <div style={{ maxWidth: '480px' }}>
-              <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '1.05rem' }}>
-                Nenhum material pendente ou novo roteiro publicado
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              {/* Filtro Rápido por Curso */}
+              <div style={{ display: 'flex', gap: '0.35rem', backgroundColor: 'var(--bg-muted)', padding: '0.25rem', borderRadius: '10px' }}>
+                {(['TODOS', 'IA', 'ESG'] as const).map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setHomeMaterialCourse(c)}
+                    style={{
+                      padding: '0.35rem 0.8rem',
+                      borderRadius: '8px',
+                      fontSize: '0.78rem',
+                      fontWeight: homeMaterialCourse === c ? 700 : 500,
+                      border: 'none',
+                      backgroundColor: homeMaterialCourse === c ? 'var(--bg-card)' : 'transparent',
+                      color: homeMaterialCourse === c ? 'var(--text-main)' : 'var(--text-muted)',
+                      boxShadow: homeMaterialCourse === c ? 'var(--shadow-sm)' : 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {c === 'TODOS' ? 'Todos' : c}
+                  </button>
+                ))}
               </div>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.35rem', lineHeight: 1.55 }}>
-                Os arquivos didáticos, apostilas e códigos das disciplinas dos cursos de IA e ESG estão catalogados na íntegra no acervo.
-              </p>
+
+              <Link href="/repositorio" className="btn btn-primary" style={{ fontSize: '0.85rem', padding: '0.55rem 1.15rem' }}>
+                Ver Acervo Completo
+              </Link>
             </div>
           </div>
+
+          {materialsLoading ? (
+            <div style={{ padding: '3rem 1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+              Carregando materiais do repositório acadêmico...
+            </div>
+          ) : homeMaterials.filter((m) => homeMaterialCourse === 'TODOS' || m.course === homeMaterialCourse).length === 0 ? (
+            <div
+              style={{
+                padding: '3rem 1.5rem',
+                backgroundColor: 'var(--bg-muted)',
+                borderRadius: '12px',
+                border: '1px dashed var(--border-light)',
+                textAlign: 'center',
+                color: 'var(--text-muted)',
+              }}
+            >
+              Nenhum material encontrado para o filtro selecionado.
+            </div>
+          ) : (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+                gap: '1rem',
+              }}
+            >
+              {homeMaterials
+                .filter((m) => homeMaterialCourse === 'TODOS' || m.course === homeMaterialCourse)
+                .slice(0, 6)
+                .map((m) => (
+                  <div
+                    key={m.id}
+                    style={{
+                      backgroundColor: 'var(--bg-card)',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: '14px',
+                      padding: '1.25rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.75rem',
+                      boxShadow: 'var(--shadow-sm)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+                      <span
+                        style={{
+                          fontSize: '0.7rem',
+                          fontWeight: 800,
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          backgroundColor: m.course === 'IA' ? 'rgba(2, 132, 199, 0.12)' : 'rgba(5, 150, 105, 0.12)',
+                          color: m.course === 'IA' ? 'var(--accent-blue)' : 'var(--accent-emerald)',
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        {m.course} • {m.semester}º Sem
+                      </span>
+                      <span
+                        style={{
+                          fontSize: '0.68rem',
+                          fontWeight: 700,
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          backgroundColor: 'var(--bg-muted)',
+                          color: 'var(--text-muted)',
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        {m.material_type}
+                      </span>
+                    </div>
+
+                    <div>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-blue)', marginBottom: '0.2rem' }}>
+                        {m.subject}
+                      </div>
+                      <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-main)', lineHeight: 1.35, margin: 0 }}>
+                        {m.title}
+                      </h3>
+                    </div>
+
+                    {m.description && (
+                      <p
+                        style={{
+                          fontSize: '0.8rem',
+                          color: 'var(--text-sub)',
+                          lineHeight: 1.45,
+                          margin: 0,
+                          flex: 1,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {m.description}
+                      </p>
+                    )}
+
+                    <div style={{ display: 'flex', gap: '0.5rem', paddingTop: '0.6rem', borderTop: '1px solid var(--border-light)', marginTop: 'auto' }}>
+                      {m.file_url && m.file_url !== '#' && (
+                        <a
+                          href={m.file_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-primary"
+                          style={{
+                            flex: 1,
+                            fontSize: '0.78rem',
+                            padding: '0.45rem 0.65rem',
+                            fontWeight: 700,
+                            textAlign: 'center',
+                            textDecoration: 'none',
+                          }}
+                        >
+                          Acessar Arquivo
+                        </a>
+                      )}
+                      <Link
+                        href={`/repositorio?q=${encodeURIComponent(m.title)}`}
+                        className="btn btn-secondary"
+                        style={{
+                          fontSize: '0.78rem',
+                          padding: '0.45rem 0.65rem',
+                          fontWeight: 600,
+                          textAlign: 'center',
+                          textDecoration: 'none',
+                        }}
+                      >
+                        Ver no Acervo
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
         </section>
 
       </div>
