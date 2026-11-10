@@ -4,7 +4,7 @@
 // Disciplina: Estágio Curricular Supervisionado (Prof. Orlando)
 // ====================================================================
 
-import {
+import type {
   GeminiConnectivityResult,
   PixReceiptOCRResult,
   PixReceiptVisionInput,
