@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
-import { AcademicMaterial, CourseType, MaterialType, AnnouncementLink, AnnouncementAttachment } from '@/lib/types';
+import { AcademicMaterial, CourseType, MaterialType, AnnouncementLink, AnnouncementAttachment, RAGQueryResult } from '@/lib/types';
 
 // Presets de Capa / Banners com Gradientes Dinâmicos
 const MATERIAL_BANNER_PRESETS = [
@@ -144,6 +144,63 @@ const OFFICIAL_PPC_DISCIPLINES: PPCDiscipline[] = [
   { code: 'ESG-EST', name: 'Estágio Curricular Supervisionado (ESG)', course: 'ESG', semester: 4, hours: 160, mode: 'Presencial' },
 ];
 
+// Formatador leve de Markdown inline para respostas pedagógicas do RAG
+function formatInlineMarkdown(content: string) {
+  const parts = content.split(/(\*\*.*?\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return (
+        <strong key={i} style={{ color: 'var(--text-main)', fontWeight: 700 }}>
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    return part;
+  });
+}
+
+// Renderizador estruturado da resposta RAG (Suporte a avisos, parágrafos e listas)
+function renderRAGAnswer(text: string) {
+  if (!text) return null;
+  const blocks = text.split('\n\n');
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', lineHeight: 1.65 }}>
+      {blocks.map((block, idx) => {
+        const trimmed = block.trim();
+        if (!trimmed) return null;
+
+        // Bloco destacado de aviso de suficiência ou leituras complementares
+        if (trimmed.startsWith('⚠️') || trimmed.includes('Aviso sobre a Suficiência')) {
+          return (
+            <div
+              key={idx}
+              style={{
+                backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                border: '1px solid rgba(245, 158, 11, 0.35)',
+                borderRadius: '10px',
+                padding: '0.85rem 1.1rem',
+                color: 'var(--text-main)',
+                fontSize: '0.88rem',
+                boxShadow: '0 1px 2px rgba(245, 158, 11, 0.05)',
+              }}
+            >
+              {formatInlineMarkdown(trimmed)}
+            </div>
+          );
+        }
+
+        // Parágrafo regular
+        return (
+          <div key={idx} style={{ color: 'var(--text-main)', fontSize: '0.925rem', whiteSpace: 'pre-wrap' }}>
+            {formatInlineMarkdown(trimmed)}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function RepositorioPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'acervo' | 'meus' | 'moderacao'>('acervo');
@@ -246,7 +303,7 @@ export default function RepositorioPage() {
   const [isRagOpen, setIsRagOpen] = useState(false);
   const [ragQuestion, setRagQuestion] = useState('');
   const [ragLoading, setRagLoading] = useState(false);
-  const [ragResult, setRagResult] = useState<{ answer: string; sources: Array<{ title: string; subject: string; file_url: string; similarity: number }> } | null>(null);
+  const [ragResult, setRagResult] = useState<RAGQueryResult | null>(null);
   const [ragError, setRagError] = useState('');
 
   // Modais de Criação / Edição / Confirmação
@@ -888,10 +945,10 @@ export default function RepositorioPage() {
                     </span>
                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
                       {[
+                        'Aprendemos linguagem de programação no curso de IA?',
+                        'Para criar uma aplicação de rotas de entrega de mercadorias, quais matérias e materiais devo estudar?',
                         'O que aprendemos na disciplina de Linguagem de Programação I no 1º semestre de IA?',
-                        'Quais são os principais conceitos de Aprendizado de Máquina I no 3º semestre?',
                         'O que significa a sigla ESG e como são calculados os escopos de pegada de carbono?',
-                        'Como funciona a disciplina de Visão Computacional no 4º semestre de IA?',
                       ].map((sug, i) => (
                         <button
                           key={i}
@@ -920,7 +977,7 @@ export default function RepositorioPage() {
                   <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                     <input
                       type="text"
-                      placeholder="Digite sua dúvida acadêmica (ex: Como funciona a validação cruzada em Machine Learning?)"
+                      placeholder="Digite sua dúvida acadêmica (ex: Aprendemos linguagem de programação no curso de IA?)"
                       value={ragQuestion}
                       onChange={(e) => setRagQuestion(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleAskRAG()}
@@ -949,53 +1006,165 @@ export default function RepositorioPage() {
                       style={{
                         backgroundColor: 'var(--bg-muted)',
                         borderRadius: '12px',
-                        padding: '1.25rem',
+                        padding: '1.4rem',
                         border: '1px solid var(--border-light)',
+                        boxShadow: 'var(--shadow-sm)',
                       }}
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--accent-blue)', textTransform: 'uppercase' }}>
-                          Resposta Sintetizada via RAG
-                        </span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.65rem', borderBottom: '1px solid var(--border-light)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--accent-blue)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                            💡 Resposta Estruturada via RAG
+                          </span>
+                          <span className="badge badge-blue" style={{ fontSize: '0.68rem' }}>
+                            {ragResult.mode === 'LIVE_GEMINI_RAG' ? 'Gemini 2.5 Flash' : 'Motor Determinístico RAG'}
+                          </span>
+                        </div>
                         <button
                           onClick={() => setRagResult(null)}
-                          style={{ background: 'none', border: 'none', fontSize: '0.8rem', color: 'var(--text-muted)', cursor: 'pointer' }}
+                          style={{ background: 'none', border: 'none', fontSize: '0.825rem', color: 'var(--text-muted)', cursor: 'pointer', fontWeight: 600 }}
                         >
                           ✕ Fechar Resposta
                         </button>
                       </div>
-                      <p style={{ color: 'var(--text-main)', fontSize: '0.925rem', lineHeight: 1.6, whiteSpace: 'pre-wrap', margin: 0 }}>
-                        {ragResult.answer}
-                      </p>
 
+                      {/* Conteúdo Inteligível e Formatado */}
+                      <div style={{ margin: '0.25rem 0 1rem' }}>
+                        {renderRAGAnswer(ragResult.answer)}
+                      </div>
+
+                      {/* Materiais Didáticos Indicados (Acesso Direto com Botões Interativos) */}
                       {ragResult.sources && ragResult.sources.length > 0 && (
-                        <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-light)' }}>
-                          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
-                            Fontes Identificadas no Acervo:
+                        <div style={{ marginTop: '1.4rem', paddingTop: '1.1rem', borderTop: '1px solid var(--border-light)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.9rem', flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <span style={{ fontSize: '0.825rem', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.025em' }}>
+                                📚 Materiais e Recursos Didáticos Indicados (Acesso Direto):
+                              </span>
+                              <span className="badge badge-green" style={{ fontSize: '0.7rem' }}>
+                                {ragResult.sources.length} encontrado{ragResult.sources.length > 1 ? 's' : ''}
+                              </span>
+                            </div>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                              Clique nos botões abaixo para abrir diretamente os materiais no acervo
+                            </span>
                           </div>
-                          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                            {ragResult.sources.map((src, i) => (
-                              <a
-                                key={i}
-                                href={src.file_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{
-                                  fontSize: '0.75rem',
-                                  backgroundColor: 'var(--bg-primary)',
-                                  border: '1px solid var(--border-light)',
-                                  padding: '0.3rem 0.6rem',
-                                  borderRadius: '6px',
-                                  color: 'var(--accent-blue)',
-                                  textDecoration: 'none',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '0.3rem',
-                                }}
-                              >
-                                <span>{src.title} ({src.subject})</span>
-                              </a>
-                            ))}
+
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.9rem' }}>
+                            {ragResult.sources.map((src, i) => {
+                              const targetFileUrl = src.fileUrl || (src as any).file_url || '#';
+                              const targetGithubUrl = src.githubUrl || (src as any).github_url || null;
+                              const targetLinks = src.links || (src as any).links || [];
+
+                              return (
+                                <div
+                                  key={i}
+                                  style={{
+                                    backgroundColor: 'var(--bg-primary)',
+                                    border: '1px solid var(--border-light)',
+                                    borderRadius: '12px',
+                                    padding: '1rem',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    justifyContent: 'space-between',
+                                    gap: '0.85rem',
+                                    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                                    transition: 'all 0.15s ease',
+                                  }}
+                                >
+                                  <div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.45rem' }}>
+                                      <span className="badge badge-blue" style={{ fontSize: '0.68rem', fontWeight: 700 }}>
+                                        {src.course} • {src.semester}º Semestre
+                                      </span>
+                                      <span className="badge badge-green" style={{ fontSize: '0.68rem' }}>
+                                        {src.materialType}
+                                      </span>
+                                    </div>
+
+                                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)', lineHeight: 1.35, marginBottom: '0.35rem' }}>
+                                      {src.title}
+                                    </div>
+                                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                                      Disciplina: <strong style={{ color: 'var(--text-sub)' }}>{src.subject}</strong>
+                                    </div>
+                                  </div>
+
+                                  <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', paddingTop: '0.65rem', borderTop: '1px dashed var(--border-light)' }}>
+                                    {targetFileUrl && targetFileUrl !== '#' && (
+                                      <a
+                                        href={targetFileUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="btn btn-primary"
+                                        style={{
+                                          fontSize: '0.78rem',
+                                          padding: '0.45rem 0.85rem',
+                                          fontWeight: 700,
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '0.4rem',
+                                          textDecoration: 'none',
+                                          flex: '1 1 auto',
+                                          justifyContent: 'center',
+                                        }}
+                                      >
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                                          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                                        </svg>
+                                        Abrir Material
+                                      </a>
+                                    )}
+
+                                    {targetGithubUrl && (
+                                      <a
+                                        href={targetGithubUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="btn btn-secondary"
+                                        style={{
+                                          fontSize: '0.78rem',
+                                          padding: '0.45rem 0.75rem',
+                                          fontWeight: 600,
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '0.4rem',
+                                          textDecoration: 'none',
+                                        }}
+                                        title="Ver repositório no GitHub"
+                                      >
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                          <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+                                        </svg>
+                                        GitHub
+                                      </a>
+                                    )}
+
+                                    {Array.isArray(targetLinks) && targetLinks.map((link: any, lIdx: number) => (
+                                      <a
+                                        key={lIdx}
+                                        href={link.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="btn btn-secondary"
+                                        style={{
+                                          fontSize: '0.74rem',
+                                          padding: '0.4rem 0.65rem',
+                                          fontWeight: 600,
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '0.35rem',
+                                          textDecoration: 'none',
+                                        }}
+                                      >
+                                        🔗 {link.label || 'Link Oficial'}
+                                      </a>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       )}

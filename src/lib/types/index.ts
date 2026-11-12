@@ -308,6 +308,8 @@ export interface RAGSourceCitation {
   authorName?: string;
   relevanceScore: number;
   excerpt: string;
+  links?: Array<{ label: string; url: string }> | null;
+  attachments?: Array<{ title: string; url: string; type?: string }> | null;
 }
 
 export interface RAGQueryInput {

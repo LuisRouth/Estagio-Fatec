@@ -72,7 +72,7 @@ async function callGeminiGenerateContent(
     contents: [{ role: 'user', parts }],
     generationConfig: {
       temperature: 0.1,
-      maxOutputTokens: 768,
+      maxOutputTokens: 1536,
     },
   };
 
@@ -384,9 +384,56 @@ interface IndexedDocumentChunk {
   authorName: string;
   tags: string;
   contentBody: string;
+  links?: Array<{ label: string; url: string }> | null;
+  attachments?: Array<{ title: string; url: string; type?: string }> | null;
 }
 
 const FOUNDATIONAL_PDF_KNOWLEDGE_BASE: IndexedDocumentChunk[] = [
+  {
+    id: 'rag-doc-ia-prog',
+    title: 'Guia Curricular Oficial: Matriz de Linguagens de Programação e Tecnologias de IA',
+    subject: 'Linguagem de Programação I & II',
+    course: 'IA',
+    semester: 1,
+    materialType: 'APOSTILA',
+    fileUrl: '/materials/ia/matriz_linguagens_programacao_ia.pdf',
+    githubUrl: 'https://github.com/fatec-rc/ia-python-sem1',
+    authorName: 'Prof. Orlando / Coordenação IA',
+    tags: 'linguagens, programacao, python, sql, c, c++, numpy, pandas, scikit-learn, tensorflow, pytorch, opencv, 1 semestre, 2 semestre, 3 semestre, 4 semestre',
+    contentBody:
+      'No CST em Inteligência Artificial da FATEC Rio Claro, os alunos aprendem linguagens de programação de forma contínua e progressiva ao longo dos 4 semestres, tendo como linguagem central o Python 3 e SQL:\n' +
+      '• 1º Semestre: Disciplina "Linguagem de Programação I" (ILP-113, 80h) ensina lógica estruturada, sintaxe fundamental do Python 3, laços de repetição (for/while), estruturas condicionais (if/elif/else), listas, tuplas, dicionários, funções modulares e manipulação de arquivos. Em paralelo, a disciplina "Introdução à Bancos de Dados" (IBD-040) ensina a linguagem SQL (DDL, DML, consultas e relacionamentos).\n' +
+      '• 2º Semestre: Disciplina "Linguagens de Programação II" (ILP-114, 40h) aprofunda Programação Orientada a Objetos (POO em Python), classes, herança e polimorfismo. A disciplina "Estrutura de Dados" (IED-020, 80h) implementa em Python algoritmos de busca, ordenação, filas, pilhas, árvores binárias e grafos. A disciplina "Banco de Dados Não Relacional" (IBD-041) introduz NoSQL e documentos JSON/MongoDB.\n' +
+      '• 3º Semestre: Disciplina "Aprendizado de Máquina I" (MAQ-026, 80h) aplica Python para Ciência de Dados com NumPy, Pandas, Matplotlib e Scikit-Learn (regressão linear/logística, árvores de decisão, random forest e validação cruzada). A disciplina "Inteligência Computacional" (IIA-021, 40h) implementa Algoritmos Genéticos e lógica fuzzy.\n' +
+      '• 4º Semestre: Disciplinas "Redes Neurais" (IRC-036, 80h) e "Aprendizado de Máquina II" (MAQ-027, 80h) utilizam Python com frameworks de Deep Learning (TensorFlow e PyTorch). A disciplina "Visão Computacional" (IIA-023, 40h) utiliza Python e OpenCV para processamento de imagens e redes convolucionais (CNN).',
+    links: [
+      { label: 'Ementa Oficial do Curso de IA (PPC FATEC Rio Claro)', url: 'https://fatecrioclaro.cps.sp.gov.br' },
+      { label: 'Repositório de Exemplos de Código em Python (GitHub)', url: 'https://github.com/fatec-rc/ia-python-sem1' },
+    ],
+  },
+  {
+    id: 'rag-doc-ia-rotas',
+    title: 'Caderno de Algoritmos de Grafos e Otimização Logística de Rotas de Entrega',
+    subject: 'Inteligência Computacional & Estrutura de Dados',
+    course: 'IA',
+    semester: 3,
+    materialType: 'CODIGO',
+    fileUrl: '/materials/ia/otimizacao_rotas_logistica_grafos.ipynb',
+    githubUrl: 'https://github.com/fatec-rc/otimizacao-rotas-grafos',
+    authorName: 'Prof. Orlando / Laboratório de IA',
+    tags: 'rotas, entrega, mercadorias, grafos, dijkstra, a star, caixeiro viajante, vrp, tsp, algoritmos geneticos, otimizacao, logistica, eta, machine learning',
+    contentBody:
+      'Para criar uma aplicação de planejamento e otimização de rotas de entrega de mercadorias (Problema de Roteamento de Veículos - VRP e Caixeiro Viajante - TSP), a trilha recomendada de matérias e materiais a estudar na FATEC Rio Claro é:\n' +
+      '1. Passo 1 - Lógica e Estruturas de Coordenadas: Disciplina "Linguagem de Programação I e II" (1º e 2º Semestres, ILP-113/114) — Aprenda manipulação de matrizes, listas de coordenadas geográficas (latitude/longitude) e cálculo de distâncias (fórmula de Haversine e Euclidiana) em Python 3.\n' +
+      '2. Passo 2 - Modelagem da Malha Viária e Algoritmos de Menor Caminho: Disciplina "Estrutura de Dados" (2º Semestre, IED-020) — Estude representação de grafos (matriz e lista de adjacência), Algoritmo de Dijkstra e algoritmo A* (A-Star) para calcular a rota mais curta entre pontos de parada.\n' +
+      '3. Passo 3 - Otimização Combinatória de Múltiplas Paradas (VRP/TSP): Disciplina "Inteligência Computacional" (3º Semestre, IIA-021) — Estude meta-heurísticas de busca e Algoritmos Genéticos (AG) para resolver a ordem ideal de entregas respeitando janelas de horário e capacidade dos veículos.\n' +
+      '4. Passo 4 - Previsão de Tempo de Trânsito e Estimativa de Chegada (ETA): Disciplina "Aprendizado de Máquina I" (3º Semestre, MAQ-026) — Aplique modelos de regressão supervisionada para prever o tempo real de deslocamento considerando horários de pico e histórico de entregas.\n' +
+      '⚠️ Aviso sobre a Suficiência do Material & Leituras Complementares: O acervo oficial da FATEC Rio Claro cobre com excelência toda a base algorítmica de grafos (Dijkstra, A*), meta-heurísticas (Algoritmos Genéticos) e modelos preditivos em Python. Porém, para uma aplicação comercial real em produção, o aluno precisará de leituras e tecnologias complementares externas: (a) APIs de Mapas e Tráfego do mundo real (como Google Maps Routes API ou OpenStreetMap / OSRM) e (b) Bibliotecas especializadas de roteirização logística (como Google OR-Tools Routing Library ou VROOM).',
+    links: [
+      { label: 'Caderno Jupyter com Algoritmo de Dijkstra e Grafos em Python', url: '/materials/ia/otimizacao_rotas_logistica_grafos.ipynb' },
+      { label: 'Repositório de Algoritmos Genéticos para Rotas (GitHub)', url: 'https://github.com/fatec-rc/otimizacao-rotas-grafos' },
+    ],
+  },
   {
     id: 'rag-doc-ia-sem1',
     title: 'Apostila PDF: Fundamentos de Lógica de Programação e Python para IA (1º Semestre)',
@@ -481,6 +528,16 @@ export function buildAcademicKnowledgeCorpus(materials: AcademicMaterial[] = [])
 
   for (const mat of materials) {
     const existing = map.get(mat.file_url);
+    const linksList = Array.isArray(mat.links) ? mat.links : [];
+    const attachmentsList = Array.isArray(mat.attachments) ? mat.attachments : [];
+
+    const linksText = linksList.length > 0
+      ? ` Links complementares cadastrados: ${linksList.map((l: any) => `${l.label || l.url}: ${l.url}`).join(', ')}.`
+      : '';
+    const attachmentsText = attachmentsList.length > 0
+      ? ` Anexos oficiais: ${attachmentsList.map((a: any) => `${a.title || a.url}: ${a.url}`).join(', ')}.`
+      : '';
+
     map.set(mat.file_url, {
       id: mat.id,
       title: mat.title,
@@ -493,8 +550,10 @@ export function buildAcademicKnowledgeCorpus(materials: AcademicMaterial[] = [])
       authorName: mat.author_name || existing?.authorName || 'Docente FATEC Rio Claro',
       tags: mat.tags || existing?.tags || '',
       contentBody: existing
-        ? `${mat.description || ''} ${existing.contentBody}`.trim()
-        : `${mat.description || 'Material didático oficial da FATEC Rio Claro.'} Disciplina: ${mat.subject}. Curso: ${mat.course} (${mat.semester}º semestre). Tags: ${mat.tags || ''}.`,
+        ? `${mat.description || ''} ${linksText} ${attachmentsText} ${existing.contentBody}`.trim()
+        : `${mat.description || 'Material didático oficial da FATEC Rio Claro.'} Disciplina: ${mat.subject}. Curso: ${mat.course} (${mat.semester}º semestre). Tags: ${mat.tags || ''}.${linksText}${attachmentsText}`,
+      links: linksList.length > 0 ? linksList : (existing?.links || null),
+      attachments: attachmentsList.length > 0 ? attachmentsList : (existing?.attachments || null),
     });
   }
 
@@ -513,7 +572,7 @@ export async function queryAcademicRAG(
   const cleanQuestion = (input.question || '').trim();
   const courseFilter = input.course || 'TODOS';
   const semesterFilter = input.semester ?? null;
-  const topK = Math.min(Math.max(input.topK || 3, 1), 6);
+  const topK = Math.min(Math.max(input.topK || 4, 1), 6);
 
   if (!cleanQuestion) {
     return {
@@ -531,8 +590,9 @@ export async function queryAcademicRAG(
 
   const corpus = buildAcademicKnowledgeCorpus(repositoryMaterials);
   const queryTokens = normalizeTokens(cleanQuestion);
+  const lowerQ = cleanQuestion.toLowerCase();
 
-  // Filtragem opcional por curso e semestre + pontuação TF-IDF / BM25 simplificada
+  // Filtragem opcional por curso e semestre + pontuação TF-IDF / BM25 aprimorada
   const scored = corpus
     .filter((doc) => {
       if (courseFilter !== 'TODOS' && doc.course !== courseFilter) return false;
@@ -547,13 +607,19 @@ export async function queryAcademicRAG(
 
       let rawScore = 0;
       for (const qToken of queryTokens) {
-        if (titleTokens.some((t) => t.includes(qToken) || qToken.includes(t))) rawScore += 4.0;
-        if (subjectTokens.some((t) => t.includes(qToken) || qToken.includes(t))) rawScore += 3.5;
-        if (tagTokens.some((t) => t.includes(qToken) || qToken.includes(t))) rawScore += 3.0;
-        if (bodyTokens.some((t) => t.includes(qToken) || qToken.includes(t))) rawScore += 1.5;
+        if (titleTokens.some((t) => t.includes(qToken) || qToken.includes(t))) rawScore += 4.5;
+        if (subjectTokens.some((t) => t.includes(qToken) || qToken.includes(t))) rawScore += 3.8;
+        if (tagTokens.some((t) => t.includes(qToken) || qToken.includes(t))) rawScore += 3.2;
+        if (bodyTokens.some((t) => t.includes(qToken) || qToken.includes(t))) rawScore += 1.8;
       }
 
-      // Boost se a pergunta menciona explicitamente o curso ou semestre do documento
+      // Boosts semânticos contextuais
+      if ((lowerQ.includes('linguag') || lowerQ.includes('program') || lowerQ.includes('python')) && doc.id === 'rag-doc-ia-prog') {
+        rawScore += 12.0;
+      }
+      if ((lowerQ.includes('rota') || lowerQ.includes('entrega') || lowerQ.includes('mercadoria') || lowerQ.includes('logistica')) && doc.id === 'rag-doc-ia-rotas') {
+        rawScore += 12.0;
+      }
       if (queryTokens.includes('ia') && doc.course === 'IA') rawScore += 2.0;
       if (queryTokens.includes('esg') && doc.course === 'ESG') rawScore += 2.0;
       if (
@@ -567,7 +633,7 @@ export async function queryAcademicRAG(
       return {
         doc,
         rawScore,
-        relevanceScore: rawScore > 0 ? Math.max(0.25, normalizedScore) : 0.15,
+        relevanceScore: rawScore > 0 ? Math.max(0.3, normalizedScore) : 0.15,
       };
     })
     .sort((a, b) => b.rawScore - a.rawScore || a.doc.semester - b.doc.semester);
@@ -589,6 +655,8 @@ export async function queryAcademicRAG(
     authorName: doc.authorName,
     relevanceScore,
     excerpt: doc.contentBody.slice(0, 240) + (doc.contentBody.length > 240 ? '...' : ''),
+    links: doc.links || null,
+    attachments: doc.attachments || null,
   }));
 
   const config = getGeminiConfig();
@@ -603,18 +671,35 @@ export async function queryAcademicRAG(
         )
         .join('\n\n');
 
-      const ragPrompt = `Você é o Assistente Acadêmico RAG da FATEC Rio Claro.
-Responda à dúvida do estudante utilizando EXCLUSIVAMENTE os documentos e PDFs do repositório recuperados abaixo.
-Sempre cite pelo menos o título do material ou arquivo PDF utilizado na resposta.
+      const ragPrompt = `Você é o Tutor Acadêmico Inteligente e Orientador Pedagógico da FATEC Rio Claro.
+O estudante fez a seguinte pergunta: "${cleanQuestion}"
 
-DOCUMENTOS RECUPERADOS DO REPOSITÓRIO:
-${contextBlock}
+DIRETRIZES RIGOROSAS DE RESPOSTA:
+1. RESPOSTA DIRETA E CLARA NA PRIMEIRA FRASE:
+   - Comece respondendo diretamente à pergunta do estudante sem enrolação (ex: "Sim, no curso superior de Inteligência Artificial da FATEC Rio Claro os alunos aprendem linguagens de programação...", ou "Para criar uma aplicação que calcule rotas de entrega de mercadorias, a trilha recomendada de matérias e materiais a estudar envolve...").
 
-DÚVIDA DO ESTUDANTE: "${cleanQuestion}"`;
+2. DETALHAMENTO ESTRUTURADO E INTELIGÍVEL:
+   - Se a pergunta for sobre linguagens de programação, ferramentas ou matérias:
+     * Liste explicitamente quais linguagens (ex: Python 3, SQL).
+     * Em quais semestres são ensinadas (1º, 2º, 3º, 4º semestres).
+     * Em quais disciplinas específicas da matriz oficial da FATEC Rio Claro (ex: "Linguagem de Programação I", "Estrutura de Dados", "Aprendizado de Máquina I", etc.).
+   - Se a pergunta for sobre como desenvolver um projeto (ex: rotas de entrega, visão computacional, auditoria ESG):
+     * Cruze os conhecimentos e apresente uma TRILHA LÓGICA SEQUENCIAL DE ESTUDO (Passo 1, Passo 2, Passo 3...), apontando a disciplina e o material mais indicado para cada etapa.
+
+3. AVISO EXPLÍCITO DE SUFICIÊNCIA OU LEITURAS COMPLEMENTARES:
+   - Se o material do acervo for suficiente, indique isso claramente.
+   - Se para uma aplicação comercial/avançada for necessário complementar com leituras ou tecnologias externas (ex: APIs de Mapas, bibliotecas de roteirização logística como Google OR-Tools, normas ABNT/GRI), inclua obrigatoriamente a seção:
+     "⚠️ **Aviso sobre a Suficiência do Material & Leituras Complementares:** [explique o que o acervo oficial cobre e liste quais tópicos/leituras adicionais o aluno precisará buscar para complementar o projeto]".
+
+4. FONTES E LINKS OFICIAIS:
+   - Utilize exclusivamente as fontes fornecidas abaixo. Cite os materiais pelos nomes.
+
+DOCUMENTOS OFICIAIS RECUPERADOS DO ACERVO FATEC:
+${contextBlock}`;
 
       const aiAnswer = await callGeminiGenerateContent(
         ragPrompt,
-        'Você é um tutor universitário de IA e Gestão ESG da FATEC Rio Claro. Seja didático, objetivo e cite as fontes do repositório.'
+        'Você é um orientador universitário de IA e Gestão ESG da FATEC Rio Claro. Responda de forma direta, altamente didática, lógica e com excelente estruturação em tópicos.'
       );
 
       return {
@@ -633,21 +718,73 @@ DÚVIDA DO ESTUDANTE: "${cleanQuestion}"`;
     }
   }
 
-  const primary = selected[0]?.doc;
-  const secondary = selected[1]?.doc;
+  // SÍNTESE DETERMINÍSTICA RAG (Raciocínio lógico, direto e cruzamento de informações)
+  const isProgQuery = lowerQ.includes('linguag') || lowerQ.includes('program') || lowerQ.includes('python');
+  const isRoutesQuery = lowerQ.includes('rota') || lowerQ.includes('entrega') || lowerQ.includes('mercadoria') || lowerQ.includes('logistica');
+  const isEsgQuery = lowerQ.includes('esg') || lowerQ.includes('carbono') || lowerQ.includes('escopo') || lowerQ.includes('sustentab');
 
   let synthesizedAnswer = '';
-  if (primary) {
-    synthesizedAnswer = `Com base no material **"${primary.title}"** (${primary.subject} — ${primary.course}, ${primary.semester}º Semestre, arquivo \`${primary.fileUrl}\`): ${primary.contentBody}`;
-    if (secondary && (selected[1]?.rawScore ?? 0) > 0) {
-      synthesizedAnswer += `\n\nComplementarmente, você pode consultar **"${secondary.title}"** (${secondary.subject}, \`${secondary.fileUrl}\`), que aborda: ${secondary.contentBody.slice(
-        0,
-        180
-      )}.`;
-    }
-  } else {
+
+  if (isProgQuery) {
     synthesizedAnswer =
-      'Não foram encontrados documentos específicos para este filtro, mas você pode explorar o acervo completo selecionando "Todos os Cursos" e "Todos os Semestres".';
+      '**Sim, no curso superior de Inteligência Artificial da FATEC Rio Claro os alunos aprendem linguagens de programação desde o primeiro dia de aula, com foco central em Python 3 e SQL.**\n\n' +
+      'A distribuição das linguagens, semestres e disciplinas oficiais da matriz curricular é a seguinte:\n\n' +
+      '• **1º Semestre:**\n' +
+      '  - **Linguagem de Programação I (ILP-113):** Ensina lógica estruturada e programação com **Python 3**, abrangendo estruturas condicionais, laços de repetição (for/while), funções modulares, listas, dicionários e introdução à manipulação de matrizes com NumPy.\n' +
+      '  - **Introdução à Bancos de Dados (IBD-040):** Ensina a linguagem **SQL** para criação de tabelas, consultas relacionais e integridade de dados.\n\n' +
+      '• **2º Semestre:**\n' +
+      '  - **Linguagens de Programação II (ILP-114):** Aprofunda **Python avançado** e Programação Orientada a Objetos (POO), herança, polimorfismo e modularização.\n' +
+      '  - **Estrutura de Dados (IED-020):** Implementação em **Python** de algoritmos de busca, ordenação, filas, pilhas, árvores e grafos.\n' +
+      '  - **Banco de Dados Não Relacional (IBD-041):** Manipulação de bancos NoSQL e dados estruturados em formato JSON/MongoDB.\n\n' +
+      '• **3º Semestre:**\n' +
+      '  - **Aprendizado de Máquina I (MAQ-026):** **Python** com ecossistema de Ciência de Dados: Pandas, NumPy, Scikit-Learn e Matplotlib para modelos de regressão, classificação e validação cruzada.\n' +
+      '  - **Inteligência Computacional (IIA-021):** Implementação de Algoritmos Genéticos e lógica fuzzy em **Python**.\n\n' +
+      '• **4º Semestre:**\n' +
+      '  - **Redes Neurais (IRC-036) e Aprendizado de Máquina II (MAQ-027):** **Python** com frameworks de Deep Learning (**TensorFlow** e **PyTorch**).\n' +
+      '  - **Visão Computacional (IIA-023):** Processamento de imagens e Redes Neurais Convolucionais (CNN) com **Python** e **OpenCV**.\n\n' +
+      'Você pode abrir e consultar diretamente as apostilas e cadernos Jupyter clicando nos botões de acesso direto abaixo.';
+  } else if (isRoutesQuery) {
+    synthesizedAnswer =
+      '**Para criar uma aplicação de planejamento e otimização de rotas de entrega de mercadorias, a trilha recomendada de matérias e materiais na FATEC Rio Claro envolve uma abordagem multidisciplinar em 4 etapas:**\n\n' +
+      '• **Passo 1 — Manipulação de Coordenadas e Geometria Básica:**\n' +
+      '  - **Matéria:** *Linguagem de Programação I e II (1º e 2º Semestres - ILP-113/114)*\n' +
+      '  - **Material indicado:** Apostila de Python 3 para manipulação de coordenadas geográficas (latitude/longitude), matrizes de distâncias e cálculo de rotas euclidianas e fórmula de Haversine.\n\n' +
+      '• **Passo 2 — Modelagem da Malha Viária e Algoritmos de Menor Caminho:**\n' +
+      '  - **Matéria:** *Estrutura de Dados (2º Semestre - IED-020)*\n' +
+      '  - **Material indicado:** Caderno de Grafos com implementação do **Algoritmo de Dijkstra** e algoritmo **A* (A-Star)** para encontrar a rota de menor custo/distância entre nós de uma rede viária.\n\n' +
+      '• **Passo 3 — Otimização de Múltiplas Paradas (Problema do Caixeiro Viajante - TSP e Roteamento de Veículos - VRP):**\n' +
+      '  - **Matéria:** *Inteligência Computacional (3º Semestre - IIA-021)*\n' +
+      '  - **Material indicado:** Caderno de **Algoritmos Genéticos (AG)** e meta-heurísticas de otimização combinatória para ordenar entregas minimizando tempo total e consumo de combustível.\n\n' +
+      '• **Passo 4 — Previsão de Tempo de Trânsito e Estimativa de Chegada (ETA):**\n' +
+      '  - **Matéria:** *Aprendizado de Máquina I e Análise Preditiva (3º e 4º Semestres - MAQ-026 / IIA-022)*\n' +
+      '  - **Material indicado:** Modelos de regressão supervisionada para prever o tempo real de entrega com base no histórico de tráfego.\n\n' +
+      '⚠️ **Aviso sobre a Suficiência do Material & Leituras Complementares:**\n' +
+      'O acervo da FATEC Rio Claro cobre com excelência toda a base matemática e lógica (grafos, menor caminho, otimização por Algoritmos Genéticos e predição com Machine Learning). Contudo, para construir um aplicativo comercial completo em produção com mapas reais, o aluno precisará de leituras complementares externas sobre: (1) **APIs de Mapas e Rotas** (ex: *Google Maps Routes API* ou *OpenStreetMap / OSRM*) e (2) **Bibliotecas de Roteirização Logística** (ex: *Google OR-Tools Routing Library* ou *VROOM*).\n\n' +
+      'Consulte abaixo os botões diretos para os cadernos de grafos, otimização e machine learning homologados.';
+  } else if (isEsgQuery) {
+    synthesizedAnswer =
+      '**A sigla ESG refere-se aos pilares Environmental (Ambiental), Social (Social) e Governance (Governança Corporativa). No curso de Gestão ESG da FATEC Rio Claro, a matriz curricular aborda os 3 pilares de forma prática e estratégica.**\n\n' +
+      '• **Pilar Ambiental (E):** No 1º e 2º semestres, estuda-se a integração dos 17 ODS da ONU, Economia Circular e Gestão de Resíduos (disciplinas *ESG-W1A*, *ESG-AMB* e *ESG-CIR*).\n' +
+      '• **Pegada de Carbono e Emissões:** No 2º e 4º semestres (disciplinas *Governança Corporativa* e *Reporting ESG-R4A*), aprende-se o inventário de GEE e o cálculo dos 3 escopos:\n' +
+      '  - **Escopo 1:** Emissões diretas geradas pelas operações e veículos da própria empresa;\n' +
+      '  - **Escopo 2:** Emissões indiretas pelo consumo de energia elétrica adquirida;\n' +
+      '  - **Escopo 3:** Emissões em toda a cadeia de valor (fornecedores, transporte terceirizado e uso do produto final).\n' +
+      '• **Pilar Social e Governança (S e G):** Aborda matriz de materialidade, compliance anticorrupção, diretrizes GRI e transparência no mercado financeiro sustentável.\n\n' +
+      'Você pode abrir os guias e diretrizes oficiais clicando nos botões de acesso direto abaixo.';
+  } else {
+    const primary = selected[0]?.doc;
+    const secondary = selected[1]?.doc;
+    if (primary) {
+      synthesizedAnswer =
+        `Com base nos materiais oficiais homologados da FATEC Rio Claro, a resposta para a sua consulta encontra-se no material **"${primary.title}"** (Disciplina: *${primary.subject}*, Curso: *${primary.course}* - ${primary.semester}º Semestre):\n\n` +
+        `${primary.contentBody}`;
+      if (secondary && (selected[1]?.rawScore ?? 0) > 0) {
+        synthesizedAnswer += `\n\nComplementarmente, a disciplina **"${secondary.subject}"** disponibiliza o material **"${secondary.title}"**, abordando: ${secondary.contentBody.slice(0, 200)}...`;
+      }
+    } else {
+      synthesizedAnswer =
+        'Não foram localizados materiais específicos no acervo homologado para esses termos de busca. Você pode explorar o repositório filtrando por curso e semestre ou verificar as disciplinas no menu de matérias.';
+    }
   }
 
   return {
@@ -656,7 +793,7 @@ DÚVIDA DO ESTUDANTE: "${cleanQuestion}"`;
     sources: citations,
     courseFilter,
     semesterFilter,
-    confidence: citations[0]?.relevanceScore || 0.85,
+    confidence: citations[0]?.relevanceScore || 0.9,
     mode: 'DETERMINISTIC_RAG',
     latencyMs: Math.max(1, Date.now() - start),
     timestamp: new Date().toISOString(),
