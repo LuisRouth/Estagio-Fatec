@@ -16,10 +16,9 @@ export const LogoFatec: React.FC<LogoFatecProps> = ({
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: '1.25rem',
         userSelect: 'none',
       }}
-      className={className}
+      className={`logo-fatec-container ${className}`.trim()}
     >
       {/* Logomarca Oficial FATEC - Versão Clara (para fundo claro) */}
       <img
@@ -61,6 +60,7 @@ export const LogoFatec: React.FC<LogoFatecProps> = ({
           <img
             src="/brand/logo-cps.png"
             alt="Logotipo Oficial Centro Paula Souza"
+            className="logo-cps-img"
             style={{
               height: `${Math.round(height * 0.88)}px`,
               width: 'auto',

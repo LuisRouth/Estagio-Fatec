@@ -586,17 +586,59 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                         />
                       </div>
                     </button>
+
+                    {/* Sair da Sessão via Menu Dropdown (Excelente para Mobile e Acessibilidade) */}
+                    <div style={{ paddingTop: '0.35rem', marginTop: '0.2rem', borderTop: '1px solid', borderColor: highContrast ? '#334155' : 'var(--border-light)' }}>
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        disabled={loggingOut}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.65rem',
+                          width: '100%',
+                          padding: '0.6rem 0.75rem',
+                          borderRadius: '8px',
+                          border: 'none',
+                          backgroundColor: 'transparent',
+                          color: 'var(--accent-rose)',
+                          fontSize: '0.85rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          transition: 'background-color 0.15s ease',
+                        }}
+                        title="Encerrar sessão acadêmica"
+                      >
+                        <svg
+                          width="15"
+                          height="15"
+                          viewBox="0 0 16 16"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M6 2H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" />
+                          <path d="M11 11l3-3-3-3" />
+                          <path d="M14 8H6" />
+                        </svg>
+                        <span>{loggingOut ? 'Saindo da conta...' : 'Sair da Conta'}</span>
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
 
               {/* Contêiner isolado com overflow hidden APENAS para a corrida do botão Sair */}
-              <div style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', paddingRight: '2px' }}>
+              <div className="header-logout-container" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', paddingRight: '2px' }}>
                 <button
                   type="button"
                   onClick={handleLogout}
                   disabled={loggingOut}
-                  className="btn btn-secondary"
+                  className="btn btn-secondary header-logout-btn"
                   style={{
                     padding: '0.42rem 0.8rem',
                     fontSize: '0.8rem',
@@ -635,7 +677,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                     <path d="M11 11l3-3-3-3" />
                     <path d="M14 8H6" />
                   </svg>
-                  <span>{loggingOut ? 'Saindo...' : 'Sair'}</span>
+                  <span className="header-logout-text">{loggingOut ? 'Saindo...' : 'Sair'}</span>
                 </button>
               </div>
             </div>
