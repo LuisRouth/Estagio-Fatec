@@ -518,7 +518,7 @@ a.btn-secondary:hover:not(:disabled) {
   }
 }
 
-/* Header & Botão de Perfil Responsivo (Elimina sobreposição com logo no mobile) */
+/* Header & Botão de Perfil Responsivo (Harmoniza Fatec + CPS e Perfil no mobile sem sobreposição) */
 .app-header {
   padding: 0 1.5rem;
 }
@@ -529,6 +529,11 @@ a.btn-secondary:hover:not(:disabled) {
 
 .logo-fatec-container {
   gap: 1.25rem;
+  flex-shrink: 0;
+}
+
+.logo-cps-img {
+  flex-shrink: 0;
 }
 
 .user-profile-btn {
@@ -542,28 +547,34 @@ a.btn-secondary:hover:not(:disabled) {
   .app-header-left {
     gap: 0.5rem !important;
   }
-  .logo-cps-img,
-  .logo-fatec-divider {
-    display: none !important;
-  }
   .logo-fatec-container {
-    gap: 0 !important;
+    gap: 0.5rem !important;
   }
   .logo-fatec-light,
   .logo-fatec-dark {
-    height: 38px !important;
+    height: 32px !important;
+  }
+  .logo-fatec-divider {
+    display: block !important;
+    height: 20px !important;
+    margin: 0 0.1rem !important;
+  }
+  .logo-cps-img {
+    display: block !important;
+    height: 24px !important;
+    width: auto !important;
   }
   .header-logout-container {
     display: none !important;
   }
   .user-profile-btn {
     width: auto !important;
-    max-width: 165px !important;
+    max-width: 155px !important;
     padding: 0.3rem 0.5rem !important;
     gap: 0.35rem !important;
   }
   .user-profile-info {
-    max-width: 80px !important;
+    max-width: 75px !important;
   }
   .user-profile-role {
     display: none !important;
@@ -577,17 +588,27 @@ a.btn-secondary:hover:not(:disabled) {
   .app-header-left {
     gap: 0.35rem !important;
   }
+  .logo-fatec-container {
+    gap: 0.35rem !important;
+  }
   .logo-fatec-light,
   .logo-fatec-dark {
-    height: 32px !important;
+    height: 28px !important;
+  }
+  .logo-fatec-divider {
+    height: 18px !important;
+    margin: 0 !important;
+  }
+  .logo-cps-img {
+    height: 22px !important;
   }
   .user-profile-btn {
     width: auto !important;
-    max-width: 140px !important;
-    padding: 0.25rem 0.4rem !important;
+    max-width: 130px !important;
+    padding: 0.25rem 0.35rem !important;
   }
   .user-profile-info {
-    max-width: 65px !important;
+    max-width: 60px !important;
   }
 }
 
