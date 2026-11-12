@@ -1053,6 +1053,9 @@ export default function RepositorioPage() {
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '0.9rem' }}>
                             {ragResult.sources.map((src, i) => {
                               const targetFileUrl = src.fileUrl || (src as any).file_url || '#';
+                              const viewerUrl = targetFileUrl.startsWith('/materials/')
+                                ? targetFileUrl.replace(/\.(pdf|ipynb|html)$/i, '')
+                                : targetFileUrl;
                               const targetGithubUrl = src.githubUrl || (src as any).github_url || null;
                               const targetLinks = src.links || (src as any).links || [];
 
@@ -1091,9 +1094,9 @@ export default function RepositorioPage() {
                                   </div>
 
                                   <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', paddingTop: '0.65rem', borderTop: '1px dashed var(--border-light)' }}>
-                                    {targetFileUrl && targetFileUrl !== '#' && (
+                                    {viewerUrl && viewerUrl !== '#' && (
                                       <a
-                                        href={targetFileUrl}
+                                        href={viewerUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="btn btn-primary"
@@ -2051,7 +2054,7 @@ export default function RepositorioPage() {
                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
                           {m.file_url && m.file_url !== '#' && (
                             <a
-                              href={m.file_url}
+                              href={m.file_url.startsWith('/materials/') ? m.file_url.replace(/\.(pdf|ipynb|html)$/i, '') : m.file_url}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="btn btn-secondary"

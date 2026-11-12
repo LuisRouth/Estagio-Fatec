@@ -412,6 +412,34 @@ const FOUNDATIONAL_PDF_KNOWLEDGE_BASE: IndexedDocumentChunk[] = [
     ],
   },
   {
+    id: 'rag-doc-ia-db',
+    title: 'Guia Didático Oficial: Bancos de Dados Relacionais (SQL) e Não-Relacionais (NoSQL)',
+    subject: 'Introdução à Bancos de Dados & Banco de Dados Não Relacional',
+    course: 'IA',
+    semester: 1,
+    materialType: 'APOSTILA',
+    fileUrl: '/materials/ia/bancos_de_dados_sql_nosql_ibd040_ibd041.pdf',
+    githubUrl: 'https://github.com/fatec-rc/ia-bancos-de-dados',
+    authorName: 'Prof. Orlando / Coordenação de Bancos de Dados',
+    tags: 'banco de dados, bancos de dados, sql, nosql, postgresql, mysql, mongodb, ibd-040, ibd-041, bdn-009, relacional, modelagem, mer, ddl, dml, joins',
+    contentBody:
+      'Para estudar Banco de Dados no curso superior de Inteligência Artificial da FATEC Rio Claro, a matriz curricular oficial é composta pelas seguintes matérias e códigos:\n' +
+      '1. Matéria Oficial 1: "Introdução à Bancos de Dados" (Código: IBD-040, 1º Semestre, 40h) — Cobre Modelagem Conceitual e Lógica (Modelo Entidade-Relacionamento - MER), Álgebra Relacional, Normalização (1FN, 2FN, 3FN), Linguagem SQL ANSI padrão (PostgreSQL/MySQL), DDL (CREATE, ALTER, DROP), DML (INSERT, UPDATE, DELETE, SELECT), Chaves Primárias/Estrangeiras e junções relacionais (JOINs).\n' +
+      '2. Matéria Oficial 2: "Banco de Dados Não Relacional" (Código: IBD-041, 2º Semestre, 40h) — Cobre arquiteturas NoSQL, Teorema CAP, bancos orientados a documentos (MongoDB, coleções BSON/JSON), bancos chave-valor (Redis) e consultas agregadas.\n' +
+      '3. Matéria Oficial 3: "Bancos de Dados Analíticos & Data Warehousing" (Código: BDN-009, 3º Semestre, 40h) — Cobre modelagem dimensional (Star Schema / Snowflake), pipelines ETL/ELT e Data Lakes.\n\n' +
+      'Materiais Didáticos Anexados para Estudo:\n' +
+      '• Apostila Didática PDF: "Guia Curricular de Bancos de Dados Relacionais (SQL) e Não-Relacionais (NoSQL)" (Arquivo: /materials/ia/bancos_de_dados_sql_nosql_ibd040_ibd041.pdf).\n' +
+      '• Repositório de scripts DDL/DML e exemplos práticos de modelagem no GitHub (https://github.com/fatec-rc/ia-bancos-de-dados).\n\n' +
+      'Aplicações Práticas em Projetos e Trabalhos da Vitrine Acadêmica:\n' +
+      'Após o aprendizado teórico e prático nas matérias IBD-040 e IBD-041, o conteúdo de banco de dados é diretamente aplicado nos seguintes projetos do curso:\n' +
+      '• Projeto "DWH Saúde RC — Data Warehouse e Analytics em Saúde Coletiva" (Vitrine de Projetos): Utiliza PostgreSQL para estruturar dados públicos do DATASUS com modelagem dimensional e consultas analíticas.\n' +
+      '• Sistema "Portal Integrado e Cantina Discente FATEC Rio Claro": Utiliza banco de dados relacional PostgreSQL em produção no Supabase, com tabelas relacionais, integridade referencial, triggers de auditoria e índices B-Tree.',
+    links: [
+      { label: 'Apostila Oficial de Bancos de Dados (SQL e NoSQL - IBD-040 / IBD-041)', url: '/materials/ia/bancos_de_dados_sql_nosql_ibd040_ibd041.pdf' },
+      { label: 'Projeto DWH Saúde RC na Vitrine de Projetos', url: 'https://github.com/MateusIoga/DWH-Saude-RC' },
+    ],
+  },
+  {
     id: 'rag-doc-ia-rotas',
     title: 'Caderno de Algoritmos de Grafos e Otimização Logística de Rotas de Entrega',
     subject: 'Inteligência Computacional & Estrutura de Dados',
@@ -617,6 +645,9 @@ export async function queryAcademicRAG(
       if ((lowerQ.includes('linguag') || lowerQ.includes('program') || lowerQ.includes('python')) && doc.id === 'rag-doc-ia-prog') {
         rawScore += 12.0;
       }
+      if ((lowerQ.includes('banco') || lowerQ.includes('sql') || lowerQ.includes('nosql') || lowerQ.includes('ibd-040') || lowerQ.includes('ibd-041')) && doc.id === 'rag-doc-ia-db') {
+        rawScore += 18.0;
+      }
       if ((lowerQ.includes('rota') || lowerQ.includes('entrega') || lowerQ.includes('mercadoria') || lowerQ.includes('logistica')) && doc.id === 'rag-doc-ia-rotas') {
         rawScore += 12.0;
       }
@@ -679,6 +710,10 @@ DIRETRIZES RIGOROSAS DE RESPOSTA:
    - Comece respondendo diretamente à pergunta do estudante sem enrolação (ex: "Sim, no curso superior de Inteligência Artificial da FATEC Rio Claro os alunos aprendem linguagens de programação...", ou "Para criar uma aplicação que calcule rotas de entrega de mercadorias, a trilha recomendada de matérias e materiais a estudar envolve...").
 
 2. DETALHAMENTO ESTRUTURADO E INTELIGÍVEL:
+   - Se a pergunta for sobre "onde estudar banco de dados", SQL, NoSQL ou temas correlatos:
+     * Indique PRIMEIRO, de forma objetiva, as matérias oficiais com seus respectivos códigos da matriz curricular (ex: "Introdução à Bancos de Dados" - Código IBD-040 no 1º semestre, "Banco de Dados Não Relacional" - Código IBD-041 no 2º semestre e "Bancos de Dados Analíticos & Data Warehousing" - Código BDN-009 no 3º semestre).
+     * Indique os materiais didáticos anexados disponíveis no acervo para o estudo específico dessas disciplinas.
+     * Somente DEPOIS, faça referência em quais projetos práticos, TCCs ou trabalhos da Vitrine foi usado o conteúdo da matéria (ex: Projeto "DWH Saúde RC" e o banco de dados PostgreSQL do Portal/Cantina).
    - Se a pergunta for sobre linguagens de programação, ferramentas ou matérias:
      * Liste explicitamente quais linguagens (ex: Python 3, SQL).
      * Em quais semestres são ensinadas (1º, 2º, 3º, 4º semestres).
@@ -719,13 +754,39 @@ ${contextBlock}`;
   }
 
   // SÍNTESE DETERMINÍSTICA RAG (Raciocínio lógico, direto e cruzamento de informações)
+  const isDbQuery =
+    lowerQ.includes('banco de dados') ||
+    lowerQ.includes('bancos de dados') ||
+    (lowerQ.includes('banco') && lowerQ.includes('dados')) ||
+    lowerQ.includes('estudar sql') ||
+    lowerQ.includes('estudar nosql') ||
+    lowerQ.includes('ibd-040') ||
+    lowerQ.includes('ibd-041');
   const isProgQuery = lowerQ.includes('linguag') || lowerQ.includes('program') || lowerQ.includes('python');
   const isRoutesQuery = lowerQ.includes('rota') || lowerQ.includes('entrega') || lowerQ.includes('mercadoria') || lowerQ.includes('logistica');
   const isEsgQuery = lowerQ.includes('esg') || lowerQ.includes('carbono') || lowerQ.includes('escopo') || lowerQ.includes('sustentab');
 
   let synthesizedAnswer = '';
 
-  if (isProgQuery) {
+  if (isDbQuery) {
+    synthesizedAnswer =
+      '**Para estudar Banco de Dados no curso superior de Inteligência Artificial da FATEC Rio Claro, você deve cursar primeiramente as matérias específicas da matriz curricular oficial:**\n\n' +
+      '• **1. Matérias Oficiais e Códigos Curriculares:**\n' +
+      '  - **Introdução à Bancos de Dados (Código: IBD-040 — 1º Semestre, 40h):**\n' +
+      '    Ensina a base teórica e prática dos Bancos de Dados Relacionais, incluindo Modelagem Conceitual e Lógica (MER), Álgebra Relacional, Normalização (1FN, 2FN, 3FN) e a linguagem **SQL** padrão ANSI (DDL: `CREATE`, `ALTER`, `DROP`; DML: `SELECT`, `INSERT`, `UPDATE`, `DELETE`; e junções `JOIN`).\n' +
+      '  - **Banco de Dados Não Relacional (Código: IBD-041 — 2º Semestre, 40h):**\n' +
+      '    Aprofunda as tecnologias **NoSQL**, Teorema CAP, bancos orientados a documentos (**MongoDB** / BSON), bancos chave-valor (**Redis**) e bancos colunares/grafos.\n' +
+      '  - **Bancos de Dados Analíticos & Data Warehousing (Código: BDN-009 — 3º Semestre, 40h):**\n' +
+      '    Modelagem multidimensional (Star Schema / Snowflake), pipelines ETL/ELT e arquiteturas analíticas de Big Data.\n\n' +
+      '• **2. Materiais Didáticos Anexados para Estudo:**\n' +
+      '  - **Apostila Didática PDF:** *"Guia Curricular de Bancos de Dados Relacionais (SQL) e Não-Relacionais (NoSQL)"* (acesso direto no acervo: `/materials/ia/bancos_de_dados_sql_nosql_ibd040_ibd041.pdf`).\n' +
+      '  - **Repositório de Scripts e Modelagem:** Repositório com exemplos de scripts DDL/DML e consultas SQL práticas no GitHub (https://github.com/fatec-rc/ia-bancos-de-dados).\n\n' +
+      '• **3. Aplicação Prática em Projetos e Trabalhos Acadêmicos:**\n' +
+      '  Após adquirir a fundamentação teórica nas matérias IBD-040 e IBD-041, o conhecimento de bancos de dados é exercitado nos seguintes projetos reais do curso:\n' +
+      '  - **DWH Saúde RC — Data Warehouse e Analytics em Saúde Coletiva (Vitrine de Projetos):** Projeto interdisciplinar que modela dados abertos do DATASUS em PostgreSQL utilizando tabelas fato e dimensão com dashboards analíticos.\n' +
+      '  - **Portal Integrado e Cantina Discente FATEC Rio Claro:** Aplicação em produção utilizando banco de dados relacional **PostgreSQL** no Supabase com modelagem relacional, constraints de integridade, triggers de auditoria e índices B-Tree de alta performance.\n\n' +
+      'Clique nos botões de acesso direto abaixo para abrir a apostila oficial de Banco de Dados ou visualizar os projetos aplicados no acervo.';
+  } else if (isProgQuery) {
     synthesizedAnswer =
       '**Sim, no curso superior de Inteligência Artificial da FATEC Rio Claro os alunos aprendem linguagens de programação desde o primeiro dia de aula, com foco central em Python 3 e SQL.**\n\n' +
       'A distribuição das linguagens, semestres e disciplinas oficiais da matriz curricular é a seguinte:\n\n' +
