@@ -258,6 +258,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       <EcoTechBackground />
       {/* Header Institucional Fixo no Topo Absoluto (Sem faixas extras sobrepondo) */}
       <header
+        className="app-header"
         style={{
           height: 'var(--header-height)',
           backgroundColor: highContrast ? '#0f172a' : '#ffffff',
@@ -270,11 +271,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '0 1.5rem',
           boxShadow: 'var(--shadow-sm)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+        <div className="app-header-left" style={{ display: 'flex', alignItems: 'center' }}>
           {/* Botão Menu Hambúrguer (Mobile) */}
           <button
             onClick={() => setMobileMenuOpen(true)}
@@ -295,7 +295,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
             ☰
           </button>
 
-          <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+          <Link href="/" className="app-header-logo" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
             <LogoFatec height={48} />
           </Link>
         </div>
@@ -308,12 +308,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
               <div ref={userMenuRef} style={{ position: 'relative' }}>
                 <button
                   type="button"
+                  className="user-profile-btn"
                   onClick={() => setUserMenuOpen((prev) => !prev)}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    width: '260px',
                     background: userMenuOpen ? 'rgba(2, 132, 199, 0.08)' : 'transparent',
                     border: '1px solid',
                     borderColor: userMenuOpen ? 'var(--accent-blue)' : (highContrast ? '#334155' : 'var(--border-light)'),
@@ -348,11 +348,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                       {displayName.charAt(0).toUpperCase()}
                     </div>
 
-                    <div style={{ textAlign: 'left', minWidth: 0 }}>
+                    <div className="user-profile-info" style={{ textAlign: 'left', minWidth: 0 }}>
                       <div style={{ fontSize: '0.85rem', fontWeight: 700, color: highContrast ? '#f8fafc' : 'var(--text-main)', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {displayName}
                       </div>
-                      <div style={{ fontSize: '0.725rem', color: 'var(--accent-emerald)', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                      <div className="user-profile-role" style={{ fontSize: '0.725rem', color: 'var(--accent-emerald)', fontWeight: 600, whiteSpace: 'nowrap' }}>
                         {displayRole || 'Discente'}
                       </div>
                     </div>
@@ -450,8 +450,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                     style={{
                       position: 'absolute',
                       top: 'calc(100% + 6px)',
-                      left: 0,
+                      right: 0,
                       width: '260px',
+                      maxWidth: 'calc(100vw - 24px)',
                       backgroundColor: highContrast ? '#1e293b' : '#ffffff',
                       borderRadius: '12px',
                       border: '1px solid',

@@ -402,18 +402,28 @@ export default function RepositorioPage() {
     setRagResult(null);
 
     try {
-      const res = await fetch('/api/materials/rag', {
+      const res = await fetch('/api/ai/rag', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question: q,
           course: selectedCourse === 'TODOS' ? undefined : selectedCourse,
-          semester: selectedSemester === 'TODOS' ? undefined : selectedSemester,
+          semester: selectedSemester === 'TODOS' ? undefined : Number(selectedSemester),
         }),
       });
 
-      const data = await res.json();
-      if (data.success) {
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error(
+          res.status === 404
+            ? 'Endpoint do Assistente IA não localizado (404).'
+            : `Resposta inválida do servidor (HTTP ${res.status}).`
+        );
+      }
+
+      if (res.ok && data.success) {
         setRagResult(data.data);
       } else {
         setRagError(data.error || 'Não foi possível encontrar respostas no acervo.');
@@ -551,6 +561,17 @@ export default function RepositorioPage() {
       if (res.ok) {
         setPendingMaterials((prev) => prev.filter((m) => m.id !== mat.id));
         fetchMaterials();
+      } else {
+        // Fallback de compatibilidade: PUT /api/materials/[id]
+        const fallback = await fetch(`/api/materials/${mat.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ is_approved: true }),
+        });
+        if (fallback.ok) {
+          setPendingMaterials((prev) => prev.filter((m) => m.id !== mat.id));
+          fetchMaterials();
+        }
       }
     } catch (err) {
       console.error('Erro ao aprovar material:', err);

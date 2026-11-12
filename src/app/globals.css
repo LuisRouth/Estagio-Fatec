@@ -518,6 +518,63 @@ a.btn-secondary:hover:not(:disabled) {
   }
 }
 
+/* Header & Botão de Perfil Responsivo (Elimina sobreposição com logo no mobile) */
+.app-header {
+  padding: 0 1.5rem;
+}
+
+.app-header-left {
+  gap: 1.25rem;
+}
+
+.user-profile-btn {
+  width: 260px;
+}
+
+@media (max-width: 768px) {
+  .app-header {
+    padding: 0 0.75rem !important;
+  }
+  .app-header-left {
+    gap: 0.65rem !important;
+  }
+  .app-header-logo svg {
+    max-height: 40px !important;
+  }
+  .user-profile-btn {
+    width: auto !important;
+    max-width: 175px !important;
+    padding: 0.3rem 0.5rem !important;
+    gap: 0.35rem !important;
+  }
+  .user-profile-info {
+    max-width: 85px !important;
+  }
+  .user-profile-role {
+    display: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-header {
+    padding: 0 0.5rem !important;
+  }
+  .app-header-left {
+    gap: 0.4rem !important;
+  }
+  .app-header-logo svg {
+    max-height: 34px !important;
+  }
+  .user-profile-btn {
+    width: auto !important;
+    max-width: 145px !important;
+    padding: 0.25rem 0.4rem !important;
+  }
+  .user-profile-info {
+    max-width: 65px !important;
+  }
+}
+
 
 /* Prevenção de overflow horizontal */
 html,
