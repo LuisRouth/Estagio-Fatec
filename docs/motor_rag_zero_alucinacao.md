@@ -52,3 +52,4 @@ pergunta
 ## 5. Como melhorar as respostas (sem arriscar alucinação)
 
 O assistente é tão detalhado quanto o acervo. Para respostas mais ricas, **docentes devem cadastrar o plano de ensino / apostila de cada disciplina** no Repositório Acadêmico, informando corretamente *Disciplina*, *Curso* e *Semestre*. O motor passa a citar esse material automaticamente, com descrição e links reais.
+
