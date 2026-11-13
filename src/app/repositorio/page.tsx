@@ -206,6 +206,60 @@ export default function RepositorioPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<AcademicMaterial | null>(null);
   const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<AcademicMaterial | null>(null);
+  const [unavailableMaterialModal, setUnavailableMaterialModal] = useState<{
+    title: string;
+    subject: string;
+    course: string;
+    semester: number;
+    materialType: string;
+    fileUrl: string;
+    githubUrl?: string | null;
+    description?: string | null;
+    authorName?: string | null;
+  } | null>(null);
+  const [checkingMaterialUrl, setCheckingMaterialUrl] = useState<string | null>(null);
+
+  const handleOpenMaterial = async (
+    rawUrl: string,
+    info: {
+      title: string;
+      subject: string;
+      course: string;
+      semester: number;
+      materialType: string;
+      githubUrl?: string | null;
+      description?: string | null;
+      authorName?: string | null;
+    }
+  ) => {
+    if (!rawUrl || rawUrl === '#') return;
+    const targetUrl = rawUrl.startsWith('/materials/')
+      ? rawUrl.replace(/\.(pdf|ipynb|html)$/i, '')
+      : rawUrl;
+
+    if (targetUrl.startsWith('/uploads/')) {
+      setCheckingMaterialUrl(targetUrl);
+      try {
+        const res = await fetch(targetUrl, { method: 'HEAD' });
+        if (res.ok) {
+          window.open(targetUrl, '_blank', 'noopener,noreferrer');
+          return;
+        }
+      } catch {
+        // Arquivo indisponível no servidor -> exibe aviso informativo sem redirecionar para 404
+      } finally {
+        setCheckingMaterialUrl(null);
+      }
+
+      setUnavailableMaterialModal({
+        ...info,
+        fileUrl: rawUrl,
+      });
+      return;
+    }
+
+    window.open(targetUrl, '_blank', 'noopener,noreferrer');
+  };
 
   // Form State Dinâmico
   const [formTitle, setFormTitle] = useState('');
@@ -991,10 +1045,20 @@ export default function RepositorioPage() {
 
                                   <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', paddingTop: '0.65rem', borderTop: '1px dashed var(--border-light)' }}>
                                     {viewerUrl && viewerUrl !== '#' && (
-                                      <a
-                                        href={viewerUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
+                                      <button
+                                        type="button"
+                                        disabled={checkingMaterialUrl === viewerUrl}
+                                        onClick={() =>
+                                          handleOpenMaterial(targetFileUrl, {
+                                            title: src.title,
+                                            subject: src.subject,
+                                            course: src.course,
+                                            semester: src.semester,
+                                            materialType: src.materialType,
+                                            githubUrl: targetGithubUrl,
+                                            description: (src as any).excerpt || null,
+                                          })
+                                        }
                                         className="btn btn-primary"
                                         style={{
                                           fontSize: '0.78rem',
@@ -1012,8 +1076,8 @@ export default function RepositorioPage() {
                                           <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
                                           <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
                                         </svg>
-                                        Abrir Material
-                                      </a>
+                                        {checkingMaterialUrl === viewerUrl ? 'Verificando...' : 'Abrir Material'}
+                                      </button>
                                     )}
 
                                     {targetGithubUrl && (
@@ -1949,15 +2013,26 @@ export default function RepositorioPage() {
                         {/* Botões de Ação */}
                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
                           {m.file_url && m.file_url !== '#' && (
-                            <a
-                              href={m.file_url.startsWith('/materials/') ? m.file_url.replace(/\.(pdf|ipynb|html)$/i, '') : m.file_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <button
+                              type="button"
+                              disabled={checkingMaterialUrl === m.file_url}
+                              onClick={() =>
+                                handleOpenMaterial(m.file_url, {
+                                  title: m.title,
+                                  subject: m.subject,
+                                  course: m.course,
+                                  semester: m.semester,
+                                  materialType: m.material_type,
+                                  githubUrl: m.github_url,
+                                  description: m.description,
+                                  authorName: m.author_name,
+                                })
+                              }
                               className="btn btn-secondary"
                               style={{ flex: 1, padding: '0.45rem 0.75rem', fontSize: '0.8rem', fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}
                             >
-                              Acessar Arquivo
-                            </a>
+                              {checkingMaterialUrl === m.file_url ? 'Verificando...' : 'Acessar Arquivo'}
+                            </button>
                           )}
                           {m.github_url && (
                             <a
@@ -2541,6 +2616,110 @@ export default function RepositorioPage() {
                   style={{ fontWeight: 700, padding: '0.6rem 1.25rem' }}
                 >
                   Sim, Excluir
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* MODAL: ARQUIVO FÍSICO AINDA NÃO DISPONÍVEL EM STORAGE          */}
+        {/* ============================================================== */}
+        {unavailableMaterialModal && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.7)',
+              backdropFilter: 'blur(4px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999,
+              padding: '1rem',
+            }}
+          >
+            <div
+              style={{
+                backgroundColor: 'var(--bg-primary)',
+                borderRadius: '16px',
+                border: '1px solid var(--border-light)',
+                maxWidth: '520px',
+                width: '100%',
+                padding: '1.75rem',
+                boxShadow: 'var(--shadow-lg)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+                <span className="badge badge-blue" style={{ fontSize: '0.72rem', fontWeight: 700 }}>
+                  {unavailableMaterialModal.course} • {unavailableMaterialModal.semester}º Semestre
+                </span>
+                <span className="badge badge-amber" style={{ fontSize: '0.72rem', fontWeight: 700 }}>
+                  {unavailableMaterialModal.materialType}
+                </span>
+              </div>
+
+              <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', margin: 0, lineHeight: 1.35 }}>
+                {unavailableMaterialModal.title}
+              </h4>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', margin: '0.35rem 0 1rem' }}>
+                Disciplina: <strong style={{ color: 'var(--text-sub)' }}>{unavailableMaterialModal.subject}</strong>
+              </p>
+
+              {unavailableMaterialModal.description && (
+                <div
+                  style={{
+                    backgroundColor: 'var(--bg-muted)',
+                    border: '1px solid var(--border-light)',
+                    borderRadius: '10px',
+                    padding: '0.85rem 1rem',
+                    fontSize: '0.85rem',
+                    color: 'var(--text-main)',
+                    lineHeight: 1.5,
+                    marginBottom: '1rem',
+                  }}
+                >
+                  {unavailableMaterialModal.description}
+                </div>
+              )}
+
+              <div
+                style={{
+                  backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                  border: '1px solid rgba(245, 158, 11, 0.35)',
+                  borderRadius: '10px',
+                  padding: '0.9rem 1rem',
+                  fontSize: '0.83rem',
+                  color: 'var(--text-main)',
+                  lineHeight: 1.5,
+                  marginBottom: '1.25rem',
+                }}
+              >
+                <strong>Arquivo ainda não disponível no servidor:</strong> este material está catalogado no repositório, mas o arquivo físico (<code>{unavailableMaterialModal.fileUrl}</code>) ainda não foi enviado para o armazenamento em nuvem. Solicite ao docente o upload atualizado ou um link externo válido (Google Drive / GitHub).
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                {unavailableMaterialModal.githubUrl && (
+                  <a
+                    href={unavailableMaterialModal.githubUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-secondary"
+                    style={{ fontWeight: 700, padding: '0.6rem 1.1rem', textDecoration: 'none' }}
+                  >
+                    Abrir GitHub ↗
+                  </a>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setUnavailableMaterialModal(null)}
+                  className="btn btn-primary"
+                  style={{ fontWeight: 700, padding: '0.6rem 1.25rem' }}
+                >
+                  Entendi
                 </button>
               </div>
             </div>

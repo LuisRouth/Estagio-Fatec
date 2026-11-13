@@ -113,15 +113,102 @@ export async function POST(req: NextRequest) {
     const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const finalFileName = `${safeBaseName}_${uniqueSuffix}${ext}`;
 
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'materials');
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
+    const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/+$/, '');
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+    const isRealSupabase =
+      supabaseUrl.startsWith('https://') &&
+      !supabaseUrl.includes('[PROJECT-REF]') &&
+      supabaseServiceKey.length > 20 &&
+      !supabaseServiceKey.includes('sua_chave');
+
+    let fileUrl = '';
+    let storageProvider: 'supabase' | 'local' = 'local';
+
+    if (isRealSupabase) {
+      const bucket = 'materials';
+      const contentTypeMap: Record<string, string> = {
+        '.pdf': 'application/pdf',
+        '.ipynb': 'application/x-ipynb+json',
+        '.zip': 'application/zip',
+        '.py': 'text/x-python',
+        '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        '.csv': 'text/csv',
+        '.json': 'application/json',
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+      };
+
+      const uploadEndpoint = `${supabaseUrl}/storage/v1/object/${bucket}/${finalFileName}`;
+      const uploadBody = new Uint8Array(buffer);
+      let storageRes = await fetch(uploadEndpoint, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${supabaseServiceKey}`,
+          apikey: supabaseServiceKey,
+          'Content-Type': contentTypeMap[ext] || 'application/octet-stream',
+          'x-upsert': 'true',
+        },
+        body: uploadBody,
+      });
+
+      // Se o bucket ainda não existir, cria automaticamente como público e tenta novamente
+      if (storageRes.status === 404 || storageRes.status === 400) {
+        await fetch(`${supabaseUrl}/storage/v1/bucket`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${supabaseServiceKey}`,
+            apikey: supabaseServiceKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ id: bucket, name: bucket, public: true }),
+        });
+
+        storageRes = await fetch(uploadEndpoint, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${supabaseServiceKey}`,
+            apikey: supabaseServiceKey,
+            'Content-Type': contentTypeMap[ext] || 'application/octet-stream',
+            'x-upsert': 'true',
+          },
+          body: uploadBody,
+        });
+      }
+
+      if (!storageRes.ok) {
+        const errText = await storageRes.text().catch(() => '');
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Falha ao enviar arquivo para o Supabase Storage (HTTP ${storageRes.status}). ${errText}`.trim(),
+          },
+          { status: 502, headers: SECURITY_HEADERS }
+        );
+      }
+
+      fileUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${finalFileName}`;
+      storageProvider = 'supabase';
+    } else if (process.env.VERCEL === '1') {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'Armazenamento em nuvem não configurado no servidor. Configure SUPABASE_SERVICE_ROLE_KEY na Vercel ou informe uma URL externa válida.',
+        },
+        { status: 503, headers: SECURITY_HEADERS }
+      );
+    } else {
+      const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'materials');
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+
+      const filePath = path.join(uploadsDir, finalFileName);
+      fs.writeFileSync(filePath, buffer);
+      fileUrl = `/uploads/materials/${finalFileName}`;
     }
-
-    const filePath = path.join(uploadsDir, finalFileName);
-    fs.writeFileSync(filePath, buffer);
-
-    const fileUrl = `/uploads/materials/${finalFileName}`;
 
     return NextResponse.json(
       {
@@ -133,6 +220,7 @@ export async function POST(req: NextRequest) {
           originalName: fileName,
           sizeBytes: buffer.length,
           extension: ext,
+          storageProvider,
         },
       },
       { status: 201, headers: SECURITY_HEADERS }
