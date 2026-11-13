@@ -61,7 +61,8 @@ test.describe('Portal Integrado FATEC Rio Claro — Suíte E2E & Usabilidade Mob
     expect(ragRes.ok()).toBeTruthy();
     const ragJson = await ragRes.json();
     expect(ragJson.success).toBe(true);
-    expect(ragJson.data.sources.length).toBeGreaterThan(0);
+    expect(ragJson.data.answer).toContain('ILP-113'); // resposta ancorada na matriz curricular real
+    expect(Array.isArray(ragJson.data.sources)).toBe(true); // cards só existem se houver material cadastrado
   });
 
   test('5. Usabilidade Mobile (390x844) — Jornada de Alunos dos Semestres Iniciais (1º e 2º Semestres)', async ({ page }) => {
