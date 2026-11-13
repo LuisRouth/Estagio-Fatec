@@ -2159,7 +2159,7 @@ export const db = {
       let pIdx = 1;
 
       Object.entries(data).forEach(([key, val]) => {
-        if (key !== 'id' && key !== 'created_at' && val !== undefined) {
+        if (key !== 'id' && key !== 'created_at' && key !== 'updated_at' && val !== undefined) {
           fields.push(`${key} = $${pIdx++}`);
           if (key === 'links' || key === 'attachments') {
             values.push(JSON.stringify(Array.isArray(val) ? val : []));
@@ -2168,7 +2168,12 @@ export const db = {
           }
         }
       });
-      fields.push(`updated_at = CURRENT_TIMESTAMP`);
+
+      if (fields.length === 0) {
+        const existing = await pool.query('SELECT * FROM academic_materials WHERE id = $1 LIMIT 1', [id]);
+        return existing.rows[0] || null;
+      }
+
       values.push(id);
 
       const res = await pool.query(`UPDATE academic_materials SET ${fields.join(', ')} WHERE id = $${pIdx} RETURNING *`, values);

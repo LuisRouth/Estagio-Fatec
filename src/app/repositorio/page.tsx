@@ -2648,6 +2648,12 @@ export default function RepositorioPage() {
                   />
                 </div>
 
+                {formError && (
+                  <div className="alert-box alert-error" style={{ marginTop: '0.5rem' }}>
+                    <div>{formError}</div>
+                  </div>
+                )}
+
                 {/* Ações do Formulário */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
                   <button
