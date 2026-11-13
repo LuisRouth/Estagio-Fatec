@@ -440,6 +440,35 @@ const FOUNDATIONAL_PDF_KNOWLEDGE_BASE: IndexedDocumentChunk[] = [
     ],
   },
   {
+    id: 'rag-doc-ia-math',
+    title: 'Guia Curricular Oficial: Fundamentos de Matemática, Cálculo e Álgebra Linear para IA',
+    subject: 'Cálculo Diferencial e Integral & Álgebra Linear',
+    course: 'IA',
+    semester: 1,
+    materialType: 'APOSTILA',
+    fileUrl: '/materials/ia/matematica_calculo_algebra_linear_ia.pdf',
+    githubUrl: 'https://github.com/fatec-rc/ia-matematica-aplicada',
+    authorName: 'Prof. Orlando / Departamento de Matemática e IA',
+    tags: 'matematica, calculo, algebra, algebra linear, estatistica, probabilidade, discreta, matrizes, vetores, derivadas, integrais, otimizacao, gradient descent, tensores, icd-010, imd-010, ial-010, ipe-010',
+    contentBody:
+      'Para estudar Matemática no curso superior de Inteligência Artificial da FATEC Rio Claro, a formação matemática é distribuída ao longo dos primeiros semestres, servindo como alicerce fundamental para algoritmos e modelos de Machine Learning:\n' +
+      '1. Matéria Oficial 1: "Cálculo Diferencial e Integral" (Código: ICD-010, 1º Semestre, 80h) — Cobre limites, derivadas parciais, gradientes, taxas de variação e integrais, fundamentais para a descida do gradiente (Gradient Descent) e treinamento de redes neurais.\n' +
+      '2. Matéria Oficial 2: "Matemática Discreta" (Código: IMD-010, 1º Semestre, 40h) — Cobre lógica proposicional, teoria dos conjuntos, relações, combinatória, indução e teoria dos grafos (base para estruturas de dados e complexidade algorítmica).\n' +
+      '3. Matéria Oficial 3: "Álgebra Linear e Geometria Analítica" (Código: IAL-010, 2º Semestre, 40h) — Cobre espaços vetoriais, operações matriciais, transformações lineares, produto escalar/vetorial, autovalores, autovetores e decomposição SVD (base para NumPy, manipulação de tensores e Redes Neurais Convolucionais).\n' +
+      '4. Matéria Oficial 4: "Estatística e Probabilidade" (Código: IPE-010, 2º Semestre, 80h) — Cobre variáveis aleatórias discretas/contínuas, Teorema de Bayes, distribuições (Normal, Poisson, Binomial), intervalos de confiança e teste de hipóteses.\n\n' +
+      'Materiais Didáticos Anexados para Estudo:\n' +
+      '• Apostila Didática PDF: "Guia Curricular de Fundamentos de Matemática, Cálculo e Álgebra Linear para IA" (Arquivo: /materials/ia/matematica_calculo_algebra_linear_ia.pdf).\n' +
+      '• Repositório com cadernos práticos em Python (NumPy, SciPy e SymPy) demonstrando operações matriciais, cálculo de gradientes e simulações probabilísticas (https://github.com/fatec-rc/ia-matematica-aplicada).\n\n' +
+      'Aplicações Práticas em Projetos e Trabalhos Acadêmicos:\n' +
+      'Os fundamentos matemáticos são diretamente aplicados nas seguintes disciplinas e projetos:\n' +
+      '• Modelos Preditivos de Machine Learning (disciplina MAQ-026 / Scikit-Learn): Cálculo de perda (Loss Function - MSE/Cross-Entropy) e otimização por derivadas.\n' +
+      '• Projeto DWH Saúde RC e Visão Computacional (MobileNetV2): Processamento de tensores multidimensionais, convoluções e normalização matricial.',
+    links: [
+      { label: 'Apostila Oficial de Matemática e Cálculo para IA (ICD-010 / IAL-010)', url: '/materials/ia/matematica_calculo_algebra_linear_ia.pdf' },
+      { label: 'Repositório de Scripts NumPy e Cálculo Vetorial (GitHub)', url: 'https://github.com/fatec-rc/ia-matematica-aplicada' },
+    ],
+  },
+  {
     id: 'rag-doc-ia-rotas',
     title: 'Caderno de Algoritmos de Grafos e Otimização Logística de Rotas de Entrega',
     subject: 'Inteligência Computacional & Estrutura de Dados',
@@ -534,6 +563,16 @@ const FOUNDATIONAL_PDF_KNOWLEDGE_BASE: IndexedDocumentChunk[] = [
   },
 ];
 
+const QUERY_STOP_WORDS = new Set([
+  'de', 'da', 'do', 'das', 'dos', 'em', 'na', 'no', 'nas', 'nos',
+  'com', 'para', 'por', 'que', 'um', 'uma', 'uns', 'umas', 'os', 'as', 'ao', 'aos',
+  'onde', 'como', 'quando', 'qual', 'quais', 'quem', 'porque', 'sobre',
+  'estudar', 'estudo', 'estudos', 'aprender', 'aprendemos', 'aprende',
+  'saber', 'conteudo', 'conteudos', 'material', 'materiais', 'disciplina', 'disciplinas',
+  'materia', 'materias', 'curso', 'cursos', 'semestre', 'semestres', 'grade', 'matriz',
+  'posso', 'devo', 'deve', 'consigo', 'encontro', 'encontrar', 'achar', 'tem', 'ha', 'existe'
+]);
+
 function normalizeTokens(text: string): string[] {
   return text
     .normalize('NFD')
@@ -541,7 +580,7 @@ function normalizeTokens(text: string): string[] {
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, ' ')
     .split(/\s+/)
-    .filter((w) => w.length >= 2 && !['de', 'da', 'do', 'das', 'dos', 'em', 'na', 'no', 'com', 'para', 'por', 'que', 'um', 'uma', 'os', 'as', 'ao'].includes(w));
+    .filter((w) => w.length >= 2 && !QUERY_STOP_WORDS.has(w));
 }
 
 /**
@@ -618,7 +657,10 @@ export async function queryAcademicRAG(
 
   const corpus = buildAcademicKnowledgeCorpus(repositoryMaterials);
   const queryTokens = normalizeTokens(cleanQuestion);
-  const lowerQ = cleanQuestion.toLowerCase();
+  const lowerQ = cleanQuestion
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
 
   // Filtragem opcional por curso e semestre + pontuação TF-IDF / BM25 aprimorada
   const scored = corpus
@@ -642,6 +684,9 @@ export async function queryAcademicRAG(
       }
 
       // Boosts semânticos contextuais
+      if ((lowerQ.includes('matemat') || lowerQ.includes('calculo') || lowerQ.includes('algebra') || lowerQ.includes('estatist') || lowerQ.includes('probabil') || lowerQ.includes('discret') || lowerQ.includes('icd-010') || lowerQ.includes('ial-010')) && doc.id === 'rag-doc-ia-math') {
+        rawScore += 20.0;
+      }
       if ((lowerQ.includes('linguag') || lowerQ.includes('program') || lowerQ.includes('python')) && doc.id === 'rag-doc-ia-prog') {
         rawScore += 12.0;
       }
@@ -664,15 +709,15 @@ export async function queryAcademicRAG(
       return {
         doc,
         rawScore,
-        relevanceScore: rawScore > 0 ? Math.max(0.3, normalizedScore) : 0.15,
+        relevanceScore: rawScore > 0 ? Math.max(0.3, normalizedScore) : 0,
       };
     })
     .sort((a, b) => b.rawScore - a.rawScore || a.doc.semester - b.doc.semester);
 
-  const selected = (scored.length > 0 ? scored : corpus.map((doc) => ({ doc, rawScore: 1, relevanceScore: 0.5 }))).slice(
-    0,
-    topK
-  );
+  // CRUCIAL: Selecionar APENAS documentos com relevância comprovada (rawScore > 0)
+  // Evita falsos positivos e alucinações quando a busca não corresponder a nenhum arquivo do acervo
+  const matchingScored = scored.filter((item) => item.rawScore > 0);
+  const selected = matchingScored.slice(0, topK);
 
   const citations: RAGSourceCitation[] = selected.map(({ doc, relevanceScore }) => ({
     id: doc.id,
@@ -710,6 +755,10 @@ DIRETRIZES RIGOROSAS DE RESPOSTA:
    - Comece respondendo diretamente à pergunta do estudante sem enrolação (ex: "Sim, no curso superior de Inteligência Artificial da FATEC Rio Claro os alunos aprendem linguagens de programação...", ou "Para criar uma aplicação que calcule rotas de entrega de mercadorias, a trilha recomendada de matérias e materiais a estudar envolve...").
 
 2. DETALHAMENTO ESTRUTURADO E INTELIGÍVEL:
+   - Se a pergunta for sobre "onde estudar matemática", cálculo, álgebra linear, estatística ou disciplinas correlatas:
+     * Indique PRIMEIRO, de forma objetiva, as matérias oficiais com seus respectivos códigos da matriz curricular (ex: "Cálculo Diferencial e Integral" - Código ICD-010 no 1º semestre, "Matemática Discreta" - Código IMD-010 no 1º semestre, "Álgebra Linear e Geometria Analítica" - Código IAL-010 no 2º semestre e "Estatística e Probabilidade" - Código IPE-010 no 2º semestre).
+     * Indique os materiais didáticos anexados disponíveis no acervo para o estudo específico dessas disciplinas.
+     * Somente DEPOIS, faça referência em quais projetos práticos, modelos de Machine Learning (gradiente descendente, otimização) e trabalhos acadêmicos foi usado o conteúdo da matéria.
    - Se a pergunta for sobre "onde estudar banco de dados", SQL, NoSQL ou temas correlatos:
      * Indique PRIMEIRO, de forma objetiva, as matérias oficiais com seus respectivos códigos da matriz curricular (ex: "Introdução à Bancos de Dados" - Código IBD-040 no 1º semestre, "Banco de Dados Não Relacional" - Código IBD-041 no 2º semestre e "Bancos de Dados Analíticos & Data Warehousing" - Código BDN-009 no 3º semestre).
      * Indique os materiais didáticos anexados disponíveis no acervo para o estudo específico dessas disciplinas.
@@ -754,6 +803,17 @@ ${contextBlock}`;
   }
 
   // SÍNTESE DETERMINÍSTICA RAG (Raciocínio lógico, direto e cruzamento de informações)
+  const isMathQuery =
+    lowerQ.includes('matemat') ||
+    lowerQ.includes('calculo') ||
+    lowerQ.includes('algebra') ||
+    lowerQ.includes('estatist') ||
+    lowerQ.includes('probabil') ||
+    lowerQ.includes('discret') ||
+    lowerQ.includes('derivada') ||
+    lowerQ.includes('integral') ||
+    lowerQ.includes('icd-010') ||
+    lowerQ.includes('ial-010');
   const isDbQuery =
     lowerQ.includes('banco de dados') ||
     lowerQ.includes('bancos de dados') ||
@@ -768,7 +828,27 @@ ${contextBlock}`;
 
   let synthesizedAnswer = '';
 
-  if (isDbQuery) {
+  if (isMathQuery) {
+    synthesizedAnswer =
+      '**Para estudar Matemática no curso superior de Inteligência Artificial da FATEC Rio Claro, você deve cursar primeiramente as matérias específicas da matriz curricular oficial:**\n\n' +
+      '• **1. Matérias Oficiais e Códigos Curriculares:**\n' +
+      '  - **Cálculo Diferencial e Integral (Código: ICD-010 — 1º Semestre, 80h):**\n' +
+      '    Estuda limites, derivadas, gradientes, taxas de variação e integrais — fundamentais para a descida do gradiente (Gradient Descent) e ajuste de pesos em Redes Neurais e Machine Learning.\n' +
+      '  - **Matemática Discreta (Código: IMD-010 — 1º Semestre, 40h):**\n' +
+      '    Aborda lógica matemática proposicional, teoria de conjuntos, relações, combinatória, indução e grafos (alicerce para estruturas de dados e análise de complexidade algorítmica).\n' +
+      '  - **Álgebra Linear e Geometria Analítica (Código: IAL-010 — 2º Semestre, 40h):**\n' +
+      '    Ensina espaços vetoriais, operações matriciais, transformações lineares, produto escalar/vetorial, autovalores, autovetores e decomposição SVD (base essencial para o uso da biblioteca NumPy e representação de tensores em Deep Learning).\n' +
+      '  - **Estatística e Probabilidade (Código: IPE-010 — 2º Semestre, 80h):**\n' +
+      '    Cobre variáveis aleatórias, Teorema de Bayes, distribuições (Normal, Binomial, Poisson), intervalos de confiança e teste de hipóteses para validação científica de modelos preditivos.\n\n' +
+      '• **2. Materiais Didáticos Anexados para Estudo:**\n' +
+      '  - **Apostila Didática PDF:** *"Guia Curricular de Fundamentos de Matemática, Cálculo e Álgebra Linear para IA"* (acesso direto no acervo: `/materials/ia/matematica_calculo_algebra_linear_ia.pdf`).\n' +
+      '  - **Repositório de Scripts e Demonstrações:** Cadernos interativos em Python com bibliotecas NumPy, SciPy e SymPy para operações com matrizes e cálculo de derivadas no GitHub (https://github.com/fatec-rc/ia-matematica-aplicada).\n\n' +
+      '• **3. Aplicação Prática em Projetos e Trabalhos Acadêmicos:**\n' +
+      '  A fundamentação matemática é a espinha dorsal aplicada nos seguintes projetos e matérias do curso:\n' +
+      '  - **Aprendizado de Máquina I e Redes Neurais (MAQ-026 / IRC-036):** Utilização direta do Cálculo Diferencial para funções de perda (Loss Functions) e otimização de modelos de regressão e classificação.\n' +
+      '  - **Visão Computacional e TCC:** Utilização intensiva de Álgebra Linear para manipulação de tensores de imagem, filtros de convolução e redução de dimensionalidade (PCA).\n\n' +
+      'Clique nos botões de acesso direto abaixo para abrir a apostila oficial de Matemática ou acessar o repositório de códigos.';
+  } else if (isDbQuery) {
     synthesizedAnswer =
       '**Para estudar Banco de Dados no curso superior de Inteligência Artificial da FATEC Rio Claro, você deve cursar primeiramente as matérias específicas da matriz curricular oficial:**\n\n' +
       '• **1. Matérias Oficiais e Códigos Curriculares:**\n' +
@@ -835,7 +915,7 @@ ${contextBlock}`;
   } else {
     const primary = selected[0]?.doc;
     const secondary = selected[1]?.doc;
-    if (primary) {
+    if (primary && (selected[0]?.rawScore ?? 0) > 0) {
       synthesizedAnswer =
         `Com base nos materiais oficiais homologados da FATEC Rio Claro, a resposta para a sua consulta encontra-se no material **"${primary.title}"** (Disciplina: *${primary.subject}*, Curso: *${primary.course}* - ${primary.semester}º Semestre):\n\n` +
         `${primary.contentBody}`;
@@ -844,7 +924,7 @@ ${contextBlock}`;
       }
     } else {
       synthesizedAnswer =
-        'Não foram localizados materiais específicos no acervo homologado para esses termos de busca. Você pode explorar o repositório filtrando por curso e semestre ou verificar as disciplinas no menu de matérias.';
+        `Não foram localizados materiais específicos no acervo homologado para a consulta "${cleanQuestion}". Recomendamos verificar se a busca corresponde a uma das matérias oficiais (ex: "matemática", "banco de dados", "linguagem de programação", "ESG", "aprendizado de máquina") ou navegar pelo menu de disciplinas do Repositório Acadêmico.`;
     }
   }
 

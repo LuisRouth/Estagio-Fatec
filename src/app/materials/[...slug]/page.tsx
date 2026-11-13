@@ -194,6 +194,55 @@ ORDER BY semestre ASC;`,
       },
     ],
   },
+  matematica_calculo_algebra_linear_ia: {
+    title: 'Guia Curricular Oficial: Fundamentos de Matemática, Cálculo e Álgebra Linear para IA',
+    code: 'ICD-010 / IMD-010 / IAL-010 / IPE-010',
+    subject: 'Cálculo Diferencial e Integral & Álgebra Linear',
+    course: 'IA',
+    semester: 1,
+    type: 'Guia Didático Oficial',
+    author: 'Prof. Orlando / Departamento de Matemática e IA',
+    description:
+      'Fundamentação matemática indispensável para o CST em Inteligência Artificial, abrangendo Cálculo Diferencial, Álgebra Linear, Matemática Discreta e Estatística como base para algoritmos e redes neurais.',
+    syllabus: [
+      '1º Semestre (ICD-010 - 80h): Cálculo Diferencial e Integral — Funções, limites, derivadas, derivadas parciais, gradiente (Gradient Descent), integrais e otimização contínua.',
+      '1º Semestre (IMD-010 - 40h): Matemática Discreta — Lógica proposicional e de predicados, teoria dos conjuntos, relações de equivalência e ordem, combinatória, indução matemática e introdução à grafos.',
+      '2º Semestre (IAL-010 - 40h): Álgebra Linear e Geometria Analítica — Vetores no R^n, matrizes, determinantes, sistemas lineares, transformações lineares, autovalores, autovetores e decomposição em valores singulares (SVD).',
+      '2º Semestre (IPE-010 - 80h): Estatística e Probabilidade — Espaço amostral, probabilidade condicional, Teorema de Bayes, variáveis aleatórias discretas/contínuas, distribuições de probabilidade e inferência estatística.',
+    ],
+    codeSnippet: {
+      lang: 'python',
+      code: `# Fundamentos de Álgebra Linear e Gradiente para IA com NumPy
+import numpy as np
+
+# Matriz de covariância e autovalores (base de PCA e Redes Neurais)
+A = np.array([[3.0, 1.0], [1.0, 3.0]])
+autovalores, autovetores = np.linalg.eig(A)
+
+print("Matriz A:\n", A)
+print("\nAutovalores (Variâncias principais):\n", autovalores)
+print("\nAutovetores (Eixos principais de projeção):\n", autovetores)
+
+# Cálculo de Gradiente Numérico da Função de Custo (MSE)
+def mse_loss(y_true, y_pred):
+    return np.mean((y_true - y_pred) ** 2)
+
+y_real = np.array([1.0, 2.0, 3.0])
+y_estimado = np.array([1.1, 1.9, 3.2])
+print(f"\nLoss MSE: {mse_loss(y_real, y_estimado):.4f}")`,
+    },
+    githubUrl: 'https://github.com/fatec-rc/ia-matematica-aplicada',
+    appliedProjects: [
+      {
+        name: 'Modelos Preditivos e Redes Neurais Supervisionadas (MAQ-026)',
+        description: 'Aplicação direta de derivadas para cálculo do erro e ajuste de gradiente descendente em classificadores.',
+      },
+      {
+        name: 'Processamento de Imagens e Visão Computacional (MobileNetV2)',
+        description: 'Operações matriciais com tensores multidimensionais e convoluções lineares.',
+      },
+    ],
+  },
   introducao_esg_ods_sem1: {
     title: 'Guia Didático: Introdução à Sustentabilidade, ODS da ONU e Gestão ESG',
     code: 'ESG-W1A / ESG-LEG',
@@ -469,3 +518,4 @@ export default function MaterialViewerPage() {
     </AppLayout>
   );
 }
+
