@@ -2159,9 +2159,13 @@ export const db = {
       let pIdx = 1;
 
       Object.entries(data).forEach(([key, val]) => {
-        if (key !== 'id' && key !== 'created_at') {
+        if (key !== 'id' && key !== 'created_at' && val !== undefined) {
           fields.push(`${key} = $${pIdx++}`);
-          values.push(val);
+          if (key === 'links' || key === 'attachments') {
+            values.push(JSON.stringify(Array.isArray(val) ? val : []));
+          } else {
+            values.push(val);
+          }
         }
       });
       fields.push(`updated_at = CURRENT_TIMESTAMP`);

@@ -516,6 +516,7 @@ export default function RepositorioPage() {
     setFormLinks([]);
     setFormAttachments([]);
     setFormError('');
+    setUploadFeedback('');
     setIsModalOpen(true);
   };
 
@@ -538,6 +539,7 @@ export default function RepositorioPage() {
     setFormLinks(Array.isArray(m.links) ? m.links : []);
     setFormAttachments(Array.isArray(m.attachments) ? m.attachments : []);
     setFormError('');
+    setUploadFeedback('');
     setIsModalOpen(true);
   };
 
