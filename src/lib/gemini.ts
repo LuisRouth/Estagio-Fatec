@@ -412,63 +412,6 @@ const FOUNDATIONAL_PDF_KNOWLEDGE_BASE: IndexedDocumentChunk[] = [
     ],
   },
   {
-    id: 'rag-doc-ia-db',
-    title: 'Guia Didático Oficial: Bancos de Dados Relacionais (SQL) e Não-Relacionais (NoSQL)',
-    subject: 'Introdução à Bancos de Dados & Banco de Dados Não Relacional',
-    course: 'IA',
-    semester: 1,
-    materialType: 'APOSTILA',
-    fileUrl: '/materials/ia/bancos_de_dados_sql_nosql_ibd040_ibd041.pdf',
-    githubUrl: 'https://github.com/fatec-rc/ia-bancos-de-dados',
-    authorName: 'Prof. Orlando / Coordenação de Bancos de Dados',
-    tags: 'banco de dados, bancos de dados, sql, nosql, postgresql, mysql, mongodb, ibd-040, ibd-041, bdn-009, relacional, modelagem, mer, ddl, dml, joins',
-    contentBody:
-      'Para estudar Banco de Dados no curso superior de Inteligência Artificial da FATEC Rio Claro, a matriz curricular oficial é composta pelas seguintes matérias e códigos:\n' +
-      '1. Matéria Oficial 1: "Introdução à Bancos de Dados" (Código: IBD-040, 1º Semestre, 40h) — Cobre Modelagem Conceitual e Lógica (Modelo Entidade-Relacionamento - MER), Álgebra Relacional, Normalização (1FN, 2FN, 3FN), Linguagem SQL ANSI padrão (PostgreSQL/MySQL), DDL (CREATE, ALTER, DROP), DML (INSERT, UPDATE, DELETE, SELECT), Chaves Primárias/Estrangeiras e junções relacionais (JOINs).\n' +
-      '2. Matéria Oficial 2: "Banco de Dados Não Relacional" (Código: IBD-041, 2º Semestre, 40h) — Cobre arquiteturas NoSQL, Teorema CAP, bancos orientados a documentos (MongoDB, coleções BSON/JSON), bancos chave-valor (Redis) e consultas agregadas.\n' +
-      '3. Matéria Oficial 3: "Bancos de Dados Analíticos & Data Warehousing" (Código: BDN-009, 3º Semestre, 40h) — Cobre modelagem dimensional (Star Schema / Snowflake), pipelines ETL/ELT e Data Lakes.\n\n' +
-      'Materiais Didáticos Anexados para Estudo:\n' +
-      '• Apostila Didática PDF: "Guia Curricular de Bancos de Dados Relacionais (SQL) e Não-Relacionais (NoSQL)" (Arquivo: /materials/ia/bancos_de_dados_sql_nosql_ibd040_ibd041.pdf).\n' +
-      '• Repositório de scripts DDL/DML e exemplos práticos de modelagem no GitHub (https://github.com/fatec-rc/ia-bancos-de-dados).\n\n' +
-      'Aplicações Práticas em Projetos e Trabalhos da Vitrine Acadêmica:\n' +
-      'Após o aprendizado teórico e prático nas matérias IBD-040 e IBD-041, o conteúdo de banco de dados é diretamente aplicado nos seguintes projetos do curso:\n' +
-      '• Projeto "DWH Saúde RC — Data Warehouse e Analytics em Saúde Coletiva" (Vitrine de Projetos): Utiliza PostgreSQL para estruturar dados públicos do DATASUS com modelagem dimensional e consultas analíticas.\n' +
-      '• Sistema "Portal Integrado e Cantina Discente FATEC Rio Claro": Utiliza banco de dados relacional PostgreSQL em produção no Supabase, com tabelas relacionais, integridade referencial, triggers de auditoria e índices B-Tree.',
-    links: [
-      { label: 'Apostila Oficial de Bancos de Dados (SQL e NoSQL - IBD-040 / IBD-041)', url: '/materials/ia/bancos_de_dados_sql_nosql_ibd040_ibd041.pdf' },
-      { label: 'Projeto DWH Saúde RC na Vitrine de Projetos', url: 'https://github.com/MateusIoga/DWH-Saude-RC' },
-    ],
-  },
-  {
-    id: 'rag-doc-ia-math',
-    title: 'Guia Curricular Oficial: Fundamentos de Matemática, Cálculo e Álgebra Linear para IA',
-    subject: 'Cálculo Diferencial e Integral & Álgebra Linear',
-    course: 'IA',
-    semester: 1,
-    materialType: 'APOSTILA',
-    fileUrl: '/materials/ia/matematica_calculo_algebra_linear_ia.pdf',
-    githubUrl: 'https://github.com/fatec-rc/ia-matematica-aplicada',
-    authorName: 'Prof. Orlando / Departamento de Matemática e IA',
-    tags: 'matematica, calculo, algebra, algebra linear, estatistica, probabilidade, discreta, matrizes, vetores, derivadas, integrais, otimizacao, gradient descent, tensores, icd-010, imd-010, ial-010, ipe-010',
-    contentBody:
-      'Para estudar Matemática no curso superior de Inteligência Artificial da FATEC Rio Claro, a formação matemática é distribuída ao longo dos primeiros semestres, servindo como alicerce fundamental para algoritmos e modelos de Machine Learning:\n' +
-      '1. Matéria Oficial 1: "Cálculo Diferencial e Integral" (Código: ICD-010, 1º Semestre, 80h) — Cobre limites, derivadas parciais, gradientes, taxas de variação e integrais, fundamentais para a descida do gradiente (Gradient Descent) e treinamento de redes neurais.\n' +
-      '2. Matéria Oficial 2: "Matemática Discreta" (Código: IMD-010, 1º Semestre, 40h) — Cobre lógica proposicional, teoria dos conjuntos, relações, combinatória, indução e teoria dos grafos (base para estruturas de dados e complexidade algorítmica).\n' +
-      '3. Matéria Oficial 3: "Álgebra Linear e Geometria Analítica" (Código: IAL-010, 2º Semestre, 40h) — Cobre espaços vetoriais, operações matriciais, transformações lineares, produto escalar/vetorial, autovalores, autovetores e decomposição SVD (base para NumPy, manipulação de tensores e Redes Neurais Convolucionais).\n' +
-      '4. Matéria Oficial 4: "Estatística e Probabilidade" (Código: IPE-010, 2º Semestre, 80h) — Cobre variáveis aleatórias discretas/contínuas, Teorema de Bayes, distribuições (Normal, Poisson, Binomial), intervalos de confiança e teste de hipóteses.\n\n' +
-      'Materiais Didáticos Anexados para Estudo:\n' +
-      '• Apostila Didática PDF: "Guia Curricular de Fundamentos de Matemática, Cálculo e Álgebra Linear para IA" (Arquivo: /materials/ia/matematica_calculo_algebra_linear_ia.pdf).\n' +
-      '• Repositório com cadernos práticos em Python (NumPy, SciPy e SymPy) demonstrando operações matriciais, cálculo de gradientes e simulações probabilísticas (https://github.com/fatec-rc/ia-matematica-aplicada).\n\n' +
-      'Aplicações Práticas em Projetos e Trabalhos Acadêmicos:\n' +
-      'Os fundamentos matemáticos são diretamente aplicados nas seguintes disciplinas e projetos:\n' +
-      '• Modelos Preditivos de Machine Learning (disciplina MAQ-026 / Scikit-Learn): Cálculo de perda (Loss Function - MSE/Cross-Entropy) e otimização por derivadas.\n' +
-      '• Projeto DWH Saúde RC e Visão Computacional (MobileNetV2): Processamento de tensores multidimensionais, convoluções e normalização matricial.',
-    links: [
-      { label: 'Apostila Oficial de Matemática e Cálculo para IA (ICD-010 / IAL-010)', url: '/materials/ia/matematica_calculo_algebra_linear_ia.pdf' },
-      { label: 'Repositório de Scripts NumPy e Cálculo Vetorial (GitHub)', url: 'https://github.com/fatec-rc/ia-matematica-aplicada' },
-    ],
-  },
-  {
     id: 'rag-doc-ia-rotas',
     title: 'Caderno de Algoritmos de Grafos e Otimização Logística de Rotas de Entrega',
     subject: 'Inteligência Computacional & Estrutura de Dados',
@@ -719,7 +662,7 @@ export async function queryAcademicRAG(
   const matchingScored = scored.filter((item) => item.rawScore > 0);
   const selected = matchingScored.slice(0, topK);
 
-  const citations: RAGSourceCitation[] = selected.map(({ doc, relevanceScore }) => ({
+  let citations: RAGSourceCitation[] = selected.map(({ doc, relevanceScore }) => ({
     id: doc.id,
     title: doc.title,
     subject: doc.subject,
@@ -754,15 +697,15 @@ DIRETRIZES RIGOROSAS DE RESPOSTA:
 1. RESPOSTA DIRETA E CLARA NA PRIMEIRA FRASE:
    - Comece respondendo diretamente à pergunta do estudante sem enrolação (ex: "Sim, no curso superior de Inteligência Artificial da FATEC Rio Claro os alunos aprendem linguagens de programação...", ou "Para criar uma aplicação que calcule rotas de entrega de mercadorias, a trilha recomendada de matérias e materiais a estudar envolve...").
 
-2. DETALHAMENTO ESTRUTURADO E INTELIGÍVEL:
+2. DETALHAMENTO ESTRUTURADO E FIDELIDADE AO REPOSITÓRIO:
    - Se a pergunta for sobre "onde estudar matemática", cálculo, álgebra linear, estatística ou disciplinas correlatas:
-     * Indique PRIMEIRO, de forma objetiva, as matérias oficiais com seus respectivos códigos da matriz curricular (ex: "Cálculo Diferencial e Integral" - Código ICD-010 no 1º semestre, "Matemática Discreta" - Código IMD-010 no 1º semestre, "Álgebra Linear e Geometria Analítica" - Código IAL-010 no 2º semestre e "Estatística e Probabilidade" - Código IPE-010 no 2º semestre).
-     * Indique os materiais didáticos anexados disponíveis no acervo para o estudo específico dessas disciplinas.
-     * Somente DEPOIS, faça referência em quais projetos práticos, modelos de Machine Learning (gradiente descendente, otimização) e trabalhos acadêmicos foi usado o conteúdo da matéria.
+     * Indique as matérias oficiais com seus respectivos códigos da matriz curricular (ex: "Cálculo Diferencial e Integral" - Código ICD-010 no 1º semestre, "Matemática Discreta" - Código IMD-010 no 1º semestre, "Álgebra Linear e Geometria Analítica" - Código IAL-010 no 2º semestre e "Estatística e Probabilidade" - Código IPE-010 no 2º semestre).
+     * Informe com total transparência a situação no acervo: atualmente NÃO há apostilas ou slides teóricos de Matemática cadastrados no Repositório Acadêmico por professores da unidade.
+     * Aponte onde os conceitos matemáticos são colocados em prática nos materiais e projetos reais cadastrados no acervo (ex: Machine Learning, Redes Neurais e projeto DWH Saúde RC).
    - Se a pergunta for sobre "onde estudar banco de dados", SQL, NoSQL ou temas correlatos:
-     * Indique PRIMEIRO, de forma objetiva, as matérias oficiais com seus respectivos códigos da matriz curricular (ex: "Introdução à Bancos de Dados" - Código IBD-040 no 1º semestre, "Banco de Dados Não Relacional" - Código IBD-041 no 2º semestre e "Bancos de Dados Analíticos & Data Warehousing" - Código BDN-009 no 3º semestre).
-     * Indique os materiais didáticos anexados disponíveis no acervo para o estudo específico dessas disciplinas.
-     * Somente DEPOIS, faça referência em quais projetos práticos, TCCs ou trabalhos da Vitrine foi usado o conteúdo da matéria (ex: Projeto "DWH Saúde RC" e o banco de dados PostgreSQL do Portal/Cantina).
+     * Indique as matérias oficiais com seus respectivos códigos da matriz curricular (ex: "Introdução à Bancos de Dados" - Código IBD-040 no 1º semestre, "Banco de Dados Não Relacional" - Código IBD-041 no 2º semestre e "Bancos de Dados Analíticos & Data Warehousing" - Código BDN-009 no 3º semestre).
+     * Informe com total transparência a situação no acervo: atualmente NÃO há apostilas teóricas de IBD-040/041 cadastradas pelos docentes no Repositório Acadêmico.
+     * Aponte o projeto prático real da Vitrine que aplica banco de dados relacional e dimensional: Projeto "DWH Saúde RC" e o banco de dados PostgreSQL do Portal/Cantina.
    - Se a pergunta for sobre linguagens de programação, ferramentas ou matérias:
      * Liste explicitamente quais linguagens (ex: Python 3, SQL).
      * Em quais semestres são ensinadas (1º, 2º, 3º, 4º semestres).
@@ -830,42 +773,87 @@ ${contextBlock}`;
 
   if (isMathQuery) {
     synthesizedAnswer =
-      '**Para estudar Matemática no curso superior de Inteligência Artificial da FATEC Rio Claro, você deve cursar primeiramente as matérias específicas da matriz curricular oficial:**\n\n' +
-      '• **1. Matérias Oficiais e Códigos Curriculares:**\n' +
+      '**No curso superior de Inteligência Artificial da FATEC Rio Claro, a formação matemática é componente oficial e fundamental da matriz curricular (PPC):**\n\n' +
+      '• **1. Disciplinas Oficiais e Códigos Curriculares:**\n' +
       '  - **Cálculo Diferencial e Integral (Código: ICD-010 — 1º Semestre, 80h):**\n' +
-      '    Estuda limites, derivadas, gradientes, taxas de variação e integrais — fundamentais para a descida do gradiente (Gradient Descent) e ajuste de pesos em Redes Neurais e Machine Learning.\n' +
+      '    Estuda limites, derivadas parciais, gradientes e integrais — fundamentais para a descida do gradiente (Gradient Descent) e ajuste de pesos em Redes Neurais e Machine Learning.\n' +
       '  - **Matemática Discreta (Código: IMD-010 — 1º Semestre, 40h):**\n' +
-      '    Aborda lógica matemática proposicional, teoria de conjuntos, relações, combinatória, indução e grafos (alicerce para estruturas de dados e análise de complexidade algorítmica).\n' +
+      '    Aborda lógica proposicional, teoria de conjuntos, relações, combinatória, indução e grafos (alicerce para estruturas de dados e análise de complexidade algorítmica).\n' +
       '  - **Álgebra Linear e Geometria Analítica (Código: IAL-010 — 2º Semestre, 40h):**\n' +
       '    Ensina espaços vetoriais, operações matriciais, transformações lineares, produto escalar/vetorial, autovalores, autovetores e decomposição SVD (base essencial para o uso da biblioteca NumPy e representação de tensores em Deep Learning).\n' +
       '  - **Estatística e Probabilidade (Código: IPE-010 — 2º Semestre, 80h):**\n' +
       '    Cobre variáveis aleatórias, Teorema de Bayes, distribuições (Normal, Binomial, Poisson), intervalos de confiança e teste de hipóteses para validação científica de modelos preditivos.\n\n' +
-      '• **2. Materiais Didáticos Anexados para Estudo:**\n' +
-      '  - **Apostila Didática PDF:** *"Guia Curricular de Fundamentos de Matemática, Cálculo e Álgebra Linear para IA"* (acesso direto no acervo: `/materials/ia/matematica_calculo_algebra_linear_ia.pdf`).\n' +
-      '  - **Repositório de Scripts e Demonstrações:** Cadernos interativos em Python com bibliotecas NumPy, SciPy e SymPy para operações com matrizes e cálculo de derivadas no GitHub (https://github.com/fatec-rc/ia-matematica-aplicada).\n\n' +
-      '• **3. Aplicação Prática em Projetos e Trabalhos Acadêmicos:**\n' +
-      '  A fundamentação matemática é a espinha dorsal aplicada nos seguintes projetos e matérias do curso:\n' +
-      '  - **Aprendizado de Máquina I e Redes Neurais (MAQ-026 / IRC-036):** Utilização direta do Cálculo Diferencial para funções de perda (Loss Functions) e otimização de modelos de regressão e classificação.\n' +
-      '  - **Visão Computacional e TCC:** Utilização intensiva de Álgebra Linear para manipulação de tensores de imagem, filtros de convolução e redução de dimensionalidade (PCA).\n\n' +
-      'Clique nos botões de acesso direto abaixo para abrir a apostila oficial de Matemática ou acessar o repositório de códigos.';
+      '• **2. Situação dos Materiais no Repositório Acadêmico:**\n' +
+      '  ⚠️ **Aviso de Disponibilidade:** No momento, **não há apostilas ou slides teóricos de Matemática cadastrados no Repositório Acadêmico por professores da unidade**.\n\n' +
+      '• **3. Onde o conteúdo é aplicado nos Materiais Reais do Acervo:**\n' +
+      '  Para estudar onde a matemática é aplicada na prática com materiais reais já disponíveis no repositório, consulte:\n' +
+      '  - **Apostila e Slides – Fundamentos de Aprendizado de Máquina I (Prof. Orlando / MAQ-026):** Aplicação de funções de perda e modelos de regressão.\n' +
+      '  - **Aulas de Redes Neurais Artificiais (Aulas 01 a 09 / IRC-036):** Aplicação de derivadas parciais no algoritmo Backpropagation.\n' +
+      '  - **DWH Saúde RC (Vitrine de Projetos):** Modelagem multidimensional e agregações estatísticas.\n\n' +
+      'Consulte abaixo os botões diretos para os materiais reais de Aprendizado de Máquina e Redes Neurais disponíveis no acervo.';
+
+    const realMathMatches = corpus.filter(
+      (m) =>
+        m.subject.toLowerCase().includes('aprendizado') ||
+        m.subject.toLowerCase().includes('redes') ||
+        m.title.toLowerCase().includes('dwh')
+    ).slice(0, 3);
+
+    citations = realMathMatches.map((doc) => ({
+      id: doc.id,
+      title: doc.title,
+      subject: doc.subject,
+      course: doc.course,
+      semester: doc.semester,
+      materialType: doc.materialType,
+      fileUrl: doc.fileUrl,
+      githubUrl: doc.githubUrl,
+      authorName: doc.authorName,
+      relevanceScore: 0.9,
+      excerpt: doc.contentBody.slice(0, 240) + '...',
+      links: doc.links || null,
+      attachments: doc.attachments || null,
+    }));
   } else if (isDbQuery) {
     synthesizedAnswer =
-      '**Para estudar Banco de Dados no curso superior de Inteligência Artificial da FATEC Rio Claro, você deve cursar primeiramente as matérias específicas da matriz curricular oficial:**\n\n' +
-      '• **1. Matérias Oficiais e Códigos Curriculares:**\n' +
+      '**Para estudar Banco de Dados no curso superior de Inteligência Artificial da FATEC Rio Claro, as matérias oficiais da matriz curricular (PPC) são:**\n\n' +
+      '• **1. Disciplinas Oficiais e Códigos Curriculares:**\n' +
       '  - **Introdução à Bancos de Dados (Código: IBD-040 — 1º Semestre, 40h):**\n' +
-      '    Ensina a base teórica e prática dos Bancos de Dados Relacionais, incluindo Modelagem Conceitual e Lógica (MER), Álgebra Relacional, Normalização (1FN, 2FN, 3FN) e a linguagem **SQL** padrão ANSI (DDL: `CREATE`, `ALTER`, `DROP`; DML: `SELECT`, `INSERT`, `UPDATE`, `DELETE`; e junções `JOIN`).\n' +
+      '    Ensina modelagem conceitual e lógica (MER), normalização (1FN, 2FN, 3FN) e a linguagem **SQL** padrão ANSI (DDL e DML).\n' +
       '  - **Banco de Dados Não Relacional (Código: IBD-041 — 2º Semestre, 40h):**\n' +
-      '    Aprofunda as tecnologias **NoSQL**, Teorema CAP, bancos orientados a documentos (**MongoDB** / BSON), bancos chave-valor (**Redis**) e bancos colunares/grafos.\n' +
+      '    Aborda arquiteturas **NoSQL**, Teorema CAP, MongoDB (documentos BSON/JSON) e Redis (chave-valor).\n' +
       '  - **Bancos de Dados Analíticos & Data Warehousing (Código: BDN-009 — 3º Semestre, 40h):**\n' +
-      '    Modelagem multidimensional (Star Schema / Snowflake), pipelines ETL/ELT e arquiteturas analíticas de Big Data.\n\n' +
-      '• **2. Materiais Didáticos Anexados para Estudo:**\n' +
-      '  - **Apostila Didática PDF:** *"Guia Curricular de Bancos de Dados Relacionais (SQL) e Não-Relacionais (NoSQL)"* (acesso direto no acervo: `/materials/ia/bancos_de_dados_sql_nosql_ibd040_ibd041.pdf`).\n' +
-      '  - **Repositório de Scripts e Modelagem:** Repositório com exemplos de scripts DDL/DML e consultas SQL práticas no GitHub (https://github.com/fatec-rc/ia-bancos-de-dados).\n\n' +
-      '• **3. Aplicação Prática em Projetos e Trabalhos Acadêmicos:**\n' +
-      '  Após adquirir a fundamentação teórica nas matérias IBD-040 e IBD-041, o conhecimento de bancos de dados é exercitado nos seguintes projetos reais do curso:\n' +
-      '  - **DWH Saúde RC — Data Warehouse e Analytics em Saúde Coletiva (Vitrine de Projetos):** Projeto interdisciplinar que modela dados abertos do DATASUS em PostgreSQL utilizando tabelas fato e dimensão com dashboards analíticos.\n' +
-      '  - **Portal Integrado e Cantina Discente FATEC Rio Claro:** Aplicação em produção utilizando banco de dados relacional **PostgreSQL** no Supabase com modelagem relacional, constraints de integridade, triggers de auditoria e índices B-Tree de alta performance.\n\n' +
-      'Clique nos botões de acesso direto abaixo para abrir a apostila oficial de Banco de Dados ou visualizar os projetos aplicados no acervo.';
+      '    Modelagem multidimensional (Star Schema / Snowflake), pipelines ETL/ELT e Data Lakes.\n\n' +
+      '• **2. Situação dos Materiais no Repositório Acadêmico:**\n' +
+      '  ⚠️ **Aviso de Disponibilidade:** No momento, **não há apostilas ou slides teóricos de IBD-040/IBD-041 cadastrados pelos docentes no Repositório Acadêmico**.\n\n' +
+      '• **3. Aplicação Prática no Acervo Real (Vitrine de Projetos):**\n' +
+      '  O conteúdo prático de banco de dados e modelagem relacional/dimensional está disponível no acervo através do projeto homologado na Vitrine:\n' +
+      '  - **DWH Saúde RC — Data Warehouse e Analytics em Saúde Coletiva:** Projeto interdisciplinar que modela dados abertos do DATASUS em PostgreSQL utilizando tabelas fato, dimensões e dashboards analíticos.\n' +
+      '  - **Portal Integrado FATEC Rio Claro:** Aplicação em produção utilizando banco de dados relacional **PostgreSQL** no Supabase com modelagem relacional, constraints de integridade e triggers de auditoria.\n\n' +
+      'Consulte abaixo o botão de acesso direto para o projeto prático DWH Saúde RC disponível na Vitrine de Projetos.';
+
+    const realDbMatches = corpus.filter(
+      (m) =>
+        m.title.toLowerCase().includes('dwh') ||
+        m.subject.toLowerCase().includes('warehouse') ||
+        m.tags.toLowerCase().includes('postgresql')
+    ).slice(0, 2);
+
+    citations = realDbMatches.map((doc) => ({
+      id: doc.id,
+      title: doc.title,
+      subject: doc.subject,
+      course: doc.course,
+      semester: doc.semester,
+      materialType: doc.materialType,
+      fileUrl: doc.fileUrl,
+      githubUrl: doc.githubUrl,
+      authorName: doc.authorName,
+      relevanceScore: 0.95,
+      excerpt: doc.contentBody.slice(0, 240) + '...',
+      links: doc.links || null,
+      attachments: doc.attachments || null,
+    }));
   } else if (isProgQuery) {
     synthesizedAnswer =
       '**Sim, no curso superior de Inteligência Artificial da FATEC Rio Claro os alunos aprendem linguagens de programação desde o primeiro dia de aula, com foco central em Python 3 e SQL.**\n\n' +
