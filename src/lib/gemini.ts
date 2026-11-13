@@ -874,7 +874,6 @@ ${contextBlock}`;
 
   const isMathQuery =
     !isEsgQuery &&
-    courseFilter !== 'ESG' &&
     (lowerQ.includes('matemat') ||
       lowerQ.includes('calculo diferencial') ||
       lowerQ.includes('calculo integral') ||
