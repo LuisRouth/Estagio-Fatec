@@ -2314,24 +2314,95 @@ export default function RepositorioPage() {
                       {m.description || 'Sem descrição fornecida pelo autor.'}
                     </p>
 
+                    {m.tags && (
+                      <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                        {m.tags.split(',').map((tag: string, i: number) => (
+                          <span
+                            key={i}
+                            style={{
+                              fontSize: '0.72rem',
+                              backgroundColor: 'var(--bg-muted)',
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              color: 'var(--text-muted)',
+                            }}
+                          >
+                            #{tag.trim()}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
                     {/* Ações de Moderação */}
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-light)' }}>
-                      <button
-                        type="button"
-                        onClick={() => handleApproveMaterial(m)}
-                        className="btn btn-emerald"
-                        style={{ fontWeight: 700 }}
-                      >
-                        Aprovar para o Acervo
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDeleteConfirmTarget(m)}
-                        className="btn btn-danger"
-                        style={{ fontWeight: 700 }}
-                      >
-                        Rejeitar / Excluir
-                      </button>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-light)' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        {m.file_url && m.file_url !== '#' ? (
+                          <button
+                            type="button"
+                            disabled={checkingMaterialUrl === m.file_url}
+                            onClick={() =>
+                              handleOpenMaterial(m.file_url, {
+                                title: m.title,
+                                subject: m.subject,
+                                course: m.course,
+                                semester: m.semester,
+                                materialType: m.material_type,
+                                githubUrl: m.github_url,
+                                description: m.description,
+                                authorName: m.author_name,
+                              })
+                            }
+                            className="btn btn-primary"
+                            style={{ fontWeight: 700 }}
+                          >
+                            {checkingMaterialUrl === m.file_url ? 'Abrindo...' : '📄 Analisar Arquivo'}
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', alignSelf: 'center' }}>
+                            Sem arquivo anexado
+                          </span>
+                        )}
+
+                        {m.github_url && (
+                          <a
+                            href={m.github_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-secondary"
+                            style={{ fontWeight: 700, textDecoration: 'none' }}
+                          >
+                            GitHub ↗
+                          </a>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditModal(m)}
+                          className="btn btn-secondary"
+                          style={{ fontWeight: 700 }}
+                        >
+                          ✏️ Editar
+                        </button>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleApproveMaterial(m)}
+                          className="btn btn-emerald"
+                          style={{ fontWeight: 700 }}
+                        >
+                          Aprovar para o Acervo
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteConfirmTarget(m)}
+                          className="btn btn-danger"
+                          style={{ fontWeight: 700 }}
+                        >
+                          Rejeitar / Excluir
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
