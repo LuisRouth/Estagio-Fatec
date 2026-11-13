@@ -504,6 +504,23 @@ const FOUNDATIONAL_PDF_KNOWLEDGE_BASE: IndexedDocumentChunk[] = [
     contentBody:
       'Trabalho de Conclusão de Curso integrando Redes Neurais Convolucionais (CNN) e Visão Computacional à separação automatizada de resíduos recicláveis (plástico, metal, papel e vidro). Demonstra pré-processamento de imagens, data augmentation, transferência de aprendizado (Transfer Learning com MobileNetV2) e conexão interdisciplinar entre IA e impacto ambiental ESG.',
   },
+  {
+    id: 'rag-doc-ia-dwh',
+    title: 'DWH Saúde RC — Data Warehouse e Analytics em Saúde Coletiva',
+    subject: 'Bancos de Dados Analíticos & Data Warehousing',
+    course: 'IA',
+    semester: 3,
+    materialType: 'PROJETO',
+    fileUrl: 'https://github.com/MateusIoga/DWH-Saude-RC',
+    githubUrl: 'https://github.com/MateusIoga/DWH-Saude-RC',
+    authorName: 'Mateus Ioga / Equipe DWH Saúde RC',
+    tags: 'banco de dados, sql, postgresql, data warehouse, datasus, etl, modelagem dimensional, star schema, saude coletiva',
+    contentBody:
+      'Data Warehouse voltado à gestão de dados da saúde pública de Rio Claro utilizando cargas de dados do DATASUS, modelagem multidimensional (Star Schema) e dashboards analíticos. Disciplina: Bancos de Dados Analíticos & Data Warehousing. Curso: IA (3º semestre). Tags: Saude, Data Warehouse, DATASUS, ETL, TypeScript, PostgreSQL.',
+    links: [
+      { label: 'Repositório Oficial DWH Saúde RC (GitHub)', url: 'https://github.com/MateusIoga/DWH-Saude-RC' },
+    ],
+  },
 ];
 
 const QUERY_STOP_WORDS = new Set([
@@ -513,7 +530,9 @@ const QUERY_STOP_WORDS = new Set([
   'estudar', 'estudo', 'estudos', 'aprender', 'aprendemos', 'aprende',
   'saber', 'conteudo', 'conteudos', 'material', 'materiais', 'disciplina', 'disciplinas',
   'materia', 'materias', 'curso', 'cursos', 'semestre', 'semestres', 'grade', 'matriz',
-  'posso', 'devo', 'deve', 'consigo', 'encontro', 'encontrar', 'achar', 'tem', 'ha', 'existe'
+  'posso', 'devo', 'deve', 'consigo', 'encontro', 'encontrar', 'achar', 'tem', 'temos',
+  'tinha', 'ter', 'ha', 'existe', 'existem', 'havera', 'possui', 'possuem',
+  'disponivel', 'disponiveis', 'ver', 'olhar', 'pesquisar', 'buscar', 'busca', 'procurar'
 ]);
 
 function normalizeTokens(text: string): string[] {
@@ -524,6 +543,104 @@ function normalizeTokens(text: string): string[] {
     .replace(/[^a-z0-9\s]/g, ' ')
     .split(/\s+/)
     .filter((w) => w.length >= 2 && !QUERY_STOP_WORDS.has(w));
+}
+
+/**
+ * Compara dois tokens lexicais exigindo correspondência exata ou prefixo estrito
+ * (evita falsos positivos de substrings minúsculas)
+ */
+function tokenMatches(docToken: string, queryToken: string): boolean {
+  if (docToken === queryToken) return true;
+  if (docToken.length >= 4 && queryToken.length >= 4) {
+    if (docToken.startsWith(queryToken) || queryToken.startsWith(docToken)) return true;
+  }
+  return false;
+}
+
+/**
+ * Detecta consultas sobre cursos ou áreas de conhecimento que NÃO FAZEM PARTE
+ * da FATEC Rio Claro (que oferece exclusivamente Inteligência Artificial e Gestão ESG).
+ */
+export function detectOutOfScopeDomain(question: string): { isOutOfScope: boolean; topic?: string } {
+  const norm = question
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+
+  // Construção civil / Edificações / Arquitetura
+  if (
+    norm.includes('construcao civil') ||
+    norm.includes('engenharia civil') ||
+    norm.includes('edificacao') ||
+    norm.includes('edificacoes') ||
+    norm.includes('alvenaria') ||
+    norm.includes('canteiro de obra') ||
+    norm.includes('concreto armado') ||
+    norm.includes('instalacoes prediais') ||
+    norm.includes('topografia') ||
+    norm.includes('estruturas de concreto') ||
+    (norm.includes('construcao') && (norm.includes('civil') || norm.includes('predial') || norm.includes('obra') || norm.includes('casa') || norm.includes('edificio')))
+  ) {
+    return { isOutOfScope: true, topic: 'Construção Civil e Edificações' };
+  }
+
+  // Saúde / Medicina / Odontologia / Enfermagem / Fisioterapia
+  if (
+    norm.includes('medicina') ||
+    norm.includes('enfermagem') ||
+    norm.includes('odontologia') ||
+    norm.includes('fisioterapia') ||
+    norm.includes('farmacia') ||
+    norm.includes('veterinaria') ||
+    norm.includes('nutricao') ||
+    norm.includes('biomedicina')
+  ) {
+    // Permitir se for explicitamente sobre o projeto DWH Saúde RC da Vitrine
+    if (!norm.includes('dwh') && !norm.includes('datasus') && !norm.includes('analytics') && !norm.includes('saude rc')) {
+      return { isOutOfScope: true, topic: 'Ciências da Saúde (Medicina/Enfermagem/Odontologia)' };
+    }
+  }
+
+  // Direito / Ciências Jurídicas
+  if (
+    norm.includes('direito penal') ||
+    norm.includes('direito civil') ||
+    norm.includes('advocacia') ||
+    norm.includes('processo penal') ||
+    norm.includes('processo civil') ||
+    norm.includes('ciencias juridicas') ||
+    norm.includes('oab')
+  ) {
+    return { isOutOfScope: true, topic: 'Direito e Ciências Jurídicas' };
+  }
+
+  // Engenharias pesadas tradicionais / Mecânica pesada / Agronomia
+  if (
+    norm.includes('engenharia mecanica') ||
+    norm.includes('mecanica pesada') ||
+    norm.includes('engenharia eletrica') ||
+    norm.includes('metalurgia') ||
+    norm.includes('aeronautica') ||
+    norm.includes('agronomia') ||
+    norm.includes('zootecnia') ||
+    norm.includes('agropecuaria')
+  ) {
+    return { isOutOfScope: true, topic: 'Engenharias Tradicionais / Agronomia' };
+  }
+
+  // Humanas / Pedagogia / Gastronomia / Moda
+  if (
+    norm.includes('pedagogia') ||
+    norm.includes('letras') ||
+    norm.includes('culinaria') ||
+    norm.includes('gastronomia') ||
+    norm.includes('corte e costura') ||
+    norm.includes('moda')
+  ) {
+    return { isOutOfScope: true, topic: 'Licenciaturas, Gastronomia ou Moda' };
+  }
+
+  return { isOutOfScope: false };
 }
 
 /**
@@ -598,6 +715,29 @@ export async function queryAcademicRAG(
     };
   }
 
+  // 1. Verificação prévia de escopo institucional da FATEC Rio Claro
+  // A unidade oferece EXCLUSIVAMENTE: Inteligência Artificial (Matutino) e Gestão ESG (Noturno)
+  const outOfScopeCheck = detectOutOfScopeDomain(cleanQuestion);
+  if (outOfScopeCheck.isOutOfScope) {
+    return {
+      question: cleanQuestion,
+      answer:
+        `A FATEC Rio Claro oferece exclusivamente os cursos superiores de graduação tecnológica em **Inteligência Artificial** (Matutino) e **Gestão ESG** (Noturno).\n\n` +
+        `Portanto, **não possuímos cursos, disciplinas ou materiais didáticos sobre ${outOfScopeCheck.topic}** em nossa unidade.\n\n` +
+        `Nosso Repositório Acadêmico e Vitrine de Projetos concentram-se exclusivamente nas áreas homologadas:\n` +
+        `• **Inteligência Artificial:** Programação em Python, Algoritmos e Estrutura de Dados, Bancos de Dados (SQL e NoSQL), Aprendizado de Máquina, Redes Neurais e Visão Computacional.\n` +
+        `• **Gestão ESG:** Governança Corporativa, Relatórios de Sustentabilidade (Padrões GRI), Economia Circular, Inventário de Emissões de Carbono (Escopos 1, 2 e 3) e ODS da ONU.\n\n` +
+        `Caso queira consultar materiais dessas áreas ou projetos desenvolvidos pelos nossos estudantes, por favor pesquise por matérias de IA ou ESG.`,
+      sources: [],
+      courseFilter,
+      semesterFilter,
+      confidence: 1.0,
+      mode: 'DETERMINISTIC_RAG',
+      latencyMs: Math.max(1, Date.now() - start),
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const corpus = buildAcademicKnowledgeCorpus(repositoryMaterials);
   const queryTokens = normalizeTokens(cleanQuestion);
   const lowerQ = cleanQuestion
@@ -605,7 +745,7 @@ export async function queryAcademicRAG(
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
 
-  // Filtragem opcional por curso e semestre + pontuação TF-IDF / BM25 aprimorada
+  // Filtragem opcional por curso e semestre + pontuação lexical estrita
   const scored = corpus
     .filter((doc) => {
       if (courseFilter !== 'TODOS' && doc.course !== courseFilter) return false;
@@ -620,21 +760,15 @@ export async function queryAcademicRAG(
 
       let rawScore = 0;
       for (const qToken of queryTokens) {
-        if (titleTokens.some((t) => t.includes(qToken) || qToken.includes(t))) rawScore += 4.5;
-        if (subjectTokens.some((t) => t.includes(qToken) || qToken.includes(t))) rawScore += 3.8;
-        if (tagTokens.some((t) => t.includes(qToken) || qToken.includes(t))) rawScore += 3.2;
-        if (bodyTokens.some((t) => t.includes(qToken) || qToken.includes(t))) rawScore += 1.8;
+        if (titleTokens.some((t) => tokenMatches(t, qToken))) rawScore += 5.0;
+        if (subjectTokens.some((t) => tokenMatches(t, qToken))) rawScore += 4.0;
+        if (tagTokens.some((t) => tokenMatches(t, qToken))) rawScore += 3.5;
+        if (bodyTokens.some((t) => tokenMatches(t, qToken))) rawScore += 1.0;
       }
 
-      // Boosts semânticos contextuais
-      if ((lowerQ.includes('matemat') || lowerQ.includes('calculo') || lowerQ.includes('algebra') || lowerQ.includes('estatist') || lowerQ.includes('probabil') || lowerQ.includes('discret') || lowerQ.includes('icd-010') || lowerQ.includes('ial-010')) && doc.id === 'rag-doc-ia-math') {
-        rawScore += 20.0;
-      }
+      // Boosts semânticos contextuais para termos curriculares fundamentais
       if ((lowerQ.includes('linguag') || lowerQ.includes('program') || lowerQ.includes('python')) && doc.id === 'rag-doc-ia-prog') {
         rawScore += 12.0;
-      }
-      if ((lowerQ.includes('banco') || lowerQ.includes('sql') || lowerQ.includes('nosql') || lowerQ.includes('ibd-040') || lowerQ.includes('ibd-041')) && doc.id === 'rag-doc-ia-db') {
-        rawScore += 18.0;
       }
       if ((lowerQ.includes('rota') || lowerQ.includes('entrega') || lowerQ.includes('mercadoria') || lowerQ.includes('logistica')) && doc.id === 'rag-doc-ia-rotas') {
         rawScore += 12.0;
@@ -645,21 +779,22 @@ export async function queryAcademicRAG(
         (queryTokens.includes('iniciante') || queryTokens.includes('primeiro') || queryTokens.includes('1')) &&
         doc.semester === 1
       ) {
-        rawScore += 2.5;
+        rawScore += 2.0;
       }
 
       const normalizedScore = Math.min(0.99, Number((rawScore / Math.max(queryTokens.length * 4, 4)).toFixed(2)));
       return {
         doc,
         rawScore,
-        relevanceScore: rawScore > 0 ? Math.max(0.3, normalizedScore) : 0,
+        relevanceScore: rawScore >= 4.0 ? Math.max(0.4, normalizedScore) : 0,
       };
     })
     .sort((a, b) => b.rawScore - a.rawScore || a.doc.semester - b.doc.semester);
 
-  // CRUCIAL: Selecionar APENAS documentos com relevância comprovada (rawScore > 0)
-  // Evita falsos positivos e alucinações quando a busca não corresponder a nenhum arquivo do acervo
-  const matchingScored = scored.filter((item) => item.rawScore > 0);
+  // CRUCIAL: Limiar mínimo rigoroso de relevância (rawScore >= 4.0)
+  // Exige correspondência substancial no título, disciplina, tags ou múltiplos tokens-chave.
+  // Evita correspondências falsas por ocorrências casuais isoladas de uma única palavra no corpo.
+  const matchingScored = scored.filter((item) => item.rawScore >= 4.0);
   const selected = matchingScored.slice(0, topK);
 
   let citations: RAGSourceCitation[] = selected.map(({ doc, relevanceScore }) => ({
@@ -679,7 +814,7 @@ export async function queryAcademicRAG(
   }));
 
   const config = getGeminiConfig();
-  if (config.apiKey) {
+  if (config.apiKey && citations.length > 0) {
     try {
       const contextBlock = citations
         .map(
@@ -693,40 +828,23 @@ export async function queryAcademicRAG(
       const ragPrompt = `Você é o Tutor Acadêmico Inteligente e Orientador Pedagógico da FATEC Rio Claro.
 O estudante fez a seguinte pergunta: "${cleanQuestion}"
 
-DIRETRIZES RIGOROSAS DE RESPOSTA:
-1. RESPOSTA DIRETA E CLARA NA PRIMEIRA FRASE:
-   - Comece respondendo diretamente à pergunta do estudante sem enrolação (ex: "Sim, no curso superior de Inteligência Artificial da FATEC Rio Claro os alunos aprendem linguagens de programação...", ou "Para criar uma aplicação que calcule rotas de entrega de mercadorias, a trilha recomendada de matérias e materiais a estudar envolve...").
+DIRETRIZES RIGOROSAS DE RESPOSTA E FIDELIDADE INSTITUCIONAL:
+1. ESCOPO DOS CURSOS DA FATEC RIO CLARO:
+   - A unidade oferece EXCLUSIVAMENTE os cursos de graduação em Inteligência Artificial (Matutino) e Gestão ESG (Noturno).
+   - Se a pergunta envolver áreas que a FATEC Rio Claro NÃO possui (ex: Construção Civil, Edificações, Medicina, Enfermagem, Odontologia, Direito, etc.), declare IMEDIATAMENTE e com clareza que a instituição não oferece esses cursos nem possui materiais didáticos sobre o tema. Não force correspondências com os documentos recuperados.
 
-2. DETALHAMENTO ESTRUTURADO E FIDELIDADE AO REPOSITÓRIO:
-   - Se a pergunta for sobre "onde estudar matemática", cálculo, álgebra linear, estatística ou disciplinas correlatas:
-     * Indique as matérias oficiais com seus respectivos códigos da matriz curricular (ex: "Cálculo Diferencial e Integral" - Código ICD-010 no 1º semestre, "Matemática Discreta" - Código IMD-010 no 1º semestre, "Álgebra Linear e Geometria Analítica" - Código IAL-010 no 2º semestre e "Estatística e Probabilidade" - Código IPE-010 no 2º semestre).
-     * Informe com total transparência a situação no acervo: atualmente NÃO há apostilas ou slides teóricos de Matemática cadastrados no Repositório Acadêmico por professores da unidade.
-     * Aponte onde os conceitos matemáticos são colocados em prática nos materiais e projetos reais cadastrados no acervo (ex: Machine Learning, Redes Neurais e projeto DWH Saúde RC).
-   - Se a pergunta for sobre "onde estudar banco de dados", SQL, NoSQL ou temas correlatos:
-     * Indique as matérias oficiais com seus respectivos códigos da matriz curricular (ex: "Introdução à Bancos de Dados" - Código IBD-040 no 1º semestre, "Banco de Dados Não Relacional" - Código IBD-041 no 2º semestre e "Bancos de Dados Analíticos & Data Warehousing" - Código BDN-009 no 3º semestre).
-     * Informe com total transparência a situação no acervo: atualmente NÃO há apostilas teóricas de IBD-040/041 cadastradas pelos docentes no Repositório Acadêmico.
-     * Aponte o projeto prático real da Vitrine que aplica banco de dados relacional e dimensional: Projeto "DWH Saúde RC" e o banco de dados PostgreSQL do Portal/Cantina.
-   - Se a pergunta for sobre linguagens de programação, ferramentas ou matérias:
-     * Liste explicitamente quais linguagens (ex: Python 3, SQL).
-     * Em quais semestres são ensinadas (1º, 2º, 3º, 4º semestres).
-     * Em quais disciplinas específicas da matriz oficial da FATEC Rio Claro (ex: "Linguagem de Programação I", "Estrutura de Dados", "Aprendizado de Máquina I", etc.).
-   - Se a pergunta for sobre como desenvolver um projeto (ex: rotas de entrega, visão computacional, auditoria ESG):
-     * Cruze os conhecimentos e apresente uma TRILHA LÓGICA SEQUENCIAL DE ESTUDO (Passo 1, Passo 2, Passo 3...), apontando a disciplina e o material mais indicado para cada etapa.
+2. RESPOSTA DIRETA E CLARA NA PRIMEIRA FRASE:
+   - Comece respondendo diretamente à pergunta do estudante sem evasivas.
 
-3. AVISO EXPLÍCITO DE SUFICIÊNCIA OU LEITURAS COMPLEMENTARES:
-   - Se o material do acervo for suficiente, indique isso claramente.
-   - Se para uma aplicação comercial/avançada for necessário complementar com leituras ou tecnologias externas (ex: APIs de Mapas, bibliotecas de roteirização logística como Google OR-Tools, normas ABNT/GRI), inclua obrigatoriamente a seção:
-     "⚠️ **Aviso sobre a Suficiência do Material & Leituras Complementares:** [explique o que o acervo oficial cobre e liste quais tópicos/leituras adicionais o aluno precisará buscar para complementar o projeto]".
-
-4. FONTES E LINKS OFICIAIS:
-   - Utilize exclusivamente as fontes fornecidas abaixo. Cite os materiais pelos nomes.
+3. RESPEITO ESTRITO AOS DOCUMENTOS RECUPERADOS:
+   - Se os documentos abaixo NÃO responderem à dúvida do estudante ou forem insuficientes, diga claramente que não compreendeu ou não localizou materiais específicos no acervo e peça para refazer a pergunta de forma mais objetiva, dando exemplos práticos de perguntas do acervo.
 
 DOCUMENTOS OFICIAIS RECUPERADOS DO ACERVO FATEC:
 ${contextBlock}`;
 
       const aiAnswer = await callGeminiGenerateContent(
         ragPrompt,
-        'Você é um orientador universitário de IA e Gestão ESG da FATEC Rio Claro. Responda de forma direta, altamente didática, lógica e com excelente estruturação em tópicos.'
+        'Você é um orientador universitário de IA e Gestão ESG da FATEC Rio Claro. Responda de forma direta, altamente didática, lógica e com rigorosa fidelidade ao acervo.'
       );
 
       return {
@@ -746,17 +864,33 @@ ${contextBlock}`;
   }
 
   // SÍNTESE DETERMINÍSTICA RAG (Raciocínio lógico, direto e cruzamento de informações)
+  const isEsgQuery =
+    courseFilter === 'ESG' ||
+    lowerQ.includes('esg') ||
+    lowerQ.includes('carbono') ||
+    lowerQ.includes('escopo') ||
+    lowerQ.includes('sustentab') ||
+    lowerQ.includes('ods da onu');
+
   const isMathQuery =
-    lowerQ.includes('matemat') ||
-    lowerQ.includes('calculo') ||
-    lowerQ.includes('algebra') ||
-    lowerQ.includes('estatist') ||
-    lowerQ.includes('probabil') ||
-    lowerQ.includes('discret') ||
-    lowerQ.includes('derivada') ||
-    lowerQ.includes('integral') ||
-    lowerQ.includes('icd-010') ||
-    lowerQ.includes('ial-010');
+    !isEsgQuery &&
+    courseFilter !== 'ESG' &&
+    (lowerQ.includes('matemat') ||
+      lowerQ.includes('calculo diferencial') ||
+      lowerQ.includes('calculo integral') ||
+      lowerQ.includes('estudar calculo') ||
+      lowerQ.includes('disciplina de calculo') ||
+      lowerQ.includes('materia de calculo') ||
+      lowerQ.includes('algebra') ||
+      lowerQ.includes('estatist') ||
+      lowerQ.includes('probabil') ||
+      lowerQ.includes('discret') ||
+      lowerQ.includes('derivada') ||
+      lowerQ.includes('integral') ||
+      lowerQ.includes('icd-010') ||
+      lowerQ.includes('ial-010') ||
+      (lowerQ.includes('calculo') && !lowerQ.includes('rota') && !lowerQ.includes('frete') && !lowerQ.includes('distancia')));
+
   const isDbQuery =
     lowerQ.includes('banco de dados') ||
     lowerQ.includes('bancos de dados') ||
@@ -765,9 +899,16 @@ ${contextBlock}`;
     lowerQ.includes('estudar nosql') ||
     lowerQ.includes('ibd-040') ||
     lowerQ.includes('ibd-041');
-  const isProgQuery = lowerQ.includes('linguag') || lowerQ.includes('program') || lowerQ.includes('python');
-  const isRoutesQuery = lowerQ.includes('rota') || lowerQ.includes('entrega') || lowerQ.includes('mercadoria') || lowerQ.includes('logistica');
-  const isEsgQuery = lowerQ.includes('esg') || lowerQ.includes('carbono') || lowerQ.includes('escopo') || lowerQ.includes('sustentab');
+
+  const isRoutesQuery =
+    lowerQ.includes('rota') ||
+    lowerQ.includes('entrega') ||
+    lowerQ.includes('mercadoria') ||
+    lowerQ.includes('logistica');
+
+  const isProgQuery =
+    !isRoutesQuery &&
+    (lowerQ.includes('linguag') || lowerQ.includes('program') || lowerQ.includes('python'));
 
   let synthesizedAnswer = '';
 
@@ -872,6 +1013,25 @@ ${contextBlock}`;
       '  - **Redes Neurais (IRC-036) e Aprendizado de Máquina II (MAQ-027):** **Python** com frameworks de Deep Learning (**TensorFlow** e **PyTorch**).\n' +
       '  - **Visão Computacional (IIA-023):** Processamento de imagens e Redes Neurais Convolucionais (CNN) com **Python** e **OpenCV**.\n\n' +
       'Você pode abrir e consultar diretamente as apostilas e cadernos Jupyter clicando nos botões de acesso direto abaixo.';
+
+    const progMatches = corpus.filter((m) => m.id === 'rag-doc-ia-prog' || m.id === 'rag-doc-ia-sem1').slice(0, 2);
+    if (progMatches.length > 0) {
+      citations = progMatches.map((doc) => ({
+        id: doc.id,
+        title: doc.title,
+        subject: doc.subject,
+        course: doc.course,
+        semester: doc.semester,
+        materialType: doc.materialType,
+        fileUrl: doc.fileUrl,
+        githubUrl: doc.githubUrl,
+        authorName: doc.authorName,
+        relevanceScore: 0.98,
+        excerpt: doc.contentBody.slice(0, 240) + '...',
+        links: doc.links || null,
+        attachments: doc.attachments || null,
+      }));
+    }
   } else if (isRoutesQuery) {
     synthesizedAnswer =
       '**Para criar uma aplicação de planejamento e otimização de rotas de entrega de mercadorias, a trilha recomendada de matérias e materiais na FATEC Rio Claro envolve uma abordagem multidisciplinar em 4 etapas:**\n\n' +
@@ -890,6 +1050,25 @@ ${contextBlock}`;
       '⚠️ **Aviso sobre a Suficiência do Material & Leituras Complementares:**\n' +
       'O acervo da FATEC Rio Claro cobre com excelência toda a base matemática e lógica (grafos, menor caminho, otimização por Algoritmos Genéticos e predição com Machine Learning). Contudo, para construir um aplicativo comercial completo em produção com mapas reais, o aluno precisará de leituras complementares externas sobre: (1) **APIs de Mapas e Rotas** (ex: *Google Maps Routes API* ou *OpenStreetMap / OSRM*) e (2) **Bibliotecas de Roteirização Logística** (ex: *Google OR-Tools Routing Library* ou *VROOM*).\n\n' +
       'Consulte abaixo os botões diretos para os cadernos de grafos, otimização e machine learning homologados.';
+
+    const routesMatches = corpus.filter((m) => m.id === 'rag-doc-ia-rotas').slice(0, 1);
+    if (routesMatches.length > 0) {
+      citations = routesMatches.map((doc) => ({
+        id: doc.id,
+        title: doc.title,
+        subject: doc.subject,
+        course: doc.course,
+        semester: doc.semester,
+        materialType: doc.materialType,
+        fileUrl: doc.fileUrl,
+        githubUrl: doc.githubUrl,
+        authorName: doc.authorName,
+        relevanceScore: 0.98,
+        excerpt: doc.contentBody.slice(0, 240) + '...',
+        links: doc.links || null,
+        attachments: doc.attachments || null,
+      }));
+    }
   } else if (isEsgQuery) {
     synthesizedAnswer =
       '**A sigla ESG refere-se aos pilares Environmental (Ambiental), Social (Social) e Governance (Governança Corporativa). No curso de Gestão ESG da FATEC Rio Claro, a matriz curricular aborda os 3 pilares de forma prática e estratégica.**\n\n' +
@@ -900,19 +1079,48 @@ ${contextBlock}`;
       '  - **Escopo 3:** Emissões em toda a cadeia de valor (fornecedores, transporte terceirizado e uso do produto final).\n' +
       '• **Pilar Social e Governança (S e G):** Aborda matriz de materialidade, compliance anticorrupção, diretrizes GRI e transparência no mercado financeiro sustentável.\n\n' +
       'Você pode abrir os guias e diretrizes oficiais clicando nos botões de acesso direto abaixo.';
+
+    const esgMatches = corpus.filter((m) => m.course === 'ESG').slice(0, 2);
+    if (esgMatches.length > 0) {
+      citations = esgMatches.map((doc) => ({
+        id: doc.id,
+        title: doc.title,
+        subject: doc.subject,
+        course: doc.course,
+        semester: doc.semester,
+        materialType: doc.materialType,
+        fileUrl: doc.fileUrl,
+        githubUrl: doc.githubUrl,
+        authorName: doc.authorName,
+        relevanceScore: 0.95,
+        excerpt: doc.contentBody.slice(0, 240) + '...',
+        links: doc.links || null,
+        attachments: doc.attachments || null,
+      }));
+    }
   } else {
     const primary = selected[0]?.doc;
     const secondary = selected[1]?.doc;
-    if (primary && (selected[0]?.rawScore ?? 0) > 0) {
+    if (primary && (selected[0]?.rawScore ?? 0) >= 4.0) {
       synthesizedAnswer =
         `Com base nos materiais oficiais homologados da FATEC Rio Claro, a resposta para a sua consulta encontra-se no material **"${primary.title}"** (Disciplina: *${primary.subject}*, Curso: *${primary.course}* - ${primary.semester}º Semestre):\n\n` +
         `${primary.contentBody}`;
-      if (secondary && (selected[1]?.rawScore ?? 0) > 0) {
+      if (secondary && (selected[1]?.rawScore ?? 0) >= 4.0) {
         synthesizedAnswer += `\n\nComplementarmente, a disciplina **"${secondary.subject}"** disponibiliza o material **"${secondary.title}"**, abordando: ${secondary.contentBody.slice(0, 200)}...`;
       }
     } else {
       synthesizedAnswer =
-        `Não foram localizados materiais específicos no acervo homologado para a consulta "${cleanQuestion}". Recomendamos verificar se a busca corresponde a uma das matérias oficiais (ex: "matemática", "banco de dados", "linguagem de programação", "ESG", "aprendizado de máquina") ou navegar pelo menu de disciplinas do Repositório Acadêmico.`;
+        'Não compreendi sua dúvida acadêmica ou não foram localizados materiais específicos no acervo do Repositório Acadêmico da FATEC Rio Claro para esses termos.\n\n' +
+        'Por favor, **refaça sua pergunta de forma mais objetiva**, indicando o nome da disciplina, linguagem, ferramenta ou projeto que deseja consultar.\n\n' +
+        '💡 **Exemplos de perguntas que posso responder com base no acervo real:**\n' +
+        '• *"O que aprendemos na disciplina de Linguagem de Programação I no 1º semestre de IA?"*\n' +
+        '• *"Para criar uma aplicação de rotas de entrega de mercadorias, quais matérias e materiais devo estudar?"*\n' +
+        '• *"Onde estudar material sobre Banco de Dados no curso de IA?"*\n' +
+        '• *"Onde estudar Matemática e Cálculo para Inteligência Artificial?"*\n' +
+        '• *"O que significa a sigla ESG e como são calculados os escopos de pegada de carbono?"*\n' +
+        '• *"Como funciona o projeto DWH Saúde RC na Vitrine de Projetos?"*\n' +
+        '• *"Quais são os modelos e diretrizes para o Relatório de Estágio Supervisionado?"*';
+      citations = [];
     }
   }
 

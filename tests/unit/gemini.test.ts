@@ -106,4 +106,49 @@ describe('Módulo de Inteligência Artificial — Google Gemini SDK, OCR Visão 
     expect(ragESG.sources[0].course).toBe('ESG');
     expect(ragESG.answer.toLowerCase()).toContain('carbono');
   });
+
+  it('deve identificar consultas fora de escopo (Construção Civil) e responder com fidelidade institucional sem cartões de fontes', async () => {
+    const ragCivil = await queryAcademicRAG({
+      question: 'no curso temos material sobre construção civil',
+    });
+    expect(ragCivil.sources).toHaveLength(0);
+    expect(ragCivil.answer).toContain('Inteligência Artificial');
+    expect(ragCivil.answer).toContain('Gestão ESG');
+    expect(ragCivil.answer).toContain('Construção Civil');
+  });
+
+  it('deve identificar consultas fora de escopo de saúde/odontologia e retornar zero fontes', async () => {
+    const ragMed = await queryAcademicRAG({
+      question: 'onde encontro materiais sobre clínica médica e odontologia',
+    });
+    expect(ragMed.sources).toHaveLength(0);
+    expect(ragMed.answer).toContain('Inteligência Artificial');
+    expect(ragMed.answer).toContain('Gestão ESG');
+  });
+
+  it('deve informar incompreensão ou ausência de material com exemplos práticos quando a consulta for vaga/sem correspondência', async () => {
+    const ragVaga = await queryAcademicRAG({
+      question: 'qual o preco da passagem de onibus intermunicipal',
+    });
+    expect(ragVaga.sources).toHaveLength(0);
+    expect(ragVaga.answer).toContain('Não compreendi sua dúvida acadêmica');
+    expect(ragVaga.answer).toContain('Exemplos de perguntas que posso responder');
+  });
+
+  it('deve orientar sobre banco de dados citando matérias oficiais e o projeto DWH Saúde RC', async () => {
+    const ragDb = await queryAcademicRAG({
+      question: 'onde estudar material sobre banco de dados',
+    });
+    expect(ragDb.answer).toContain('IBD-040');
+    expect(ragDb.answer).toContain('DWH Saúde RC');
+    expect(ragDb.sources.length).toBeGreaterThan(0);
+  });
+
+  it('deve orientar sobre matemática citando disciplinas oficiais (Cálculo ICD-010) e informando a ausência de apostilas teóricas', async () => {
+    const ragMath = await queryAcademicRAG({
+      question: 'onde estudar matemática',
+    });
+    expect(ragMath.answer).toContain('ICD-010');
+    expect(ragMath.answer).toContain('não há apostilas ou slides teóricos de Matemática');
+  });
 });
