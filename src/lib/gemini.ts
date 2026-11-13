@@ -909,9 +909,36 @@ ${contextBlock}`;
     !isRoutesQuery &&
     (lowerQ.includes('linguag') || lowerQ.includes('program') || lowerQ.includes('python'));
 
+  const isEnglishQuery =
+    lowerQ.includes('ingles') ||
+    lowerQ.includes('english') ||
+    lowerQ.includes('idioma') ||
+    lowerQ.includes('lingua inglesa') ||
+    lowerQ.includes('ing-297') ||
+    lowerQ.includes('ing-298') ||
+    lowerQ.includes('esg-in1') ||
+    lowerQ.includes('esg-in2');
+
   let synthesizedAnswer = '';
 
-  if (isMathQuery) {
+  if (isEnglishQuery) {
+    synthesizedAnswer =
+      '**Sim! Na FATEC Rio Claro, a disciplina de Inglês é obrigatória e integra a matriz curricular oficial (PPC) de ambos os cursos superiores:**\n\n' +
+      '• **1. No Curso Superior de Inteligência Artificial (Matutino):**\n' +
+      '  - **Inglês I (Código: ING-297 — 3º Semestre, 40h — Presencial):**\n' +
+      '    Focado em **Inglês Instrumental e Técnico para Tecnologia**. O estudante aprende leitura e interpretação contextual de documentações técnicas de APIs e bibliotecas de IA (NumPy, Scikit-Learn, PyTorch, TensorFlow), sintaxe de comandos, mensagens de erro e terminologia da Ciência da Computação.\n' +
+      '  - **Inglês II (Código: ING-298 — 4º Semestre, 40h — Presencial):**\n' +
+      '    Aprofunda a leitura e análise crítica de **artigos científicos internacionais (Papers de IA)**, escrita técnica de resumos (*abstracts*) para o Trabalho de Graduação (TCC), redação de documentações de código no GitHub e comunicação para apresentação técnica de projetos.\n\n' +
+      '• **2. No Curso Superior de Gestão ESG (Noturno):**\n' +
+      '  - **Inglês 1 para ESG – Fundamentos (Código: ESG-IN1 — 3º Semestre, 40h — On-line):**\n' +
+      '    Vocabulário corporativo global voltado aos pilares ESG, terminologia de sustentabilidade e leitura de relatórios internacionais da ONU e ODS.\n' +
+      '  - **Inglês 2 para ESG – Aplicações em Projetos (Código: ESG-IN2 — 4º Semestre, 40h — On-line):**\n' +
+      '    Aplicação em frameworks internacionais de auditoria e reporte (padrões GRI, GHG Protocol, relatórios corporativos em língua inglesa e negociações sustentáveis internacionais).\n\n' +
+      '• **3. Situação dos Materiais no Repositório Acadêmico:**\n' +
+      '  ⚠️ **Aviso de Disponibilidade:** As disciplinas de Inglês constam na grade curricular oficial do SIGA/CPS, porém **ainda não há apostilas teóricas ou listas de exercícios de Inglês cadastradas pelos docentes no Repositório Acadêmico**.\n\n' +
+      'Você pode consultar a matriz completa de disciplinas no botão "Explorar Grade Curricular Completa" no topo da página.';
+    citations = [];
+  } else if (isMathQuery) {
     synthesizedAnswer =
       '**No curso superior de Inteligência Artificial da FATEC Rio Claro, a formação matemática é componente oficial e fundamental da matriz curricular (PPC):**\n\n' +
       '• **1. Disciplinas Oficiais e Códigos Curriculares:**\n' +

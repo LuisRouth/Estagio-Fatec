@@ -151,4 +151,14 @@ describe('Módulo de Inteligência Artificial — Google Gemini SDK, OCR Visão 
     expect(ragMath.answer).toContain('ICD-010');
     expect(ragMath.answer).toContain('não há apostilas ou slides teóricos de Matemática');
   });
+
+  it('deve responder sobre a disciplina de Inglês na matriz curricular mesmo com digitação ruidosa ("cursoo")', async () => {
+    const ragIngles = await queryAcademicRAG({
+      question: 'Há materia de ingles no cursoo que aprendemos na materia de inglês',
+    });
+    expect(ragIngles.answer).toContain('ING-297');
+    expect(ragIngles.answer).toContain('Inglês I');
+    expect(ragIngles.answer).toContain('ESG-IN1');
+    expect(ragIngles.sources).toHaveLength(0);
+  });
 });
