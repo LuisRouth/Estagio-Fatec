@@ -284,6 +284,61 @@ export default function RepositorioPage() {
 
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [uploadFeedback, setUploadFeedback] = useState('');
+
+  const handleMaterialFileUpload = async (file: File) => {
+    setFormError('');
+    setUploadFeedback('');
+    setUploadingFile(true);
+    try {
+      // 1. Tenta upload direto via URL assinada (suporta arquivos até 25 MB sem limite de 4.5 MB da Vercel)
+      const signRes = await fetch('/api/materials/upload-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: file.name, sizeBytes: file.size }),
+      });
+      const signJson = await signRes.json();
+
+      if (signRes.ok && signJson.success && signJson.data?.signedUploadUrl) {
+        const putRes = await fetch(signJson.data.signedUploadUrl, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': signJson.data.contentType || file.type || 'application/octet-stream',
+          },
+          body: file,
+        });
+
+        if (!putRes.ok) {
+          throw new Error(`Falha ao enviar arquivo para o Supabase Storage (HTTP ${putRes.status}).`);
+        }
+
+        setFormFileUrl(signJson.data.publicUrl);
+        setUploadFeedback(`Arquivo "${file.name}" enviado para a nuvem com sucesso!`);
+        return;
+      }
+
+      // 2. Fallback para ambiente local (quando Supabase Storage não estiver configurado)
+      if (signJson?.fallbackLocal) {
+        const fd = new FormData();
+        fd.append('file', file);
+        const upRes = await fetch('/api/materials/upload', { method: 'POST', body: fd });
+        const upJson = await upRes.json();
+        if (!upRes.ok || !upJson.success) {
+          throw new Error(upJson.error || 'Falha ao enviar arquivo.');
+        }
+        setFormFileUrl(upJson.data.fileUrl);
+        setUploadFeedback(`Arquivo "${file.name}" salvo localmente com sucesso!`);
+        return;
+      }
+
+      throw new Error(signJson.error || 'Não foi possível preparar o upload do arquivo.');
+    } catch (err: any) {
+      setFormError(err.message || 'Erro ao enviar arquivo.');
+    } finally {
+      setUploadingFile(false);
+    }
+  };
 
   // Papéis de acesso
   const isPrivileged = currentUser?.role === 'ADMIN' || currentUser?.role === 'CA_MEMBRO' || currentUser?.role === 'PROFESSOR';
@@ -2508,11 +2563,43 @@ export default function RepositorioPage() {
                     <label className="form-label" style={{ fontWeight: 700 }}>Link do Arquivo (PDF / Drive / Nuvem)</label>
                     <input
                       type="url"
-                      placeholder="https://drive.google.com/..."
+                      placeholder="https://drive.google.com/... ou envie o arquivo abaixo"
                       value={formFileUrl}
                       onChange={(e) => setFormFileUrl(e.target.value)}
                       className="form-input"
                     />
+                    <div style={{ marginTop: '0.45rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <label
+                        className="btn btn-secondary"
+                        style={{
+                          fontSize: '0.75rem',
+                          padding: '0.35rem 0.75rem',
+                          fontWeight: 700,
+                          cursor: uploadingFile ? 'not-allowed' : 'pointer',
+                          opacity: uploadingFile ? 0.65 : 1,
+                        }}
+                      >
+                        {uploadingFile ? 'Enviando para nuvem...' : '📎 Enviar Arquivo (PDF, DOCX, ZIP até 25MB)'}
+                        <input
+                          type="file"
+                          accept=".pdf,.ipynb,.zip,.py,.docx,.pptx,.csv,.json,.png,.jpg,.jpeg"
+                          disabled={uploadingFile}
+                          style={{ display: 'none' }}
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) {
+                              handleMaterialFileUpload(f);
+                              e.target.value = '';
+                            }
+                          }}
+                        />
+                      </label>
+                    </div>
+                    {uploadFeedback && (
+                      <div style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 600, marginTop: '0.35rem' }}>
+                        {uploadFeedback}
+                      </div>
+                    )}
                   </div>
 
                   <div className="form-group">
