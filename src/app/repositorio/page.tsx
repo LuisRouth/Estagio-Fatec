@@ -2101,6 +2101,27 @@ export default function RepositorioPage() {
                             </a>
                           )}
                         </div>
+
+                        {(isPrivileged || (currentUser?.id && m.author_id === currentUser.id)) && (
+                          <div style={{ display: 'flex', gap: '0.5rem', paddingTop: '0.5rem', borderTop: '1px dashed var(--border-light)' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditModal(m)}
+                              className="btn btn-secondary"
+                              style={{ flex: 1, padding: '0.38rem 0.65rem', fontSize: '0.75rem', fontWeight: 700 }}
+                            >
+                              ✏️ Editar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDeleteConfirmTarget(m)}
+                              className="btn btn-danger"
+                              style={{ flex: 1, padding: '0.38rem 0.65rem', fontSize: '0.75rem', fontWeight: 700 }}
+                            >
+                              🗑️ Excluir
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
