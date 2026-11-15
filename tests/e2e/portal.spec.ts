@@ -82,4 +82,57 @@ test.describe('Portal Integrado FATEC Rio Claro — Suíte E2E & Usabilidade Mob
     await page.goto('/cantina');
     await expect(page.locator('h1')).toContainText('Cantina Discente');
   });
+
+  test('6. Jornada Completa de Compra: Login -> Cantina -> Carrinho -> Checkout Pix -> Histórico', async ({ page }) => {
+    // 1. Login com aluno seedado
+    await page.goto('/login');
+    await page.fill('#email', 'lucas.mendes@aluno.cps.sp.gov.br');
+    await page.fill('#senha', 'Fatec@2026');
+    await page.click('button[type="submit"]');
+    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 15000 });
+
+    // 2. Acessar a Cantina e adicionar um produto disponível ao carrinho
+    await page.goto('/cantina');
+    await expect(page.locator('h1')).toContainText('Cantina Discente');
+    const addButtons = page.getByRole('button', { name: /\+ Adicionar/i });
+    await expect(addButtons.first()).toBeVisible({ timeout: 15000 });
+    await addButtons.first().click();
+
+    // 3. Finalizar pedido e gerar Pix Dinâmico
+    const checkoutBtn = page.getByRole('button', { name: /Finalizar e Gerar Pix/i });
+    await expect(checkoutBtn).toBeVisible({ timeout: 10000 });
+    await checkoutBtn.click();
+
+    // 4. Verificar geração do Pix Copia-e-Cola no modal de checkout
+    await expect(page.getByText(/Pix Copia e Cola|QR Code|Aguardando Pagamento/i).first()).toBeVisible({ timeout: 15000 });
+
+    // 5. Conferir registro no Histórico de compras
+    await page.goto('/historico');
+    await expect(page.locator('h1')).toContainText(/Histórico/i);
+  });
+
+  test('7. Jornada Completa de Estudo: Repositório -> Filtros -> Assistente IA RAG -> Vitrine de TCCs', async ({ page }) => {
+    // 1. Acessar Repositório Acadêmico e aplicar filtros de curso e semestre
+    await page.goto('/repositorio');
+    await expect(page.locator('h1')).toContainText('Repositório Acadêmico');
+    await page.getByRole('button', { name: '1º Sem' }).click();
+
+    // 2. Abrir o Assistente Acadêmico Inteligente (RAG) e realizar pergunta
+    const toggleRagBtn = page.getByRole('button', { name: /Consultar via IA|Ocultar Assistente/i });
+    if (await toggleRagBtn.isVisible()) {
+      const text = await toggleRagBtn.textContent();
+      if (text && text.includes('Consultar via IA')) {
+        await toggleRagBtn.click();
+      }
+    }
+    const ragInput = page.getByPlaceholder(/Digite sua dúvida acadêmica/i);
+    await expect(ragInput).toBeVisible({ timeout: 10000 });
+    await ragInput.fill('O que aprendemos em Python no 1º semestre de IA?');
+    await page.getByRole('button', { name: /Perguntar ao Assistente/i }).click();
+    await expect(page.getByText(/ILP-113/i).first()).toBeVisible({ timeout: 15000 });
+
+    // 3. Navegar para Vitrine de TCCs
+    await page.goto('/vitrine');
+    await expect(page.locator('h1')).toContainText(/Vitrine/i);
+  });
 });

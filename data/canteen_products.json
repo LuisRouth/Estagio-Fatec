@@ -201,13 +201,13 @@
     "description": "Garrafa de água mineral natural geladinha",
     "category": "BEBIDA",
     "price": 3,
-    "current_stock": 22,
+    "current_stock": 6,
     "min_stock_alert": 8,
     "image_url": "/images/products/minalba_sem_gas.jpg",
     "barcode": "7896052600019",
     "is_available": true,
     "created_at": "2026-10-27T10:00:00.000Z",
-    "updated_at": "2026-11-13T01:38:58.294Z"
+    "updated_at": "2026-11-15T20:08:59.582Z"
   },
   {
     "id": "b0000000-0000-0000-0000-000000000016",
@@ -474,5 +474,17 @@
     "is_available": true,
     "created_at": "2026-10-27T10:00:00.000Z",
     "updated_at": "2026-11-06T18:52:59.892Z"
+  },
+  {
+    "name": "Bolo de Cenoura Caseiro",
+    "description": "Fatia embalada individualmente",
+    "category": "DOCE",
+    "price": 4,
+    "current_stock": 10,
+    "min_stock_alert": 3,
+    "is_available": true,
+    "id": "a445df82-b6f8-48ca-ad3b-c040ab381b56",
+    "created_at": "2026-11-15T20:08:59.431Z",
+    "updated_at": "2026-11-15T20:08:59.431Z"
   }
 ]
