@@ -99,7 +99,7 @@ export default function AnnouncementCard({
         boxShadow: isUrgent ? '0 8px 24px rgba(239, 68, 68, 0.12)' : 'var(--shadow-sm)',
         overflow: 'hidden',
         cursor: 'pointer',
-        height: '420px',
+        minHeight: '380px', height: '100%',
         position: 'relative',
         transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
       }}
@@ -282,7 +282,7 @@ export default function AnnouncementCard({
             fontSize: '1.025rem',
             fontWeight: 800,
             color: 'var(--text-main)',
-            lineHeight: 1.35,
+            lineHeight: 1.55, paddingBottom: '3px', paddingBottom: '3px',
             marginBottom: '0.45rem',
             display: '-webkit-box',
             WebkitLineClamp: 2,

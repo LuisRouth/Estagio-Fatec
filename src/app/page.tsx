@@ -396,6 +396,7 @@ export default function HomePage() {
           {/* Cards Padronizados de Comunicados na Home */}
           {announcementsLoading ? (
             <div
+              className="home-cards-carousel home-announcements-carousel"
               style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
@@ -458,6 +459,7 @@ export default function HomePage() {
             </div>
           ) : (
             <div
+              className="home-cards-carousel home-announcements-carousel"
               style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
@@ -590,6 +592,7 @@ export default function HomePage() {
             </div>
           ) : (
             <div
+              className="home-cards-carousel home-materials-carousel"
               style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',

@@ -956,9 +956,9 @@ export default function CantinaAdminPage() {
               </div>
             </div>
 
-            {/* Tabela de Gestão de Produtos */}
+            {/* Tabela de Gestão de Produtos (Desktop / Telas Médias) */}
             <div
-              className="canteen-admin-card"
+              className="canteen-admin-card canteen-admin-table-view"
               style={{
                 borderRadius: '20px',
                 border: '1px solid var(--border-light)',
@@ -1147,6 +1147,133 @@ export default function CantinaAdminPage() {
                 </table>
               </div>
             </div>
+
+                {/* Visualização em Cartões Touch-Friendly para Smartphones (<= 820px) */}
+                <div className="canteen-admin-cards-view">
+                  {filteredProducts.length === 0 ? (
+                    <div className="canteen-admin-card" style={{ padding: '2.5rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                      Nenhum produto cadastrado com esses filtros.
+                    </div>
+                  ) : (
+                    filteredProducts.map((p) => {
+                      const isLowStock = p.current_stock > 0 && p.current_stock <= p.min_stock_alert;
+                      const isOutOfStock = p.current_stock <= 0;
+
+                      return (
+                        <div key={p.id} className="canteen-admin-product-card">
+                          <div className="card-top-row">
+                            <div className="card-thumb">
+                              {p.image_url ? (
+                                <img src={p.image_url} alt="" loading="lazy" decoding="async" />
+                              ) : (
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+                              )}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-main)', lineHeight: 1.3 }}>
+                                {p.name}
+                              </div>
+                              <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', marginTop: '0.25rem', flexWrap: 'wrap' }}>
+                                <span className="badge badge-blue" style={{ fontSize: '0.68rem', padding: '0.15rem 0.5rem' }}>
+                                  {p.category}
+                                </span>
+                                <span style={{ fontWeight: 800, color: 'var(--accent-primary)', fontSize: '0.95rem' }}>
+                                  R$ {Number(p.price).toFixed(2).replace('.', ',')}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Ajuste Rápido de Estoque com Toque Fácil */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--bg-muted)', padding: '0.65rem 0.85rem', borderRadius: '10px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Estoque:</span>
+                              <span
+                                style={{
+                                  fontWeight: 800,
+                                  fontSize: '1.05rem',
+                                  color: isOutOfStock ? 'var(--accent-rose)' : isLowStock ? 'var(--accent-amber)' : 'var(--accent-emerald)',
+                                }}
+                              >
+                                {p.current_stock} un.
+                              </span>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '0.35rem' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleQuickStockAdjust(p.id, -1)}
+                                disabled={p.current_stock <= 0}
+                                className="canteen-admin-touch-quick-btn"
+                                title="Remover 1 unidade"
+                              >
+                                -1
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleQuickStockAdjust(p.id, 1)}
+                                className="canteen-admin-touch-quick-btn"
+                                title="Adicionar 1 unidade"
+                              >
+                                +1
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleQuickStockAdjust(p.id, 10)}
+                                className="canteen-admin-touch-quick-btn"
+                                style={{ fontSize: '0.8rem', padding: '0 0.5rem', color: 'var(--accent-emerald)' }}
+                                title="Reposição em lote (+10)"
+                              >
+                                +10
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Ações: Ativo, Editar, Excluir */}
+                          <div className="card-actions-row">
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                              <input
+                                type="checkbox"
+                                checked={p.is_available}
+                                onChange={() => handleToggleAvailability(p.id, p.is_available)}
+                                style={{ width: '16px', height: '16px' }}
+                              />
+                              {p.is_available ? 'Ativo na Loja' : 'Inativo'}
+                            </label>
+
+                            <div className="card-action-btns" style={{ display: 'flex', gap: '0.4rem' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenModal(p)}
+                                className="btn btn-secondary touch-target-btn"
+                                style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem' }}
+                              >
+                                Editar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteProduct(p)}
+                                className="touch-target-btn"
+                                style={{
+                                  padding: '0.45rem 0.75rem',
+                                  fontSize: '0.8rem',
+                                  borderRadius: '8px',
+                                  border: '1px solid var(--accent-rose-light)',
+                                  backgroundColor: 'var(--accent-rose-light)',
+                                  color: 'var(--accent-rose)',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                Excluir
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </>
             )}
 

@@ -155,7 +155,7 @@ export default function AnnouncementDetailModal({
         <div
           style={{
             width: '100%',
-            height: '240px',
+            height: '180px', maxHeight: '25vh',
             position: 'relative',
             backgroundColor: '#0f172a',
             overflow: 'hidden',
@@ -265,7 +265,7 @@ export default function AnnouncementDetailModal({
         </div>
 
         {/* Conteúdo com rolagem */}
-        <div style={{ overflowY: 'auto', padding: '1.75rem 2rem', flex: 1, overscrollBehavior: 'contain' }}>
+        <div className="announcement-modal-scroll" style={{ overflowY: 'auto', padding: '1.5rem', flex: 1, overscrollBehavior: 'contain' }}>
           {/* Metadados: Curso, Semestre e Data */}
           <div
             style={{
@@ -316,7 +316,7 @@ export default function AnnouncementDetailModal({
           {/* Título Principal */}
           <h1
             style={{
-              fontSize: '1.65rem',
+              fontSize: '1.35rem',
               fontWeight: 800,
               color: 'var(--text-main)',
               lineHeight: 1.3,

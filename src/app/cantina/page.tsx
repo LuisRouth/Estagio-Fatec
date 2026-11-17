@@ -572,7 +572,7 @@ export default function CantinaPage() {
         
         {/* Cabeçalho da Cantina com Identidade FATEC */}
         <div
-          className="canteen-discente-header-card card-interactive"
+          className="canteen-discente-header-card canteen-header-card card-interactive"
           style={{
             borderRadius: '20px',
             padding: '2.25rem 2rem',
@@ -592,16 +592,16 @@ export default function CantinaPage() {
               <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Autoatendimento Discente</span>
             </div>
 
-            <h1 style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
+            <h1 className="canteen-header-title" style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
               Cantina Discente dos Estudantes
             </h1>
-            <p style={{ color: 'var(--text-sub)', fontSize: '0.95rem', marginTop: '0.35rem', maxWidth: '680px', lineHeight: 1.6 }}>
+            <p className="canteen-header-desc" style={{ color: 'var(--text-sub)', fontSize: '0.95rem', marginTop: '0.35rem', maxWidth: '680px', lineHeight: 1.6 }}>
               Pegue o produto na prateleira física, adicione ao seu pedido abaixo e escaneie o <strong>QR Code Pix com valor exato</strong>.Sem pranchetas de papel e com extrato em tempo real.
             </p>
           </div>
 
           {/* Ações do Topo: Gerenciar Estoque / Pedidos (Apenas CA e ADMIN) e Meu Pedido */}
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="canteen-header-actions" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
             {(currentUser?.role === 'ADMIN' || currentUser?.role === 'CA_MEMBRO') && (
               <Link
                 href={activeCanteenTab === 'statement' ? '/cantina/admin?tab=orders' : '/cantina/admin?tab=products'}
@@ -713,14 +713,14 @@ export default function CantinaPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
             {/* Abas de Categorias */}
-            <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.25rem', maxWidth: '100%' }}>
+            <div className="canteen-categories-bar" style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.25rem', maxWidth: '100%' }}>
               {categories.map((cat) => {
                 const isSelected = selectedCategory === cat.id;
                 return (
                   <button
                     key={cat.id}
                     onClick={() => setSelectedCategory(cat.id)}
-                    className={`canteen-category-btn ${isSelected ? 'active' : ''}`}
+                    className={`canteen-category-btn canteen-cat-pill ${isSelected ? 'active' : ''}`}
                     style={{
                       border: isSelected ? '1px solid var(--accent-blue)' : '1px solid var(--border-light)',
                       backgroundColor: isSelected ? 'var(--accent-blue)' : 'transparent',
@@ -882,6 +882,7 @@ export default function CantinaPage() {
           </div>
         ) : (
           <div
+            className="canteen-products-grid"
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
@@ -911,7 +912,7 @@ export default function CantinaPage() {
                   {renderCardBackgroundEffect(product.category)}
                   <div className="canteen-card-content">
                   {/* Badge de Estoque */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                  <div className="canteen-badges-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                     <span className="badge" style={{ backgroundColor: 'var(--bg-muted)', color: 'var(--text-muted)', fontSize: '0.72rem' }}>
                       {product.category}
                     </span>
@@ -921,13 +922,9 @@ export default function CantinaPage() {
                         Esgotado
                       </span>
                     ) : isLowStock ? (
-                      <span className="badge" style={{ backgroundColor: 'var(--accent-amber-light)', color: 'var(--accent-amber)' }}>
-                        Últimos {product.current_stock} un.
-                      </span>
+                      <span className="badge canteen-stock-badge" style={{ backgroundColor: 'var(--accent-amber-light)', color: 'var(--accent-amber)' }}><span className="stock-full">Últimos {product.current_stock} un.</span><span className="stock-compact">{product.current_stock} un.</span></span>
                     ) : (
-                      <span className="badge badge-emerald">
-                        {product.current_stock} un. disponíveis
-                      </span>
+                      <span className="badge badge-emerald canteen-stock-badge"><span className="stock-full">{product.current_stock} un. disponíveis</span><span className="stock-compact">{product.current_stock} un.</span></span>
                     )}
                   </div>
 
@@ -951,6 +948,8 @@ export default function CantinaPage() {
                       <img
                         src={product.image_url}
                         alt={product.name}
+                        loading="lazy"
+                        decoding="async"
                         style={{
                           width: '100%',
                           height: '100%',
@@ -968,19 +967,18 @@ export default function CantinaPage() {
 
                   {/* Detalhes do Produto */}
                   <div>
-                    <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)', lineHeight: 1.35, minHeight: '2.7rem' }}>
+                    <h3 className="canteen-product-name" style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)', lineHeight: 1.35, minHeight: '2.7rem' }}>
                       {product.name}
                     </h3>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.35rem', minHeight: '2.4rem', lineHeight: 1.4 }}>
+                    <p className="canteen-product-desc" style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.35rem', minHeight: '2.4rem', lineHeight: 1.4 }}>
                       {product.description || 'Disponível no freezer e expositor discente do campus.'}
                     </p>
                   </div>
 
                   {/* Preço e Botão de Ação */}
-                  <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Preço Unitário</span>
-                      <span style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--accent-blue)' }}>
+                  <div className="canteen-card-bottom" style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div className="canteen-price-box">
+                      <span className="canteen-product-price" style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--accent-blue)' }}>
                         R$ {Number(product.price).toFixed(2).replace('.', ',')}
                       </span>
                     </div>
@@ -993,15 +991,8 @@ export default function CantinaPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                         <button
                           onClick={() => updateQuantity(product.id, -1)}
-                          style={{
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '8px',
-                            border: '1px solid var(--border-light)',
-                            backgroundColor: 'var(--bg-card)',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                          }}
+                          className="canteen-qty-btn"
+                          title="Remover 1 unidade"
                         >
                           -
                         </button>
@@ -1011,15 +1002,8 @@ export default function CantinaPage() {
                         <button
                           onClick={() => updateQuantity(product.id, 1)}
                           disabled={inCartItem.quantity >= product.current_stock}
-                          style={{
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '8px',
-                            border: '1px solid var(--border-light)',
-                            backgroundColor: 'var(--bg-card)',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                          }}
+                          className="canteen-qty-btn"
+                          title="Adicionar mais 1 unidade"
                         >
                           +
                         </button>
@@ -1027,8 +1011,8 @@ export default function CantinaPage() {
                     ) : (
                       <button
                         onClick={() => addToCart(product)}
-                        className="btn btn-primary"
-                        style={{ padding: '0.55rem 1.15rem', fontSize: '0.85rem' }}
+                        className="btn btn-primary touch-target-btn"
+                        style={{ padding: '0.65rem 1.15rem', fontSize: '0.875rem' }}
                       >
                         + Adicionar
                       </button>
@@ -1044,6 +1028,7 @@ export default function CantinaPage() {
         {/* Carrinho Flutuante Fixo no Canto Inferior Direito (Não fecha nem atrapalha as compras) */}
         {totalCartCount > 0 && !isCartOpen && (
           <div
+            className="canteen-floating-dock-wrapper"
             style={{
               position: 'fixed',
               bottom: '24px',
