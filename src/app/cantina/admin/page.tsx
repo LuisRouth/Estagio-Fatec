@@ -575,6 +575,31 @@ export default function CantinaAdminPage() {
     }
   };
 
+  // Alternar disponibilidade do produto na loja
+  const handleToggleAvailability = async (productId: string, currentAvailable: boolean) => {
+    try {
+      const nextAvailable = !currentAvailable;
+      const res = await fetch(`/api/canteen/products/${productId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_available: nextAvailable }),
+      });
+
+      if (res.ok) {
+        setProducts((prev) =>
+          prev.map((p) => (p.id === productId ? { ...p, is_available: nextAvailable } : p))
+        );
+        showToast(nextAvailable ? 'Produto ativado na loja!' : 'Produto marcado como inativo.');
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        showToast(errData.error || 'Não foi possível alterar a disponibilidade.', 'error');
+      }
+    } catch (err) {
+      console.error('Falha ao alterar disponibilidade:', err);
+      showToast('Erro de comunicação ao atualizar disponibilidade.', 'error');
+    }
+  };
+
   // 3. Abrir modal para novo produto ou edição
   const handleOpenModal = (product?: Product) => {
     setFormError('');
