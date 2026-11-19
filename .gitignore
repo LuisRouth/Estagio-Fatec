@@ -36,4 +36,13 @@ yarn-error.log*
 
 # Uploads locais e materiais brutos
 materiais_aulas/
-public/uploads/materials/
+public/uploads/materials/*
+!public/uploads/materials/ia_sem1_iia020_aula01_fundamentos.pdf
+!public/uploads/materials/ia_sem1_iia020_agentes_inteligentes.pdf
+!public/uploads/materials/ia_sem3_maq026_exercicio_classificacao_iris.pdf
+!public/uploads/materials/ia_sem3_eia005_plano_ensino_gpa3.pdf
+!public/uploads/materials/ia_sem4_iia022_aula05_regressao_logistica.pdf
+!public/uploads/materials/ia_sem4_maq027_metodologia_semma.pdf
+!public/uploads/materials/ia_sem4_irc036_aula04_redes_recorrentes_competitivas.pdf
+!public/uploads/materials/ia_sem5_eia100_apresentacao_diretrizes_estagio.pdf
+!public/uploads/materials/ia_sem5_tia001_manual_norteador_trilhas_tcc.docx

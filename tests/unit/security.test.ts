@@ -40,7 +40,7 @@ describe('Módulo de Segurança OWASP (src/lib/security.ts)', () => {
 
   it('deve conter todos os headers de segurança obrigatórios OWASP', () => {
     expect(SECURITY_HEADERS['X-Content-Type-Options']).toBe('nosniff');
-    expect(SECURITY_HEADERS['X-Frame-Options']).toBe('DENY');
+    expect(SECURITY_HEADERS['X-Frame-Options']).toBe('SAMEORIGIN');
     expect(SECURITY_HEADERS['X-XSS-Protection']).toBe('1; mode=block');
   });
 });

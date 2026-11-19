@@ -27,6 +27,7 @@ const updateSchema = z.object({
   attachments: z.array(z.any()).optional().nullable(),
   tags: z.string().max(255).optional().nullable(),
   is_approved: z.boolean().optional(),
+  reject_pending_edit: z.boolean().optional(),
 });
 
 interface RouteParams {
@@ -113,16 +114,50 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     }
 
     const updateData: any = { ...parsed.data };
+    delete updateData.reject_pending_edit;
     if (updateData.title) updateData.title = sanitizeInput(updateData.title);
     if (updateData.description) updateData.description = sanitizeInput(updateData.description);
     if (updateData.subject) updateData.subject = sanitizeInput(updateData.subject);
 
-    // Apenas Professor ou Admin podem alterar status de aprovação
-    if (updateData.is_approved !== undefined && !isPrivileged) {
-      delete updateData.is_approved;
-    }
+    let updated: any;
+    let responseMessage = 'Material atualizado com sucesso.';
+    let requiresReapproval = false;
 
-    const updated = await db.materials.update(id, updateData);
+    if (isPrivileged && parsed.data.reject_pending_edit) {
+      // Moderador rejeitou apenas a edição pendente: mantém a versão antiga publicada no ar
+      updated = await db.materials.update(id, { pending_edit: null });
+      responseMessage = 'Edição pendente descartada. A versão original publicada foi mantida.';
+    } else if (!isPrivileged && material.is_approved) {
+      // Aluno editando item já aprovado: versão antiga permanece publicada no ar
+      // e a nova versão vai para pending_edit aguardando aprovação do CA/Admin
+      delete updateData.is_approved;
+      updated = await db.materials.update(id, { pending_edit: updateData });
+      responseMessage =
+        'Alterações enviadas para revisão! Enquanto o CA/Admin não aprovar, a versão anterior continua publicada.';
+      requiresReapproval = true;
+    } else if (!isPrivileged) {
+      // Aluno editando item ainda pendente (não aprovado): atualiza direto mantendo is_approved = false
+      updateData.is_approved = false;
+      updated = await db.materials.update(id, updateData);
+      responseMessage = 'Alterações salvas! A publicação continua na fila de aprovação do CA/Admin.';
+      requiresReapproval = true;
+    } else {
+      // Moderador (Admin / CA / Professor): se estiver aprovando com pending_edit, aplica as alterações pendentes
+      if (updateData.is_approved === true && material.pending_edit && typeof material.pending_edit === 'object') {
+        updated = await db.materials.update(id, {
+          ...material.pending_edit,
+          ...updateData,
+          is_approved: true,
+          pending_edit: null,
+        });
+        responseMessage = 'Nova versão aprovada e publicada no lugar da anterior!';
+      } else {
+        updated = await db.materials.update(id, {
+          ...updateData,
+          pending_edit: null,
+        });
+      }
+    }
 
     const ip = req.headers.get('x-forwarded-for') || '127.0.0.1';
     await db.audit.log({
@@ -135,7 +170,12 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     });
 
     return NextResponse.json(
-      { success: true, message: 'Material atualizado com sucesso.', data: updated },
+      {
+        success: true,
+        message: responseMessage,
+        requiresReapproval,
+        data: updated,
+      },
       { status: 200, headers: SECURITY_HEADERS }
     );
   } catch (error) {

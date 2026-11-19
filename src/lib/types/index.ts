@@ -153,6 +153,7 @@ export interface AcademicMaterial {
   tags?: string | null;
   download_count: number;
   is_approved: boolean;
+  pending_edit?: Partial<AcademicMaterial> | null;
   created_at: string;
   updated_at: string;
 }

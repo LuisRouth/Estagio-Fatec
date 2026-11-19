@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
+import FilePreviewModal, { FilePreviewTarget, isPreviewableFile } from '@/components/ui/FilePreviewModal';
 import { AcademicMaterial, CourseType, AnnouncementLink, AnnouncementAttachment } from '@/lib/types';
 
 // Presets de Capa / Banner para Projetos
@@ -105,6 +106,9 @@ export default function VitrinePage() {
 
   // Anexos Dinâmicos Adicionais
   const [formAttachments, setFormAttachments] = useState<AnnouncementAttachment[]>([]);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const [attachmentUploadFeedback, setAttachmentUploadFeedback] = useState('');
+  const [previewFile, setPreviewFile] = useState<FilePreviewTarget | null>(null);
 
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
@@ -350,6 +354,62 @@ export default function VitrinePage() {
 
   const handleRemoveAttachment = (id: string) => {
     setFormAttachments(formAttachments.filter((a) => a.id !== id));
+  };
+
+  // Upload direto de arquivo do computador para Anexos da Vitrine (Supabase Storage até 25MB ou fallback local)
+  const handleVitrineFileUpload = async (file: File) => {
+    setFormError('');
+    setAttachmentUploadFeedback('');
+    setUploadingAttachment(true);
+    try {
+      let publicUrl = '';
+      const signRes = await fetch('/api/materials/upload-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: file.name, sizeBytes: file.size }),
+      });
+      const signJson = await signRes.json();
+
+      if (signRes.ok && signJson.success && signJson.data?.signedUploadUrl) {
+        const putRes = await fetch(signJson.data.signedUploadUrl, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': signJson.data.contentType || file.type || 'application/octet-stream',
+          },
+          body: file,
+        });
+        if (!putRes.ok) {
+          throw new Error(`Falha ao enviar arquivo para o Supabase Storage (HTTP ${putRes.status}).`);
+        }
+        publicUrl = signJson.data.publicUrl;
+      } else if (signJson?.fallbackLocal) {
+        const fd = new FormData();
+        fd.append('file', file);
+        const upRes = await fetch('/api/materials/upload', { method: 'POST', body: fd });
+        const upJson = await upRes.json();
+        if (!upRes.ok || !upJson.success) {
+          throw new Error(upJson.error || 'Falha ao enviar arquivo.');
+        }
+        publicUrl = upJson.data.fileUrl;
+      } else {
+        throw new Error(signJson.error || 'Não foi possível preparar o upload do arquivo.');
+      }
+
+      setFormAttachments((prev) => [
+        ...prev,
+        {
+          id: `att-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          title: file.name,
+          url: publicUrl,
+          type: 'DOCUMENTO',
+        },
+      ]);
+      setAttachmentUploadFeedback(`Arquivo "${file.name}" anexado com sucesso!`);
+    } catch (err: any) {
+      setFormError(err.message || 'Erro ao enviar arquivo do computador.');
+    } finally {
+      setUploadingAttachment(false);
+    }
   };
 
   // Alternar tag com 1 clique nos chips sugeridos
@@ -994,111 +1054,203 @@ export default function VitrinePage() {
                         }}
                       >
                         <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                          {/* GitHub Principal */}
-                          {p.github_url && (
-                            <a
-                              href={p.github_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="btn btn-secondary"
-                              style={{
-                                padding: '0.42rem 0.8rem',
-                                fontSize: '0.78rem',
-                                fontWeight: 700,
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.35rem',
-                              }}
-                              title="Repositório GitHub"
-                            >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                                <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
-                              </svg>
-                              GitHub
-                            </a>
-                          )}
+                          {(() => {
+                            const normalizeUrl = (u?: string | null) =>
+                              (u || '').trim().replace(/\/+$/, '').toLowerCase();
+                            const normGithub = normalizeUrl(p.github_url);
+                            const normFile = normalizeUrl(p.file_url);
 
-                          {/* Links Dinâmicos Adicionais */}
-                          {Array.isArray(p.links) &&
-                            p.links.map((link, idx) => (
-                              <a
-                                key={link.id || idx}
-                                href={link.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="btn btn-secondary"
-                                style={{
-                                  padding: '0.42rem 0.8rem',
-                                  fontSize: '0.78rem',
-                                  fontWeight: 700,
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '0.35rem',
-                                }}
-                                title={link.label}
-                              >
-                                <span>{link.label || 'Link'}</span>
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                  <line x1="7" y1="17" x2="17" y2="7"></line>
-                                  <polyline points="7 7 17 7 17 17"></polyline>
-                                </svg>
-                              </a>
-                            ))}
+                            const distinctLinks = Array.isArray(p.links)
+                              ? p.links.filter((link) => {
+                                  const normLink = normalizeUrl(link.url);
+                                  if (!normLink) return false;
+                                  if (normGithub && normLink === normGithub) return false;
+                                  return true;
+                                })
+                              : [];
 
-                          {/* Anexos Dinâmicos */}
-                          {Array.isArray(p.attachments) &&
-                            p.attachments.map((att, idx) => (
-                              <a
-                                key={att.id || idx}
-                                href={att.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="btn btn-secondary"
-                                style={{
-                                  padding: '0.42rem 0.8rem',
-                                  fontSize: '0.78rem',
-                                  fontWeight: 700,
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '0.35rem',
-                                }}
-                                title={att.title}
-                              >
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                  <polyline points="14 2 14 8 20 8"></polyline>
-                                </svg>
-                                {att.title || 'Anexo'}
-                              </a>
-                            ))}
+                            const hasFileInLinksOrAtt =
+                              (Array.isArray(p.attachments) && p.attachments.length > 0) ||
+                              distinctLinks.some((l) => normalizeUrl(l.url) === normFile);
 
-                          {/* Fallback de Arquivo se não houver anexos múltiplos */}
-                          {(!p.attachments || p.attachments.length === 0) && p.file_url && p.file_url !== '#' && (
-                            <a
-                              href={p.file_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="btn btn-secondary"
-                              style={{
-                                padding: '0.42rem 0.8rem',
-                                fontSize: '0.78rem',
-                                fontWeight: 700,
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.35rem',
-                              }}
-                              title="Documento / Artigo"
-                            >
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                <polyline points="14 2 14 8 20 8"></polyline>
-                              </svg>
-                              Docs / PDF
-                            </a>
-                          )}
+                            const showFallbackFile =
+                              !hasFileInLinksOrAtt &&
+                              !!p.file_url &&
+                              p.file_url !== '#' &&
+                              normFile !== normGithub &&
+                              !(normGithub && normFile.includes('github.com/'));
 
-                          {/* Fallback de Demo se não houver links dinâmicos */}
-                          {(!p.links || p.links.length === 0) && p.demo_url && (
+                            const getFileLabel = (url: string) => {
+                              const lower = url.toLowerCase();
+                              if (lower.includes('.pdf')) return 'PDF';
+                              if (lower.includes('.ppt') || lower.includes('slides')) return 'Slides';
+                              return 'Docs / PDF';
+                            };
+
+                            return (
+                              <>
+                                {/* GitHub Principal */}
+                                {p.github_url && (
+                                  <a
+                                    href={p.github_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="btn btn-secondary"
+                                    style={{
+                                      padding: '0.42rem 0.8rem',
+                                      fontSize: '0.78rem',
+                                      fontWeight: 700,
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '0.35rem',
+                                    }}
+                                    title="Repositório GitHub"
+                                  >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                      <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+                                    </svg>
+                                    GitHub
+                                  </a>
+                                )}
+
+                                {/* Links Dinâmicos Adicionais (PDF, Slide, Demo, etc.) */}
+                                {distinctLinks.map((link, idx) => (
+                                  <a
+                                    key={link.id || idx}
+                                    href={link.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="btn btn-secondary"
+                                    style={{
+                                      padding: '0.42rem 0.8rem',
+                                      fontSize: '0.78rem',
+                                      fontWeight: 700,
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '0.35rem',
+                                    }}
+                                    title={link.label}
+                                  >
+                                    <span>{link.label || 'Link'}</span>
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                      <line x1="7" y1="17" x2="17" y2="7"></line>
+                                      <polyline points="7 7 17 7 17 17"></polyline>
+                                    </svg>
+                                  </a>
+                                ))}
+
+                                {/* Anexos Dinâmicos */}
+                                {Array.isArray(p.attachments) &&
+                                  p.attachments.map((att, idx) =>
+                                    isPreviewableFile(att.url) ? (
+                                      <button
+                                        key={att.id || idx}
+                                        type="button"
+                                        onClick={() =>
+                                          setPreviewFile({
+                                            url: att.url,
+                                            title: att.title || p.title,
+                                            subtitle: p.title,
+                                          })
+                                        }
+                                        className="btn btn-secondary"
+                                        style={{
+                                          padding: '0.42rem 0.8rem',
+                                          fontSize: '0.78rem',
+                                          fontWeight: 700,
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '0.35rem',
+                                        }}
+                                        title={`Visualizar ${att.title || 'Anexo'} na página`}
+                                      >
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                          <polyline points="14 2 14 8 20 8"></polyline>
+                                        </svg>
+                                        {att.title || 'Anexo'}
+                                      </button>
+                                    ) : (
+                                      <a
+                                        key={att.id || idx}
+                                        href={att.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="btn btn-secondary"
+                                        style={{
+                                          padding: '0.42rem 0.8rem',
+                                          fontSize: '0.78rem',
+                                          fontWeight: 700,
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '0.35rem',
+                                        }}
+                                        title={att.title}
+                                      >
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                          <polyline points="14 2 14 8 20 8"></polyline>
+                                        </svg>
+                                        {att.title || 'Anexo'}
+                                      </a>
+                                    )
+                                  )}
+
+                                {/* Fallback de Arquivo apenas quando for documento real e distinto do GitHub */}
+                                {showFallbackFile &&
+                                  (isPreviewableFile(p.file_url) ? (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setPreviewFile({
+                                          url: p.file_url,
+                                          title: `${getFileLabel(p.file_url)} — ${p.title}`,
+                                          subtitle: p.subject,
+                                        })
+                                      }
+                                      className="btn btn-secondary"
+                                      style={{
+                                        padding: '0.42rem 0.8rem',
+                                        fontSize: '0.78rem',
+                                        fontWeight: 700,
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '0.35rem',
+                                      }}
+                                      title="Visualizar Documento na página"
+                                    >
+                                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                        <polyline points="14 2 14 8 20 8"></polyline>
+                                      </svg>
+                                      {getFileLabel(p.file_url)}
+                                    </button>
+                                  ) : (
+                                    <a
+                                      href={p.file_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="btn btn-secondary"
+                                      style={{
+                                        padding: '0.42rem 0.8rem',
+                                        fontSize: '0.78rem',
+                                        fontWeight: 700,
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '0.35rem',
+                                      }}
+                                      title="Documento / Artigo"
+                                    >
+                                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                        <polyline points="14 2 14 8 20 8"></polyline>
+                                      </svg>
+                                      {getFileLabel(p.file_url)}
+                                    </a>
+                                  ))}
+
+                                {/* Fallback de Demo se não houver links dinâmicos */}
+                                {distinctLinks.length === 0 && p.demo_url && (
                             <a
                               href={p.demo_url}
                               target="_blank"
@@ -1120,6 +1272,9 @@ export default function VitrinePage() {
                               </svg>
                             </a>
                           )}
+                              </>
+                            );
+                          })()}
                         </div>
 
                         {/* Ações de Gestão para CA, ADM ou Autor */}
@@ -1428,7 +1583,10 @@ export default function VitrinePage() {
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {pendingProjects.map((p) => (
+                {pendingProjects.map((p) => {
+                  const isPendingEdit = Boolean(p.is_approved && p.pending_edit);
+                  const d = p.pending_edit ? { ...p, ...p.pending_edit } : p;
+                  return (
                   <div
                     key={p.id}
                     className="card-interactive"
@@ -1445,26 +1603,28 @@ export default function VitrinePage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' }}>
                       <div>
                         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
-                          <span className="badge badge-amber">Aguardando Avaliação</span>
-                          <span className="badge badge-blue">{p.course}</span>
+                          <span className="badge badge-amber">
+                            {isPendingEdit ? 'Edição Pendente (Versão anterior no ar)' : 'Aguardando Avaliação'}
+                          </span>
+                          <span className="badge badge-blue">{d.course}</span>
                           <span className="badge" style={{ backgroundColor: 'var(--bg-muted)', color: 'var(--text-muted)' }}>
-                            {p.semester}º Semestre
+                            {d.semester}º Semestre
                           </span>
                           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                            {p.material_type}
+                            {d.material_type}
                           </span>
                         </div>
 
                         <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>
-                          {p.title}
+                          {d.title}
                         </h4>
                         <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent-emerald)', marginTop: '0.15rem' }}>
-                          Disciplina: {p.subject}
+                          Disciplina: {d.subject}
                         </div>
                       </div>
 
                       <div style={{ textAlign: 'right', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                        <div><strong>Submetido por:</strong> {p.author_name || 'Aluno'}</div>
+                        <div><strong>Submetido por:</strong> {d.author_name || 'Aluno'}</div>
                         <div style={{ fontSize: '0.72rem', marginTop: '0.2rem' }}>
                           {new Date(p.created_at).toLocaleDateString('pt-BR')}
                         </div>
@@ -1472,21 +1632,21 @@ export default function VitrinePage() {
                     </div>
 
                     <p style={{ fontSize: '0.9rem', color: 'var(--text-sub)', lineHeight: 1.5 }}>
-                      {p.description || 'Sem descrição fornecida pelo autor.'}
+                      {d.description || 'Sem descrição fornecida pelo autor.'}
                     </p>
 
                     {/* Links informados */}
                     <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', padding: '0.75rem', borderRadius: '10px', backgroundColor: 'var(--bg-muted)', fontSize: '0.8rem' }}>
-                      {p.github_url && (
+                      {d.github_url && (
                         <div>
                           <strong>GitHub:</strong>{' '}
-                          <a href={p.github_url} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-blue)', textDecoration: 'underline' }}>
-                            {p.github_url}
+                          <a href={d.github_url} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-blue)', textDecoration: 'underline' }}>
+                            {d.github_url}
                           </a>
                         </div>
                       )}
-                      {Array.isArray(p.links) &&
-                        p.links.map((l, idx) => (
+                      {Array.isArray(d.links) &&
+                        d.links.map((l, idx) => (
                           <div key={idx}>
                             <strong>{l.label}:</strong>{' '}
                             <a href={l.url} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-purple)', textDecoration: 'underline' }}>
@@ -1494,11 +1654,11 @@ export default function VitrinePage() {
                             </a>
                           </div>
                         ))}
-                      {p.file_url && p.file_url !== '#' && (
+                      {d.file_url && d.file_url !== '#' && (
                         <div>
                           <strong>Arquivo / Docs:</strong>{' '}
-                          <a href={p.file_url} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-emerald)', textDecoration: 'underline' }}>
-                            {p.file_url}
+                          <a href={d.file_url} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-emerald)', textDecoration: 'underline' }}>
+                            {d.file_url}
                           </a>
                         </div>
                       )}
@@ -1507,7 +1667,7 @@ export default function VitrinePage() {
                     {/* Ações de Moderação */}
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', borderTop: '1px solid var(--border-light)', paddingTop: '1rem', flexWrap: 'wrap' }}>
                       <button
-                        onClick={() => handleOpenEditModal(p)}
+                        onClick={() => handleOpenEditModal(d as AcademicMaterial)}
                         className="btn btn-secondary"
                         style={{ padding: '0.6rem 1.1rem', fontSize: '0.85rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
                         title="Editar submissão antes de aprovar"
@@ -1519,17 +1679,34 @@ export default function VitrinePage() {
                         Editar Submissão
                       </button>
 
-                      <button
-                        onClick={() => setDeleteConfirmTarget(p)}
-                        className="btn btn-danger-outline"
-                        style={{ padding: '0.6rem 1.2rem', fontSize: '0.85rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-                      >
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="3 6 5 6 21 6"></polyline>
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        </svg>
-                        Rejeitar / Excluir
-                      </button>
+                      {isPendingEdit ? (
+                        <button
+                          onClick={async () => {
+                            await fetch(`/api/materials/${p.id}`, {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ reject_pending_edit: true }),
+                            });
+                            fetchPendingProjects();
+                          }}
+                          className="btn btn-danger-outline"
+                          style={{ padding: '0.6rem 1.2rem', fontSize: '0.85rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                        >
+                          Descartar Edição
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setDeleteConfirmTarget(p)}
+                          className="btn btn-danger-outline"
+                          style={{ padding: '0.6rem 1.2rem', fontSize: '0.85rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                        >
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                          </svg>
+                          Rejeitar / Excluir
+                        </button>
+                      )}
 
                       <button
                         onClick={() => handleApproveProject(p)}
@@ -1539,11 +1716,12 @@ export default function VitrinePage() {
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="20 6 9 17 4 12"></polyline>
                         </svg>
-                        Aprovar Publicação
+                        {isPendingEdit ? 'Aprovar Nova Versão' : 'Aprovar Publicação'}
                       </button>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -1607,9 +1785,19 @@ export default function VitrinePage() {
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                   {isPrivileged
                     ? 'Publicação imediata: Como CA/Admin/Docente, seu projeto ficará visível instantaneamente.'
-                    : 'Submissão discente: Seu projeto passará pela curadoria do CA antes de ser liberado publicamente.'}
+                    : editingProject
+                      ? 'Aviso de Moderação: Ao salvar alterações, seu projeto voltará para reaprovação do CA/Admin antes de retornar à vitrine pública.'
+                      : 'Submissão discente: Seu projeto passará pela curadoria do CA antes de ser liberado publicamente.'}
                 </p>
               </div>
+
+              {editingProject && !isPrivileged && (
+                <div className="alert-box" style={{ marginBottom: '1.1rem', backgroundColor: 'rgba(217, 119, 6, 0.12)', border: '1px solid #d97706', color: 'var(--text-main)' }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>
+                    Reaprovação necessária: Enquanto o CA/Admin não aprovar sua edição, a versão anterior continuará publicada na vitrine. Após a aprovação, a nova versão substituirá a antiga.
+                  </div>
+                </div>
+              )}
 
               {formError && (
                 <div className="alert-box alert-error" style={{ marginBottom: '1.25rem' }}>
@@ -1883,36 +2071,73 @@ export default function VitrinePage() {
                   )}
                 </div>
 
-                {/* 5. ANEXOS DINÂMICOS (PDFS, SLIDES, DOCS) */}
+                {/* 5. ANEXOS DINÂMICOS (PDFS, SLIDES, DOCS — UPLOAD DO COMPUTADOR OU LINK) */}
                 <div style={{ padding: '1rem', borderRadius: '12px', backgroundColor: 'var(--bg-muted)', border: '1px solid var(--border-light)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                     <div>
                       <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-main)' }}>
                         Arquivos e Anexos (PDFs, Relatórios, Slides)
                       </span>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        Links diretos ou compartilhamentos do Google Drive / OneDrive.
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
+                        Envie arquivos diretamente do seu computador (até 25MB) ou informe o link externo.
                       </p>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={handleAddAttachment}
-                      className="btn btn-secondary"
-                      style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
-                    >
-                      + Adicionar Anexo
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
+                      <label
+                        className="btn btn-primary"
+                        style={{
+                          padding: '0.4rem 0.8rem',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          cursor: uploadingAttachment ? 'not-allowed' : 'pointer',
+                          opacity: uploadingAttachment ? 0.65 : 1,
+                        }}
+                      >
+                        {uploadingAttachment ? 'Enviando...' : '📎 Enviar do Computador'}
+                        <input
+                          type="file"
+                          accept=".pdf,.pptx,.ppt,.docx,.doc,.zip,.ipynb,.py,.csv,.png,.jpg,.jpeg"
+                          disabled={uploadingAttachment}
+                          style={{ display: 'none' }}
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) {
+                              handleVitrineFileUpload(f);
+                              e.target.value = '';
+                            }
+                          }}
+                        />
+                      </label>
+
+                      <button
+                        type="button"
+                        onClick={handleAddAttachment}
+                        className="btn btn-secondary"
+                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                      >
+                        + Link de Anexo
+                      </button>
+                    </div>
                   </div>
+
+                  {attachmentUploadFeedback && (
+                    <div style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 600, marginBottom: '0.5rem' }}>
+                      {attachmentUploadFeedback}
+                    </div>
+                  )}
 
                   {formAttachments.length === 0 ? (
                     <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textAlign: 'center', padding: '0.75rem' }}>
-                      Nenhum anexo de documento adicionado.
+                      Nenhum arquivo ou anexo adicionado. Use os botões acima para subir do computador ou adicionar link.
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                       {formAttachments.map((att) => (
-                        <div key={att.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <div key={att.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                           <input
                             type="text"
                             placeholder="Nome do arquivo (ex: Relatorio_Final.pdf)"
@@ -1922,8 +2147,8 @@ export default function VitrinePage() {
                             style={{ flex: '1 1 180px', fontSize: '0.8rem', padding: '0.5rem 0.75rem' }}
                           />
                           <input
-                            type="url"
-                            placeholder="Link do arquivo (Google Drive, Dropbox, PDF...)"
+                            type="text"
+                            placeholder="URL do arquivo (ou enviado do computador)"
                             value={att.url}
                             onChange={(e) => handleUpdateAttachment(att.id, 'url', e.target.value)}
                             className="form-input"
@@ -2096,6 +2321,7 @@ export default function VitrinePage() {
           </div>
         )}
 
+        <FilePreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />
       </div>
     </AppLayout>
   );

@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
         .join(', ');
     }
 
-    const effectiveFileUrl = parsed.data.file_url || parsed.data.github_url || '#';
+    const effectiveFileUrl = parsed.data.file_url || '#';
     const material = await db.materials.create({
       title: sanitizeInput(parsed.data.title),
       description: parsed.data.description ? sanitizeInput(parsed.data.description) : null,

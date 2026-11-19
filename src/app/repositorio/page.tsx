@@ -2,41 +2,67 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
+import FilePreviewModal, { FilePreviewTarget, isPreviewableFile } from '@/components/ui/FilePreviewModal';
 import { AcademicMaterial, CourseType, MaterialType, AnnouncementLink, AnnouncementAttachment, RAGQueryResult } from '@/lib/types';
 
-// Presets de Capa / Banners com Gradientes Dinâmicos
+// Presets de Capa / Cores com Gradientes Dinâmicos (mesma paleta dos Avisos + extras)
 const MATERIAL_BANNER_PRESETS = [
   {
     id: 'PADRAO_AZUL',
     label: 'Azul Institucional',
-    gradient: 'linear-gradient(135deg, #1e3a8a 0%, #0284c7 50%, #0f172a 100%)',
-    desc: 'Ciência de Dados & Fundamentos',
+    gradient: 'linear-gradient(135deg, #0284c7 0%, #0369a1 50%, #0f172a 100%)',
+    desc: 'FATEC & Geral',
   },
   {
-    id: 'PADRAO_AGRO',
-    label: 'Agro & Visão Computacional',
-    gradient: 'linear-gradient(135deg, #065f46 0%, #059669 50%, #022c22 100%)',
-    desc: 'Agronegócio & Campo',
+    id: 'PADRAO_VERDE',
+    label: 'Verde ESG',
+    gradient: 'linear-gradient(135deg, #059669 0%, #047857 50%, #064e3b 100%)',
+    desc: 'Sustentabilidade',
   },
   {
-    id: 'PADRAO_SAUDE',
-    label: 'Saúde, Bio & Imagens Médicas',
-    gradient: 'linear-gradient(135deg, #0369a1 0%, #0284c7 50%, #082f49 100%)',
-    desc: 'Medicina & Diagnóstico',
+    id: 'PADRAO_ROXO',
+    label: 'Roxo IA & Tech',
+    gradient: 'linear-gradient(135deg, #7c3aed 0%, #6366f1 50%, #1e1b4b 100%)',
+    desc: 'Inteligência Artificial',
   },
   {
-    id: 'PADRAO_DEEPTECH',
-    label: 'IA, Deep Learning & Modelos',
-    gradient: 'linear-gradient(135deg, #4338ca 0%, #6366f1 50%, #1e1b4b 100%)',
-    desc: 'Redes Neurais, NLP & Notebooks',
+    id: 'PADRAO_AMBAR',
+    label: 'Âmbar Destaque',
+    gradient: 'linear-gradient(135deg, #d97706 0%, #ea580c 50%, #451a03 100%)',
+    desc: 'Atenção & Prazos',
   },
   {
-    id: 'PADRAO_ESG',
-    label: 'Gestão ESG & Sustentabilidade',
-    gradient: 'linear-gradient(135deg, #047857 0%, #0d9488 50%, #134e4a 100%)',
-    desc: 'Relatórios ODS & Governança',
+    id: 'PADRAO_GRAFITE',
+    label: 'Grafite Neutro',
+    gradient: 'linear-gradient(135deg, #334155 0%, #1e293b 50%, #0f172a 100%)',
+    desc: 'Formal & Geral',
+  },
+  {
+    id: 'PADRAO_CIANO',
+    label: 'Ciano Oceano',
+    gradient: 'linear-gradient(135deg, #0891b2 0%, #0e7490 50%, #083344 100%)',
+    desc: 'Dados & Analytics',
+  },
+  {
+    id: 'PADRAO_ROSA',
+    label: 'Magenta / Rosa',
+    gradient: 'linear-gradient(135deg, #db2777 0%, #be185d 50%, #500724 100%)',
+    desc: 'Destaque Visual',
+  },
+  {
+    id: 'PADRAO_VERMELHO',
+    label: 'Vermelho Rubi',
+    gradient: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #450a0a 100%)',
+    desc: 'Importante',
   },
 ];
+
+const LEGACY_BANNER_GRADIENTS: Record<string, string> = {
+  PADRAO_AGRO: 'linear-gradient(135deg, #065f46 0%, #059669 50%, #022c22 100%)',
+  PADRAO_SAUDE: 'linear-gradient(135deg, #0369a1 0%, #0284c7 50%, #082f49 100%)',
+  PADRAO_DEEPTECH: 'linear-gradient(135deg, #4338ca 0%, #6366f1 50%, #1e1b4b 100%)',
+  PADRAO_ESG: 'linear-gradient(135deg, #047857 0%, #0d9488 50%, #134e4a 100%)',
+};
 
 import { OFFICIAL_PPC_DISCIPLINES } from '@/lib/curriculum';
 
@@ -218,6 +244,22 @@ export default function RepositorioPage() {
     authorName?: string | null;
   } | null>(null);
   const [checkingMaterialUrl, setCheckingMaterialUrl] = useState<string | null>(null);
+  const [previewFile, setPreviewFile] = useState<FilePreviewTarget | null>(null);
+
+  const openUrlOrPreview = (
+    targetUrl: string,
+    info: { title: string; subject: string; course: string; semester: number }
+  ) => {
+    if (isPreviewableFile(targetUrl)) {
+      setPreviewFile({
+        url: targetUrl,
+        title: info.title,
+        subtitle: `${info.course} • ${info.semester}º Semestre — ${info.subject}`,
+      });
+      return;
+    }
+    window.open(targetUrl, '_blank', 'noopener,noreferrer');
+  };
 
   const handleOpenMaterial = async (
     rawUrl: string,
@@ -242,7 +284,7 @@ export default function RepositorioPage() {
       try {
         const res = await fetch(targetUrl, { method: 'HEAD' });
         if (res.ok) {
-          window.open(targetUrl, '_blank', 'noopener,noreferrer');
+          openUrlOrPreview(targetUrl, info);
           return;
         }
       } catch {
@@ -258,7 +300,7 @@ export default function RepositorioPage() {
       return;
     }
 
-    window.open(targetUrl, '_blank', 'noopener,noreferrer');
+    openUrlOrPreview(targetUrl, info);
   };
 
   // Form State Dinâmico
@@ -688,13 +730,27 @@ export default function RepositorioPage() {
     });
   }, [materials, selectedCourse, selectedSemester, selectedType, selectedSubject, searchQuery]);
 
+  // Links Dinâmicos no Modal
+  const handleAddLink = () => {
+    setFormLinks((prev) => [...prev, { id: `lnk-${Date.now()}`, label: '', url: '' }]);
+  };
+  const handleUpdateLink = (id: string, field: 'label' | 'url', value: string) => {
+    setFormLinks((prev) => prev.map((l) => (l.id === id ? { ...l, [field]: value } : l)));
+  };
+  const handleRemoveLink = (id: string) => {
+    setFormLinks((prev) => prev.filter((l) => l.id !== id));
+  };
+
   // Gradiente do Card
   const getBannerGradient = (m: AcademicMaterial) => {
     if (m.image_url) return `url(${m.image_url}) center/cover no-repeat`;
     const preset = MATERIAL_BANNER_PRESETS.find((b) => b.id === m.banner_type);
     if (preset) return preset.gradient;
-    if (m.course === 'ESG') return 'linear-gradient(135deg, #047857 0%, #0d9488 50%, #134e4a 100%)';
-    return 'linear-gradient(135deg, #1e3a8a 0%, #0284c7 50%, #0f172a 100%)';
+    if (m.banner_type && LEGACY_BANNER_GRADIENTS[m.banner_type]) {
+      return LEGACY_BANNER_GRADIENTS[m.banner_type];
+    }
+    if (m.course === 'ESG') return 'linear-gradient(135deg, #059669 0%, #047857 50%, #064e3b 100%)';
+    return 'linear-gradient(135deg, #0284c7 0%, #0369a1 50%, #0f172a 100%)';
   };
 
   return (
@@ -2069,39 +2125,86 @@ export default function RepositorioPage() {
 
                         {/* Botões de Ação */}
                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
-                          {m.file_url && m.file_url !== '#' && (
-                            <button
-                              type="button"
-                              disabled={checkingMaterialUrl === m.file_url}
-                              onClick={() =>
-                                handleOpenMaterial(m.file_url, {
-                                  title: m.title,
-                                  subject: m.subject,
-                                  course: m.course,
-                                  semester: m.semester,
-                                  materialType: m.material_type,
-                                  githubUrl: m.github_url,
-                                  description: m.description,
-                                  authorName: m.author_name,
+                          {(() => {
+                            const norm = (u?: string | null) => (u || '').trim().replace(/\/+$/, '').toLowerCase();
+                            const normGithub = norm(m.github_url);
+                            const normFile = norm(m.file_url);
+                            const showFileBtn =
+                              !!m.file_url &&
+                              m.file_url !== '#' &&
+                              normFile !== normGithub &&
+                              !(normGithub && normFile.includes('github.com/'));
+
+                            const distinctLinks = Array.isArray(m.links)
+                              ? m.links.filter((l) => {
+                                  const nl = norm(l.url);
+                                  return nl && nl !== normGithub && nl !== normFile;
                                 })
-                              }
-                              className="btn btn-secondary"
-                              style={{ flex: 1, padding: '0.45rem 0.75rem', fontSize: '0.8rem', fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}
-                            >
-                              {checkingMaterialUrl === m.file_url ? 'Verificando...' : 'Acessar Arquivo'}
-                            </button>
-                          )}
-                          {m.github_url && (
-                            <a
-                              href={m.github_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="btn btn-primary"
-                              style={{ flex: 1, padding: '0.45rem 0.75rem', fontSize: '0.8rem', fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}
-                            >
-                              GitHub
-                            </a>
-                          )}
+                              : [];
+
+                            return (
+                              <>
+                                {showFileBtn && (
+                                  <button
+                                    type="button"
+                                    disabled={checkingMaterialUrl === m.file_url}
+                                    onClick={() =>
+                                      handleOpenMaterial(m.file_url, {
+                                        title: m.title,
+                                        subject: m.subject,
+                                        course: m.course,
+                                        semester: m.semester,
+                                        materialType: m.material_type,
+                                        githubUrl: m.github_url,
+                                        description: m.description,
+                                        authorName: m.author_name,
+                                      })
+                                    }
+                                    className="btn btn-secondary"
+                                    style={{ flex: 1, padding: '0.45rem 0.75rem', fontSize: '0.8rem', fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}
+                                  >
+                                    {checkingMaterialUrl === m.file_url ? 'Verificando...' : 'Acessar Arquivo'}
+                                  </button>
+                                )}
+                                {m.github_url && (
+                                  <a
+                                    href={m.github_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="btn btn-primary"
+                                    style={{ flex: 1, padding: '0.45rem 0.75rem', fontSize: '0.8rem', fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}
+                                  >
+                                    GitHub
+                                  </a>
+                                )}
+                                {distinctLinks.map((link, idx) => (
+                                  <a
+                                    key={link.id || idx}
+                                    href={link.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="btn btn-secondary"
+                                    style={{ flex: 1, padding: '0.45rem 0.75rem', fontSize: '0.8rem', fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}
+                                  >
+                                    {link.label || 'Link'}
+                                  </a>
+                                ))}
+                                {Array.isArray(m.attachments) &&
+                                  m.attachments.map((att, idx) => (
+                                    <a
+                                      key={att.id || idx}
+                                      href={att.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="btn btn-secondary"
+                                      style={{ flex: 1, padding: '0.45rem 0.75rem', fontSize: '0.8rem', fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}
+                                    >
+                                      {att.title || 'Anexo'}
+                                    </a>
+                                  ))}
+                              </>
+                            );
+                          })()}
                         </div>
 
                         {(isPrivileged || (currentUser?.id && m.author_id === currentUser.id)) && (
@@ -2267,7 +2370,10 @@ export default function RepositorioPage() {
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                {pendingMaterials.map((m) => (
+                {pendingMaterials.map((m) => {
+                  const isPendingEdit = Boolean(m.is_approved && m.pending_edit);
+                  const d = m.pending_edit ? { ...m, ...m.pending_edit } : m;
+                  return (
                   <div
                     key={m.id}
                     className="card-interactive"
@@ -2275,7 +2381,7 @@ export default function RepositorioPage() {
                       padding: '1.75rem',
                       borderRadius: '16px',
                       backgroundColor: 'var(--bg-primary)',
-                      border: '1px solid var(--border-light)',
+                      border: isPendingEdit ? '1px solid #d97706' : '1px solid var(--border-light)',
                       display: 'flex',
                       flexDirection: 'column',
                       gap: '1rem',
@@ -2284,26 +2390,28 @@ export default function RepositorioPage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
                       <div>
                         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
-                          <span className="badge badge-amber">Pendente de Avaliação</span>
-                          <span className="badge badge-blue">{m.course}</span>
+                          <span className="badge badge-amber">
+                            {isPendingEdit ? 'Edição Pendente (Versão anterior no ar)' : 'Pendente de Avaliação'}
+                          </span>
+                          <span className="badge badge-blue">{d.course}</span>
                           <span className="badge" style={{ backgroundColor: 'var(--bg-muted)', color: 'var(--text-muted)' }}>
-                            {m.semester}º Semestre
+                            {d.semester}º Semestre
                           </span>
                           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                            {m.material_type}
+                            {d.material_type}
                           </span>
                         </div>
 
                         <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
-                          {m.title}
+                          {d.title}
                         </h4>
                         <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent-emerald)', marginTop: '0.2rem' }}>
-                          Disciplina: {m.subject}
+                          Disciplina: {d.subject}
                         </div>
                       </div>
 
                       <div style={{ textAlign: 'right', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                        <div><strong>Submetido por:</strong> {m.author_name || 'Aluno'}</div>
+                        <div><strong>Submetido por:</strong> {d.author_name || 'Aluno'}</div>
                         <div style={{ fontSize: '0.72rem', marginTop: '0.2rem' }}>
                           {new Date(m.created_at).toLocaleDateString('pt-BR')}
                         </div>
@@ -2311,12 +2419,12 @@ export default function RepositorioPage() {
                     </div>
 
                     <p style={{ fontSize: '0.9rem', color: 'var(--text-sub)', lineHeight: 1.5, margin: 0 }}>
-                      {m.description || 'Sem descrição fornecida pelo autor.'}
+                      {d.description || 'Sem descrição fornecida pelo autor.'}
                     </p>
 
-                    {m.tags && (
+                    {d.tags && (
                       <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                        {m.tags.split(',').map((tag: string, i: number) => (
+                        {d.tags.split(',').map((tag: string, i: number) => (
                           <span
                             key={i}
                             style={{
@@ -2336,26 +2444,26 @@ export default function RepositorioPage() {
                     {/* Ações de Moderação */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-light)' }}>
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        {m.file_url && m.file_url !== '#' ? (
+                        {d.file_url && d.file_url !== '#' ? (
                           <button
                             type="button"
-                            disabled={checkingMaterialUrl === m.file_url}
+                            disabled={checkingMaterialUrl === d.file_url}
                             onClick={() =>
-                              handleOpenMaterial(m.file_url, {
-                                title: m.title,
-                                subject: m.subject,
-                                course: m.course,
-                                semester: m.semester,
-                                materialType: m.material_type,
-                                githubUrl: m.github_url,
-                                description: m.description,
-                                authorName: m.author_name,
+                              handleOpenMaterial(d.file_url!, {
+                                title: d.title,
+                                subject: d.subject,
+                                course: d.course,
+                                semester: d.semester,
+                                materialType: d.material_type,
+                                githubUrl: d.github_url,
+                                description: d.description,
+                                authorName: d.author_name,
                               })
                             }
                             className="btn btn-primary"
                             style={{ fontWeight: 700 }}
                           >
-                            {checkingMaterialUrl === m.file_url ? 'Abrindo...' : '📄 Analisar Arquivo'}
+                            {checkingMaterialUrl === d.file_url ? 'Abrindo...' : 'Analisar Arquivo'}
                           </button>
                         ) : (
                           <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', alignSelf: 'center' }}>
@@ -2363,9 +2471,9 @@ export default function RepositorioPage() {
                           </span>
                         )}
 
-                        {m.github_url && (
+                        {d.github_url && (
                           <a
-                            href={m.github_url}
+                            href={d.github_url}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="btn btn-secondary"
@@ -2377,11 +2485,11 @@ export default function RepositorioPage() {
 
                         <button
                           type="button"
-                          onClick={() => handleOpenEditModal(m)}
+                          onClick={() => handleOpenEditModal(d as AcademicMaterial)}
                           className="btn btn-secondary"
                           style={{ fontWeight: 700 }}
                         >
-                          ✏️ Editar
+                          Editar
                         </button>
                       </div>
 
@@ -2392,20 +2500,39 @@ export default function RepositorioPage() {
                           className="btn btn-emerald"
                           style={{ fontWeight: 700 }}
                         >
-                          Aprovar para o Acervo
+                          {isPendingEdit ? 'Aprovar Nova Versão' : 'Aprovar para o Acervo'}
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeleteConfirmTarget(m)}
-                          className="btn btn-danger"
-                          style={{ fontWeight: 700 }}
-                        >
-                          Rejeitar / Excluir
-                        </button>
+                        {isPendingEdit ? (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              await fetch(`/api/materials/${m.id}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ reject_pending_edit: true }),
+                              });
+                              fetchPendingMaterials();
+                            }}
+                            className="btn btn-danger"
+                            style={{ fontWeight: 700 }}
+                          >
+                            Descartar Edição
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setDeleteConfirmTarget(m)}
+                            className="btn btn-danger"
+                            style={{ fontWeight: 700 }}
+                          >
+                            Rejeitar / Excluir
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -2456,6 +2583,14 @@ export default function RepositorioPage() {
                   ✕
                 </button>
               </div>
+
+              {editingMaterial && !isPrivileged && (
+                <div className="alert-box" style={{ marginBottom: '1rem', backgroundColor: 'rgba(217, 119, 6, 0.12)', border: '1px solid #d97706', color: 'var(--text-main)' }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>
+                    Aviso de Moderação: Enquanto o CA/Admin não aprovar sua edição, a versão atual continuará publicada no acervo. Após a aprovação, a nova versão substituirá a antiga.
+                  </div>
+                </div>
+              )}
 
               {formError && (
                 <div className="alert-box alert-error" style={{ marginBottom: '1rem' }}>
@@ -2564,8 +2699,7 @@ export default function RepositorioPage() {
                       <option value={1}>1º Semestre</option>
                       <option value={2}>2º Semestre</option>
                       <option value={3}>3º Semestre</option>
-                      <option value={4}>4º Semestre</option>
-                      <option value={5}>Complementares (TCC / Estágio)</option>
+                      <option value={4}>4º Semestre (inclui TCC / Estágio)</option>
                     </select>
                   </div>
                 </div>
@@ -2656,7 +2790,7 @@ export default function RepositorioPage() {
                   <div className="form-group">
                     <label className="form-label" style={{ fontWeight: 700 }}>Link do Arquivo (PDF / Drive / Nuvem)</label>
                     <input
-                      type="url"
+                      type="text"
                       placeholder="https://drive.google.com/... ou envie o arquivo abaixo"
                       value={formFileUrl}
                       onChange={(e) => setFormFileUrl(e.target.value)}
@@ -2706,6 +2840,65 @@ export default function RepositorioPage() {
                       className="form-input"
                     />
                   </div>
+                </div>
+
+                {/* Links Dinâmicos Complementares (Slides, PDFs extras, Colab, Vídeo) */}
+                <div style={{ padding: '1rem', borderRadius: '12px', backgroundColor: 'var(--bg-muted)', border: '1px solid var(--border-light)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <div>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                        Links Complementares (PDF, Slides, Colab, Vídeo)
+                      </span>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
+                        Adicione outros links úteis de apoio além do arquivo principal e do GitHub.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAddLink}
+                      className="btn btn-secondary"
+                      style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', fontWeight: 700 }}
+                    >
+                      + Adicionar Link
+                    </button>
+                  </div>
+
+                  {formLinks.length === 0 ? (
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textAlign: 'center', padding: '0.45rem' }}>
+                      Nenhum link complementar adicionado.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+                      {formLinks.map((link) => (
+                        <div key={link.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                          <input
+                            type="text"
+                            placeholder="Rótulo (ex: Slides, PDF, Colab)"
+                            value={link.label}
+                            onChange={(e) => handleUpdateLink(link.id, 'label', e.target.value)}
+                            className="form-input"
+                            style={{ flex: '1 1 150px', fontSize: '0.8rem', padding: '0.45rem 0.7rem' }}
+                          />
+                          <input
+                            type="url"
+                            placeholder="https://..."
+                            value={link.url}
+                            onChange={(e) => handleUpdateLink(link.id, 'url', e.target.value)}
+                            className="form-input"
+                            style={{ flex: '2 1 220px', fontSize: '0.8rem', padding: '0.45rem 0.7rem' }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveLink(link.id)}
+                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontWeight: 700, padding: '0.25rem 0.45rem' }}
+                            title="Remover link"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="form-group">
@@ -2913,6 +3106,7 @@ export default function RepositorioPage() {
           </div>
         )}
 
+        <FilePreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />
       </div>
     </AppLayout>
   );

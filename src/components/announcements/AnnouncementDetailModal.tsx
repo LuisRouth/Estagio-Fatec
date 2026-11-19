@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import FilePreviewModal, { FilePreviewTarget, isPreviewableFile } from '@/components/ui/FilePreviewModal';
 import {
   Announcement,
   AnnouncementBannerType,
@@ -36,6 +37,7 @@ export default function AnnouncementDetailModal({
 }: AnnouncementDetailModalProps) {
   const [imgError, setImgError] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [previewFile, setPreviewFile] = useState<FilePreviewTarget | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -488,15 +490,32 @@ export default function AnnouncementDetailModal({
                         </div>
                       </div>
                     </div>
-                    <a
-                      href={att.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn btn-outline"
-                      style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', borderRadius: '6px', fontWeight: 700, textDecoration: 'none' }}
-                    >
-                      Abrir
-                    </a>
+                    {isPreviewableFile(att.url) || att.type === 'IMAGEM' ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPreviewFile({
+                            url: att.url,
+                            title: att.title,
+                            subtitle: announcement.title,
+                          })
+                        }
+                        className="btn btn-outline"
+                        style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', borderRadius: '6px', fontWeight: 700 }}
+                      >
+                        Visualizar
+                      </button>
+                    ) : (
+                      <a
+                        href={att.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-outline"
+                        style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', borderRadius: '6px', fontWeight: 700, textDecoration: 'none' }}
+                      >
+                        Abrir
+                      </a>
+                    )}
                   </div>
                 ))}
               </div>
@@ -582,6 +601,7 @@ export default function AnnouncementDetailModal({
           )}
         </div>
       </div>
+      <FilePreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />
     </div>
   ,
     document.body

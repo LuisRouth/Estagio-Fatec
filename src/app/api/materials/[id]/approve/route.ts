@@ -40,9 +40,24 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const updated = await db.materials.update(id, { is_approved: true });
+    const pendingChanges =
+      material.pending_edit && typeof material.pending_edit === 'object'
+        ? material.pending_edit
+        : {};
+
+    const updated = await db.materials.update(id, {
+      ...pendingChanges,
+      is_approved: true,
+      pending_edit: null,
+    });
     return NextResponse.json(
-      { success: true, message: 'Material aprovado com sucesso!', data: updated },
+      {
+        success: true,
+        message: material.pending_edit
+          ? 'Nova versão aprovada e publicada no lugar da anterior!'
+          : 'Material aprovado com sucesso!',
+        data: updated,
+      },
       { status: 200, headers: SECURITY_HEADERS }
     );
   } catch (error) {

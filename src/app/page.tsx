@@ -8,6 +8,7 @@ import AnnouncementCard from '@/components/announcements/AnnouncementCard';
 import AnnouncementDetailModal from '@/components/announcements/AnnouncementDetailModal';
 import AnnouncementFormModal from '@/components/announcements/AnnouncementFormModal';
 import ToastNotification from '@/components/ui/ToastNotification';
+import FilePreviewModal, { FilePreviewTarget, isPreviewableFile } from '@/components/ui/FilePreviewModal';
 import { HeroVisualWidget } from '@/components/home/HeroVisualWidget';
 
 export default function HomePage() {
@@ -29,6 +30,7 @@ export default function HomePage() {
   const [homeMaterials, setHomeMaterials] = useState<AcademicMaterial[]>([]);
   const [materialsLoading, setMaterialsLoading] = useState(true);
   const [homeMaterialCourse, setHomeMaterialCourse] = useState<CourseType | 'TODOS'>('TODOS');
+  const [previewFile, setPreviewFile] = useState<FilePreviewTarget | null>(null);
 
   // Carregar materiais do repositório
   const fetchHomeMaterials = async () => {
@@ -601,6 +603,11 @@ export default function HomePage() {
             >
               {homeMaterials
                 .filter((m) => homeMaterialCourse === 'TODOS' || m.course === homeMaterialCourse)
+                .sort((a, b) => {
+                  const aLocal = a.title.includes('[Apenas Local]') ? 1 : 0;
+                  const bLocal = b.title.includes('[Apenas Local]') ? 1 : 0;
+                  return aLocal - bLocal;
+                })
                 .slice(0, 6)
                 .map((m) => (
                   <div
@@ -673,24 +680,46 @@ export default function HomePage() {
                     )}
 
                     <div style={{ display: 'flex', gap: '0.5rem', paddingTop: '0.6rem', borderTop: '1px solid var(--border-light)', marginTop: 'auto' }}>
-                      {m.file_url && m.file_url !== '#' && (
-                        <a
-                          href={m.file_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="btn btn-primary"
-                          style={{
-                            flex: 1,
-                            fontSize: '0.78rem',
-                            padding: '0.45rem 0.65rem',
-                            fontWeight: 700,
-                            textAlign: 'center',
-                            textDecoration: 'none',
-                          }}
-                        >
-                          Acessar Arquivo
-                        </a>
-                      )}
+                      {m.file_url && m.file_url !== '#' && !m.title.includes('[Apenas Local]') &&
+                        (isPreviewableFile(m.file_url) ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setPreviewFile({
+                                url: m.file_url,
+                                title: m.title,
+                                subtitle: `${m.course} • ${m.semester}º Sem — ${m.subject}`,
+                              })
+                            }
+                            className="btn btn-primary"
+                            style={{
+                              flex: 1,
+                              fontSize: '0.78rem',
+                              padding: '0.45rem 0.65rem',
+                              fontWeight: 700,
+                              textAlign: 'center',
+                            }}
+                          >
+                            Acessar Arquivo
+                          </button>
+                        ) : (
+                          <a
+                            href={m.file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-primary"
+                            style={{
+                              flex: 1,
+                              fontSize: '0.78rem',
+                              padding: '0.45rem 0.65rem',
+                              fontWeight: 700,
+                              textAlign: 'center',
+                              textDecoration: 'none',
+                            }}
+                          >
+                            Acessar Arquivo
+                          </a>
+                        ))}
                       <Link
                         href={`/repositorio?q=${encodeURIComponent(m.title)}`}
                         className="btn btn-secondary"
@@ -711,6 +740,7 @@ export default function HomePage() {
           )}
         </section>
 
+        <FilePreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />
       </div>
     </AppLayout>
   );

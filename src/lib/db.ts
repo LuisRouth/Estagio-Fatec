@@ -1990,7 +1990,7 @@ export const db = {
       if (isMock || !pool) {
         let items = [...mockMaterials];
         if (filters?.pendingOnly) {
-          items = items.filter((m) => !m.is_approved);
+          items = items.filter((m) => !m.is_approved || !!m.pending_edit);
         } else if (filters?.authorId) {
           items = items.filter((m) => m.author_id === filters.authorId);
         } else if (filters?.onlyApproved !== false) {
@@ -2037,7 +2037,7 @@ export const db = {
       let pIdx = 1;
 
       if (filters?.pendingOnly) {
-        query += ` AND m.is_approved = FALSE`;
+        query += ` AND (m.is_approved = FALSE OR m.pending_edit IS NOT NULL)`;
       } else if (filters?.authorId) {
         query += ` AND m.author_id = $${pIdx++}`;
         params.push(filters.authorId);
@@ -2163,6 +2163,8 @@ export const db = {
           fields.push(`${key} = $${pIdx++}`);
           if (key === 'links' || key === 'attachments') {
             values.push(JSON.stringify(Array.isArray(val) ? val : []));
+          } else if (key === 'pending_edit') {
+            values.push(val === null ? null : JSON.stringify(val));
           } else {
             values.push(val);
           }
